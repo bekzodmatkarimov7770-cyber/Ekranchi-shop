@@ -54,9 +54,10 @@
       background: var(--card-bg); border-radius: 16px; padding: 12px 14px;
       display: flex; align-items: center; gap: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.03); border: 1px solid var(--border-color);
+      position: relative;
     }
+    .product-card.out-of-stock { opacity: 0.55; }
 
-    /* Rasm dizayni */
     .prod-thumb {
       width: 65px; height: 65px; border-radius: 12px; object-fit: cover;
       background: #eef1f6; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.04);
@@ -65,11 +66,20 @@
     .prod-info { flex: 1; }
     .prod-title { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.2; }
     .prod-brand { font-size: 12px; color: var(--hint); margin: 3px 0; }
+    
+    /* Teglar va Ombordagi holat teglari */
+    .tag-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
     .tag {
       display: inline-block; padding: 2px 7px; border-radius: 6px;
-      font-size: 11px; font-weight: 600; background: rgba(36, 129, 204, 0.1); color: var(--primary);
+      font-size: 10px; font-weight: 600; background: rgba(36, 129, 204, 0.1); color: var(--primary);
     }
     .tag.optom { background: rgba(16, 185, 129, 0.15); color: #059669; }
+    
+    .stock-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
+    .stock-available { background: rgba(16, 185, 129, 0.12); color: #059669; }
+    .stock-low { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+    .stock-out { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+
     .price-box { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
     .price-main { font-size: 15px; font-weight: 800; color: var(--primary); }
     .price-old { font-size: 11px; color: var(--hint); text-decoration: line-through; }
@@ -84,7 +94,8 @@
       font-size: 17px; font-weight: bold; display: flex; align-items: center;
       justify-content: center; cursor: pointer;
     }
-    .btn-qty:active { transform: scale(0.92); }
+    .btn-qty:disabled { background: #d1d5db; cursor: not-allowed; color: #9ca3af; }
+    .btn-qty:active:not(:disabled) { transform: scale(0.92); }
     .qty-num { font-weight: 700; font-size: 14px; min-width: 18px; text-align: center; }
 
     .bottom-bar {
@@ -160,11 +171,6 @@
       </div>
 
       <div class="form-group">
-        <label>Telefon raqam:</label>
-        <input type="tel" id="custPhone" class="form-control" placeholder="+998 90 123 45 67">
-      </div>
-
-      <div class="form-group">
         <label>Yetkazib berish turi:</label>
         <select id="deliveryType" class="form-control" onchange="toggleDeliveryField()">
           <option value="BTS">BTS Pochta (Viloyatlar)</option>
@@ -190,7 +196,7 @@
     try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
   }
 
-  // Mahsulotlar ro'yxatiga 'img' parametri kiritildi:
+  // Mahsulotlar ro'yxati (stock parametrlari bilan):
   const productsData = [
     { 
       id: 1, 
@@ -199,6 +205,7 @@
       type: 'Original', 
       wholesale: 180000, 
       retail: 220000,
+      stock: 35, // Omborda 35 ta bor
       img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
     },
     { 
@@ -208,6 +215,7 @@
       type: 'BOE Zavod', 
       wholesale: 140000, 
       retail: 175000,
+      stock: 4, // Oz qolgan (4 ta)
       img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
     },
     { 
@@ -217,6 +225,7 @@
       type: 'FOG', 
       wholesale: 150000, 
       retail: 190000,
+      stock: 0, // Tugagan (Mavjud emas)
       img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
     },
     { 
@@ -226,11 +235,264 @@
       type: 'Original', 
       wholesale: 310000, 
       retail: 370000,
+      stock: 12,
       img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
     },
     { 
       id: 5, 
       brand: 'Honor', 
+      name: 'Honor 200', 
+      type: 'OLED', 
+      wholesale: 350000, 
+      retail: 420000,
+      stock: 20,
+      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
+    },
+    { 
+      id: 6, 
+      brand: 'Huawei', 
+      name: 'Huawei Nova 9', 
+      type: 'OLED', 
+      wholesale: 280000, 
+      retail: 340000,
+      stock: 7,
+      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
+    },
+    { 
+      id: 7, 
+      brand: 'iPhone', 
+      name: 'iPhone 11', 
+      type: 'Incell', 
+      wholesale: 210000, 
+      retail: 260000,
+      stock: 15,
+      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
+    },
+    { 
+      id: 8, 
+      brand: 'Vivo', 
+      name: 'Vivo Y20', 
+      type: 'Original', 
+      wholesale: 130000, 
+      retail: 165000,
+      stock: 10,
+      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
+    },
+    { 
+      id: 9, 
+      brand: 'Oppo', 
+      name: 'Oppo A54', 
+      type: 'TFT', 
+      wholesale: 135000, 
+      retail: 170000,
+      stock: 0, // Tugagan
+      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
+    },
+    { 
+      id: 10, 
+      brand: 'Tecno', 
+      name: 'Tecno Spark 10C', 
+      type: 'Oddiy', 
+      wholesale: 125000, 
+      retail: 160000,
+      stock: 18,
+      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
+    },
+    { 
+      id: 11, 
+      brand: 'Infinix', 
+      name: 'Infinix Hot 30', 
+      type: 'Oddiy', 
+      wholesale: 130000, 
+      retail: 165000,
+      stock: 9,
+      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
+    }
+  ];
+
+  const brands = ['Barchasi', 'Samsung', 'Redmi', 'Honor', 'Huawei', 'iPhone', 'Vivo', 'Oppo', 'Tecno', 'Infinix'];
+  let currentBrand = 'Barchasi';
+  let searchQuery = '';
+  let cart = {};
+
+  const catBox = document.getElementById('cats');
+  brands.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-pill' + (b === currentBrand ? ' active' : '');
+    btn.innerText = b;
+    btn.onclick = () => {
+      triggerHaptic();
+      document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      currentBrand = b;
+      renderProducts();
+    };
+    catBox.appendChild(btn);
+  });
+
+  function onSearch() {
+    searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+    renderProducts();
+  }
+
+  function renderProducts() {
+    const list = document.getElementById('products');
+    list.innerHTML = '';
+    
+    let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
+    if (searchQuery) {
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.type.toLowerCase().includes(searchQuery));
+    }
+
+    let totalQty = 0;
+    for (let id in cart) { totalQty += cart[id]; }
+    const isWholesale = totalQty >= 15;
+
+    const promoFill = document.getElementById('promoFill');
+    const promoCount = document.getElementById('promoCount');
+    const promoText = document.getElementById('promoText');
+    const percent = Math.min(100, Math.round((totalQty / 15) * 100));
+    promoFill.style.width = percent + '%';
+    promoCount.innerText = `${totalQty} / 15`;
+    
+    if (isWholesale) {
+      promoText.innerText = '🎉 Tabriklaymiz! Optom narx faollashdi!';
+      promoFill.style.background = '#10b981';
+    } else {
+      promoText.innerText = `Optom narxgacha yana ${15 - totalQty} ta qoldi!`;
+      promoFill.style.background = '#38bdf8';
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--hint);">Hech narsa topilmadi 🔍</div>';
+      updateCartBar(totalQty, isWholesale);
+      return;
+    }
+
+    filtered.forEach(p => {
+      const qty = cart[p.id] || 0;
+      const activePrice = isWholesale ? p.wholesale : p.retail;
+      const isOut = p.stock <= 0;
+      const isLow = p.stock > 0 && p.stock <= 5;
+
+      let stockBadge = '';
+      if (isOut) {
+        stockBadge = '<span class="stock-tag stock-out">Tugagan</span>';
+      } else if (isLow) {
+        stockBadge = `<span class="stock-tag stock-low">Oz qoldi (${p.stock} ta)</span>`;
+      } else {
+        stockBadge = `<span class="stock-tag stock-available">Omborda bor (${p.stock} ta)</span>`;
+      }
+      
+      const div = document.createElement('div');
+      div.className = `product-card ${isOut ? 'out-of-stock' : ''}`;
+      div.innerHTML = `
+        <img src="${p.img}" class="prod-thumb" alt="${p.name}" loading="lazy">
+        <div class="prod-info">
+          <div class="prod-title">${p.name}</div>
+          <div class="prod-brand">${p.brand} • <span class="tag ${isWholesale ? 'optom' : ''}">${p.type}</span></div>
+          <div class="tag-row">${stockBadge}</div>
+          <div class="price-box">
+            <span class="price-main">${activePrice.toLocaleString()} so'm</span>
+            ${isWholesale ? `<span class="price-old">${p.retail.toLocaleString()}</span>` : ''}
+          </div>
+        </div>
+        <div class="counter-ui">
+          ${qty > 0 ? `<button class="btn-qty" style="background:transparent; color:var(--text);" onclick="changeQty(${p.id}, -1)">-</button><span class="qty-num">${qty}</span>` : ''}
+          <button class="btn-qty" ${isOut || qty >= p.stock ? 'disabled' : ''} onclick="changeQty(${p.id}, 1)">+</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+
+    updateCartBar(totalQty, isWholesale);
+  }
+
+  function changeQty(id, delta) {
+    const p = productsData.find(item => item.id == id);
+    if (!p) return;
+
+    const currentQty = cart[id] || 0;
+    if (delta > 0 && currentQty >= p.stock) {
+      alert(`Omborda bu ekrandan jami ${p.stock} ta mavjud!`);
+      return;
+    }
+
+    triggerHaptic();
+    cart[id] = currentQty + delta;
+    if (cart[id] <= 0) delete cart[id];
+    renderProducts();
+  }
+
+  function updateCartBar(totalQty, isWholesale) {
+    let totalSum = 0;
+    for (let id in cart) {
+      const p = productsData.find(item => item.id == id);
+      if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
+    }
+    document.getElementById('cartQtySummary').innerText = `Savat: ${totalQty} ta ${isWholesale ? '(Optom)' : ''}`;
+    document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString() + " so'm";
+  }
+
+  function openCheckout() {
+    triggerHaptic();
+    let totalQty = 0;
+    for (let id in cart) totalQty += cart[id];
+    if (totalQty === 0) return alert("Avval savatga tovar qo'shing!");
+    document.getElementById('checkoutModal').style.display = 'flex';
+  }
+
+  function closeCheckout() {
+    document.getElementById('checkoutModal').style.display = 'none';
+  }
+
+  function toggleDeliveryField() {
+    const type = document.getElementById('deliveryType').value;
+    document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tuman:" : "Yetkazish manzili (Taksi uchun):";
+  }
+
+  function submitOrder() {
+    triggerHaptic();
+    const name = document.getElementById('custName').value.trim();
+    const delivery = document.getElementById('deliveryType').value;
+    const address = document.getElementById('custAddress').value.trim();
+
+    if (!name || !address) return alert("Iltimos, ism va manzilni to'ldiring!");
+
+    let totalQty = 0;
+    for (let id in cart) totalQty += cart[id];
+    const isWholesale = totalQty >= 15;
+    
+    let totalSum = 0;
+    const items = [];
+    for (let id in cart) {
+      const p = productsData.find(item => item.id == id);
+      if (p) {
+        const price = isWholesale ? p.wholesale : p.retail;
+        const subtotal = price * cart[id];
+        totalSum += subtotal;
+        items.push({ name: p.name, type: p.type, qty: cart[id], price: price, subtotal: subtotal });
+      }
+    }
+
+    const orderData = {
+      name: name,
+      delivery: delivery,
+      address: address,
+      items: items,
+      total_qty: totalQty,
+      total_sum: totalSum,
+      price_type: isWholesale ? "Optom (15+)" : "Dona (Chakana)"
+    };
+
+    if (tg) tg.sendData(JSON.stringify(orderData));
+  }
+
+  renderProducts();
+</script>
+</body>
+</html>
+and: 'Honor', 
       name: 'Honor 200', 
       type: 'OLED', 
       wholesale: 350000, 
