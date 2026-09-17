@@ -1,12 +1,10 @@
-// ==========================================
 // 1. REKLAMALAR VA YANGILIKLAR BANERI
-// ==========================================
 const bannersData = [
   {
-    badge: "YANGILIK",
-    title: "🔥 Yangi original partiya keldi!",
-    desc: "Samsung, Redmi va Honor displeylari omborda.",
-    bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)"
+    badge: "KATTA CHEGIRMA",
+    title: "🔥 Maxsus narxlardagi ekranlar!",
+    desc: "Qizil belgi bilan belgilangan displeylarga ajoyib narxlar qo'yildi.",
+    bg: "linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)"
   },
   {
     badge: "YETKAZISH",
@@ -17,14 +15,13 @@ const bannersData = [
   {
     badge: "AKSIYA",
     title: "🎁 15+ xarid uchun ulgurji narx!",
-    desc: "15 ta ekran to'plang va avtomatik optom chegirmaga ega bo'ling.",
-    bg: "linear-gradient(135deg, #f12711 0%, #f5af19 100%)"
+    desc: "15 ta ekran to'plang va avtomatik optom narxga ega bo'ling.",
+    bg: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
   }
 ];
 
-// ==========================================
-// 2. MAHSULOTLAR, NARXLAR VA OMBOR RO'YXATI
-// ==========================================
+// 2. MAHSULOTLAR RO'YXATI:
+// Agar ekranda aksiya bo'lsa, "old_retail" ga eski qimmat narxi yoziladi!
 const productsData = [
   { 
     id: 1, 
@@ -33,6 +30,7 @@ const productsData = [
     type: 'Original', 
     wholesale: 180000, 
     retail: 220000, 
+    old_retail: 260000, // <--- Eski narxi 260 000 bo'lgan, hozir 220 000 (AKSIYA!)
     stock: 35, 
     img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' 
   },
@@ -63,6 +61,7 @@ const productsData = [
     type: 'Original', 
     wholesale: 310000, 
     retail: 370000, 
+    old_retail: 430000, // <--- Eski narxi 430 000 (AKSIYA!)
     stock: 12, 
     img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60' 
   },
@@ -93,6 +92,7 @@ const productsData = [
     type: 'Incell', 
     wholesale: 210000, 
     retail: 260000, 
+    old_retail: 310000, // <--- Eski narxi 310 000 (AKSIYA!)
     stock: 15, 
     img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' 
   },
