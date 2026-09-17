@@ -6,111 +6,207 @@
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 12px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #f2f2f7; color: #1c1c1e;
-      padding-bottom: 90px;
+    :root {
+      --bg: var(--tg-theme-bg-color, #f8f9fd);
+      --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+      --text: var(--tg-theme-text-color, #1a1c20);
+      --hint: var(--tg-theme-hint-color, #8e95a3);
+      --primary: var(--tg-theme-button-color, #2481cc);
+      --primary-text: var(--tg-theme-button-text-color, #ffffff);
+      --accent-green: #10b981;
+      --border-color: rgba(0, 0, 0, 0.06);
     }
-    .badge {
-      background: #34c759; color: white; padding: 3px 6px;
-      border-radius: 6px; font-size: 11px; margin-left: 6px; font-weight: bold;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); padding: 14px 14px 100px; }
+
+    /* Yuqori qidiruv paneli */
+    .search-container {
+      position: sticky; top: 0; z-index: 20; background: var(--bg);
+      padding-bottom: 10px;
     }
-    .notice {
-      margin-bottom: 12px; font-size: 13px; color: #3a3a3c;
-      background: #e5e5ea; padding: 10px 12px; border-radius: 10px;
+    .search-box {
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      border-radius: 14px; padding: 10px 14px; display: flex; align-items: center;
+      gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     }
+    .search-box input {
+      border: none; outline: none; background: transparent; width: 100%;
+      font-size: 15px; color: var(--text);
+    }
+
+    /* Motivatsiya progress-bari */
+    .promo-card {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: #fff; padding: 14px 16px; border-radius: 16px; margin-bottom: 14px;
+      box-shadow: 0 4px 15px rgba(33, 82, 155, 0.2);
+    }
+    .promo-title { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .progress-bar-bg {
+      background: rgba(255,255,255,0.25); border-radius: 20px; height: 8px;
+      overflow: hidden; position: relative;
+    }
+    .progress-bar-fill {
+      background: #10b981; height: 100%; width: 0%;
+      border-radius: 20px; transition: width 0.4s ease;
+    }
+
+    /* Brendlar slayderi */
     .categories {
-      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
-      margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px;
+      margin-bottom: 6px; scrollbar-width: none;
     }
     .categories::-webkit-scrollbar { display: none; }
-    .cat-btn {
-      background: #ffffff; border: 1px solid #d1d1d6; padding: 8px 14px;
-      border-radius: 16px; font-weight: 500; font-size: 14px; white-space: nowrap; cursor: pointer;
+    .cat-pill {
+      background: var(--card-bg); color: var(--hint); border: 1px solid var(--border-color);
+      padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      white-space: nowrap; cursor: pointer; transition: all 0.2s;
     }
-    .cat-btn.active { background: #007aff; color: #ffffff; border-color: #007aff; }
-    .product-list { display: flex; flex-direction: column; gap: 10px; }
-    .card {
-      background: #ffffff; padding: 12px 14px; border-radius: 12px;
+    .cat-pill.active {
+      background: var(--primary); color: var(--primary-text);
+      border-color: var(--primary); box-shadow: 0 2px 10px rgba(36, 129, 204, 0.3);
+    }
+
+    /* Mahsulotlar kartochkasi */
+    .product-grid { display: flex; flex-direction: column; gap: 10px; }
+    .product-card {
+      background: var(--card-bg); border-radius: 16px; padding: 14px 16px;
       display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03); border: 1px solid var(--border-color);
+      transition: transform 0.1s ease;
     }
-    .card-title { font-weight: 600; font-size: 15px; }
-    .card-sub { font-size: 12px; color: #8e8e93; margin-top: 2px; }
-    .price { font-weight: bold; color: #007aff; margin-top: 4px; font-size: 14px; }
-    .counter { display: flex; align-items: center; gap: 10px; }
-    .counter button {
-      background: #007aff; color: white; border: none;
-      width: 32px; height: 32px; border-radius: 8px; font-size: 18px; font-weight: bold;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    .prod-info { flex: 1; margin-right: 12px; }
+    .prod-title { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .prod-brand { font-size: 12px; color: var(--hint); margin: 2px 0 6px; }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; background: rgba(36, 129, 204, 0.1); color: var(--primary);
     }
-    .counter span { font-weight: bold; font-size: 15px; min-width: 22px; text-align: center; }
-    .cart-bar {
+    .tag.optom { background: rgba(16, 185, 129, 0.15); color: #059669; }
+    .price-box { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+    .price-main { font-size: 16px; font-weight: 800; color: var(--primary); }
+    .price-old { font-size: 12px; color: var(--hint); text-decoration: line-through; }
+
+    /* + va - Tugmalari */
+    .counter-ui {
+      display: flex; align-items: center; background: rgba(142, 149, 163, 0.08);
+      border-radius: 12px; padding: 4px; gap: 8px;
+    }
+    .btn-qty {
+      width: 34px; height: 34px; border-radius: 10px; border: none;
+      background: var(--primary); color: var(--primary-text);
+      font-size: 18px; font-weight: bold; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; transition: transform 0.1s;
+    }
+    .btn-qty:active { transform: scale(0.92); }
+    .qty-num { font-weight: 700; font-size: 15px; min-width: 20px; text-align: center; }
+
+    /* Pastki suzuvchi panel */
+    .bottom-bar {
       position: fixed; bottom: 0; left: 0; right: 0;
-      background: #ffffff; padding: 12px 16px; border-top: 1px solid #d1d1d6;
+      background: var(--card-bg); padding: 14px 18px;
+      border-top: 1px solid var(--border-color);
       display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.08); z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.06); z-index: 100;
     }
-    .modal {
+    .cart-summary-title { font-size: 12px; color: var(--hint); }
+    .cart-summary-val { font-size: 18px; font-weight: 900; color: var(--text); }
+    .btn-checkout {
+      background: var(--primary); color: var(--primary-text);
+      border: none; border-radius: 14px; padding: 12px 24px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(36, 129, 204, 0.3); transition: transform 0.1s;
+    }
+    .btn-checkout:active { transform: scale(0.96); }
+
+    /* Rasmiylashtirish modal oynasi */
+    .sheet-modal {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      align-items: flex-end; z-index: 999;
+      backdrop-filter: blur(4px); z-index: 999; align-items: flex-end;
     }
-    .modal-content {
-      background: #ffffff; width: 100%; border-radius: 16px 16px 0 0;
-      padding: 18px 16px; max-height: 85vh; overflow-y: auto;
+    .sheet-content {
+      background: var(--card-bg); width: 100%; border-radius: 24px 24px 0 0;
+      padding: 20px 20px 30px; max-height: 85vh; overflow-y: auto;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.15); animation: slideUp 0.3s ease;
     }
-    input, select, textarea {
-      width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 8px;
-      border: 1px solid #c7c7cc; font-size: 14px; font-family: inherit;
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-handle { width: 40px; height: 5px; background: #d1d5db; border-radius: 10px; margin: 0 auto 16px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .form-control {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border-color);
+      background: var(--bg); color: var(--text); font-size: 15px; outline: none; transition: border 0.2s;
     }
-    .order-btn {
-      padding: 12px 20px; background: #007aff; color: white;
-      border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer;
-    }
+    .form-control:focus { border-color: var(--primary); }
   </style>
 </head>
 <body>
 
-  <div class="notice">
-    💡 <b>Optom chegirma:</b> Jami ekranlar soni 15 taga yetganda barcha narxlar avtomatik optomga o'tadi!
-  </div>
-
-  <div class="categories" id="cats"></div>
-  <div class="product-list" id="products"></div>
-
-  <div class="cart-bar">
-    <div>
-      <div id="cart-count" style="font-size:12px; color:#8e8e93;">Savat: 0 ta</div>
-      <div id="cart-total" style="font-size:16px; font-weight:bold; color:#1c1c1e;">0 so'm</div>
+  <!-- Qidiruv maydoni -->
+  <div class="search-container">
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--hint)"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="searchInput" placeholder="Modelni qidirish (masalan: A14, Honor, Note 12)..." oninput="onSearch()">
     </div>
-    <button class="order-btn" onclick="openCheckout()">Rasmiylashtirish</button>
   </div>
 
-  <div class="modal" id="checkoutModal">
-    <div class="modal-content">
-      <h3 style="margin-top:0;">Buyurtmani rasmiylashtirish</h3>
-      
-      <label>Ismingiz:</label>
-      <input type="text" id="custName" placeholder="Ismingizni kiriting">
-      
-      <label>Telefon raqamingiz:</label>
-      <input type="tel" id="custPhone" placeholder="+998901234567">
-      
-      <label>Yetkazib berish turi:</label>
-      <select id="deliveryType" onchange="toggleDeliveryField()">
-        <option value="BTS">BTS Pochta (Viloyatlar)</option>
-        <option value="Taksi">Taksi orqali (Tezkor)</option>
-      </select>
+  <!-- Motivatsion karta (Optom progress-bari) -->
+  <div class="promo-card">
+    <div class="promo-title">
+      <span id="promoText">⚡️ 15 ta ekranga optom chegirma!</span>
+      <span id="promoCount">0 / 15</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="promoFill"></div>
+    </div>
+  </div>
 
-      <div id="addressBox">
-        <label id="addrLabel">BTS filiali va tuman:</label>
-        <textarea id="custAddress" rows="2" placeholder="Viloyat, tuman yoki manzil..."></textarea>
+  <!-- Brendlar toifasi -->
+  <div class="categories" id="cats"></div>
+
+  <!-- Tovar kartalari -->
+  <div class="product-grid" id="products"></div>
+
+  <!-- Pastki savat paneli -->
+  <div class="bottom-bar">
+    <div>
+      <div class="cart-summary-title" id="cartQtySummary">Savat: 0 ta</div>
+      <div class="cart-summary-val" id="cartTotalSummary">0 so'm</div>
+    </div>
+    <button class="btn-checkout" onclick="openCheckout()">Rasmiylashtirish 🛍</button>
+  </div>
+
+  <!-- Modal forma -->
+  <div class="sheet-modal" id="checkoutModal">
+    <div class="sheet-content">
+      <div class="sheet-handle"></div>
+      <h3 style="font-size:18px; font-weight:800; margin-bottom:16px;">Buyurtmani rasmiylashtirish</h3>
+      
+      <div class="form-group">
+        <label>Ism-familiyangiz:</label>
+        <input type="text" id="custName" class="form-control" placeholder="Masalan: Bekzodbek">
       </div>
 
-      <button class="order-btn" style="width:100%; margin-top:8px;" onclick="submitOrder()">Buyurtmani yuborish</button>
-      <button onclick="closeCheckout()" style="width:100%; background:none; border:none; color:#8e8e93; margin-top:10px; cursor:pointer;">Bekor qilish</button>
+      <div class="form-group">
+        <label>Telefon raqamingiz:</label>
+        <input type="tel" id="custPhone" class="form-control" placeholder="+998 90 123 45 67">
+      </div>
+
+      <div class="form-group">
+        <label>Yetkazib berish usuli:</label>
+        <select id="deliveryType" class="form-control" onchange="toggleDeliveryField()">
+          <option value="BTS">BTS Pochta (Viloyatlar bo'ylab)</option>
+          <option value="Taksi">Taksi orqali (Tezkor yetkazish)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label id="addrLabel">BTS filiali va tuman:</label>
+        <textarea id="custAddress" class="form-control" rows="2" placeholder="Viloyat, shahar/tuman va BTS filiali nomi..."></textarea>
+      </div>
+
+      <button class="btn-checkout" style="width:100%; padding:14px; margin-top:10px;" onclick="submitOrder()">Tasdiqlash va Yuborish 🚀</button>
+      <button onclick="closeCheckout()" style="width:100%; background:none; border:none; color:var(--hint); margin-top:12px; font-weight:600; cursor:pointer;">Yopish</button>
     </div>
   </div>
 
@@ -119,6 +215,15 @@
   if (tg) {
     tg.expand();
     tg.ready();
+  }
+
+  // Tebranish beruvchi funksiya
+  function triggerHaptic() {
+    try {
+      if (tg && tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('light');
+      }
+    } catch(e) {}
   }
 
   const productsData = [
@@ -137,15 +242,17 @@
 
   const brands = ['Barchasi', 'Samsung', 'Redmi', 'Honor', 'Huawei', 'iPhone', 'Vivo', 'Oppo', 'Tecno', 'Infinix'];
   let currentBrand = 'Barchasi';
+  let searchQuery = '';
   let cart = {};
 
   const catBox = document.getElementById('cats');
   brands.forEach(b => {
     const btn = document.createElement('button');
-    btn.className = 'cat-btn' + (b === currentBrand ? ' active' : '');
+    btn.className = 'cat-pill' + (b === currentBrand ? ' active' : '');
     btn.innerText = b;
     btn.onclick = () => {
-      document.querySelectorAll('.cat-btn').forEach(el => el.classList.remove('active'));
+      triggerHaptic();
+      document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
       btn.classList.add('active');
       currentBrand = b;
       renderProducts();
@@ -153,32 +260,65 @@
     catBox.appendChild(btn);
   });
 
+  function onSearch() {
+    searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+    renderProducts();
+  }
+
   function renderProducts() {
     const list = document.getElementById('products');
     list.innerHTML = '';
-    const filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
     
-    let totalQty = 0;
-    for (let id in cart) {
-      totalQty += cart[id];
+    let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
+    if (searchQuery) {
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.type.toLowerCase().includes(searchQuery));
     }
+
+    let totalQty = 0;
+    for (let id in cart) { totalQty += cart[id]; }
     const isWholesale = totalQty >= 15;
+
+    // Progress bar yangilash
+    const promoFill = document.getElementById('promoFill');
+    const promoCount = document.getElementById('promoCount');
+    const promoText = document.getElementById('promoText');
+    const percent = Math.min(100, Math.round((totalQty / 15) * 100));
+    promoFill.style.width = percent + '%';
+    promoCount.innerText = `${totalQty} / 15`;
+    
+    if (isWholesale) {
+      promoText.innerText = '🎉 Tabriklaymiz! Optom narx faollashdi!';
+      promoFill.style.background = '#10b981';
+    } else {
+      const left = 15 - totalQty;
+      promoText.innerText = `Optom narxgacha yana ${left} ta qoldi!`;
+      promoFill.style.background = '#38bdf8';
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--hint);">Hech narsa topilmadi 🔍</div>';
+      updateCartBar(totalQty, isWholesale);
+      return;
+    }
 
     filtered.forEach(p => {
       const qty = cart[p.id] || 0;
       const activePrice = isWholesale ? p.wholesale : p.retail;
       
       const div = document.createElement('div');
-      div.className = 'card';
+      div.className = 'product-card';
       div.innerHTML = `
-        <div>
-          <div class="card-title">${p.name} <span style="font-size:12px; color:#007aff;">(${p.type})</span></div>
-          <div class="card-sub">${p.brand}</div>
-          <div class="price">${activePrice.toLocaleString()} so'm ${isWholesale ? '<span class="badge">Optom</span>' : ''}</div>
+        <div class="prod-info">
+          <div class="prod-title">${p.name}</div>
+          <div class="prod-brand">${p.brand} • <span class="tag ${isWholesale ? 'optom' : ''}">${p.type}</span></div>
+          <div class="price-box">
+            <span class="price-main">${activePrice.toLocaleString()} so'm</span>
+            ${isWholesale ? `<span class="price-old">${p.retail.toLocaleString()}</span>` : ''}
+          </div>
         </div>
-        <div class="counter">
-          ${qty > 0 ? `<button onclick="changeQty(${p.id}, -1)">-</button><span>${qty}</span>` : ''}
-          <button onclick="changeQty(${p.id}, 1)">+</button>
+        <div class="counter-ui">
+          ${qty > 0 ? `<button class="btn-qty" style="background:transparent; color:var(--text);" onclick="changeQty(${p.id}, -1)">-</button><span class="qty-num">${qty}</span>` : ''}
+          <button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button>
         </div>
       `;
       list.appendChild(div);
@@ -188,10 +328,9 @@
   }
 
   function changeQty(id, delta) {
+    triggerHaptic();
     cart[id] = (cart[id] || 0) + delta;
-    if (cart[id] <= 0) {
-      delete cart[id];
-    }
+    if (cart[id] <= 0) delete cart[id];
     renderProducts();
   }
 
@@ -203,14 +342,15 @@
         totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
       }
     }
-    document.getElementById('cart-count').innerText = 'Savat: ' + totalQty + ' ta ' + (isWholesale ? '(Optom narxda)' : '');
-    document.getElementById('cart-total').innerText = totalSum.toLocaleString() + " so'm";
+    document.getElementById('cartQtySummary').innerText = `Savat: ${totalQty} ta ${isWholesale ? '(Optom)' : ''}`;
+    document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString() + " so'm";
   }
 
   function openCheckout() {
+    triggerHaptic();
     let totalQty = 0;
     for (let id in cart) { totalQty += cart[id]; }
-    if (totalQty === 0) return alert("Avval savatga tovar qo'shing!");
+    if (totalQty === 0) return alert("Iltimos, avval savatga tovar qo'shing!");
     document.getElementById('checkoutModal').style.display = 'flex';
   }
 
@@ -221,11 +361,12 @@
   function toggleDeliveryField() {
     const type = document.getElementById('deliveryType').value;
     document.getElementById('addrLabel').innerText = type === 'BTS' 
-      ? "BTS filiali va tuman:" 
-      : "Aniq lokatsiya yoki ko'cha nomi (Taksi uchun):";
+      ? "BTS filiali va shahar/tuman:" 
+      : "Aniq yetkazish manzili (Taksi uchun):";
   }
 
   function submitOrder() {
+    triggerHaptic();
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
     const delivery = document.getElementById('deliveryType').value;
@@ -243,6 +384,39 @@
       const p = productsData.find(item => item.id == id);
       if (p) {
         const price = isWholesale ? p.wholesale : p.retail;
+        const subtotal = price * cart[id];
+        totalSum += subtotal;
+        items.push({
+          name: p.name,
+          type: p.type,
+          qty: cart[id],
+          price: price,
+          subtotal: subtotal
+        });
+      }
+    }
+
+    const orderData = {
+      name: name,
+      phone: phone,
+      delivery: delivery,
+      address: address,
+      items: items,
+      total_qty: totalQty,
+      total_sum: totalSum,
+      price_type: isWholesale ? "Optom (15+)" : "Dona (Chakana)"
+    };
+
+    if (tg) {
+      tg.sendData(JSON.stringify(orderData));
+    }
+  }
+
+  renderProducts();
+</script>
+</body>
+</html>
+ ? p.wholesale : p.retail;
         const subtotal = price * cart[id];
         totalSum += subtotal;
         items.push({
