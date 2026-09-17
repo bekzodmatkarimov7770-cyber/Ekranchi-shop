@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ekranchi Do'kon</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f2f2f7; color: #1c1c1e;
+      padding-bottom: 90px;
+    }
+    .badge {
+      background: #34c759; color: white; padding: 3px 6px;
+      border-radius: 6px; font-size: 11px; margin-left: 6px; font-weight: bold;
+    }
+    .notice {
+      margin-bottom: 12px; font-size: 13px; color: #3a3a3c;
+      background: #e5e5ea; padding: 10px 12px; border-radius: 10px;
+    }
+    .categories {
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
+      margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .categories::-webkit-scrollbar { display: none; }
+    .cat-btn {
+      background: #ffffff; border: 1px solid #d1d1d6; padding: 8px 14px;
+      border-radius: 16px; font-weight: 500; font-size: 14px; white-space: nowrap; cursor: pointer;
+    }
+    .cat-btn.active { background: #007aff; color: #ffffff; border-color: #007aff; }
+    .product-list { display: flex; flex-direction: column; gap: 10px; }
+    .card {
+      background: #ffffff; padding: 12px 14px; border-radius: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .card-title { font-weight: 600; font-size: 15px; }
+    .card-sub { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+    .price { font-weight: bold; color: #007aff; margin-top: 4px; font-size: 14px; }
+    .counter { display: flex; align-items: center; gap: 10px; }
+    .counter button {
+      background: #007aff; color: white; border: none;
+      width: 32px; height: 32px; border-radius: 8px; font-size: 18px; font-weight: bold;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .counter span { font-weight: bold; font-size: 15px; min-width: 22px; text-align: center; }
+    .cart-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #ffffff; padding: 12px 16px; border-top: 1px solid #d1d1d6;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.08); z-index: 100;
+    }
+    .modal {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      align-items: flex-end; z-index: 999;
+    }
+    .modal-content {
+      background: #ffffff; width: 100%; border-radius: 16px 16px 0 0;
+      padding: 18px 16px; max-height: 85vh; overflow-y: auto;
+    }
+    input, select, textarea {
+      width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 8px;
+      border: 1px solid #c7c7cc; font-size: 14px; font-family: inherit;
+    }
+    .order-btn {
+      padding: 12px 20px; background: #007aff; color: white;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="notice">
+    💡 <b>Optom chegirma:</b> Jami ekranlar soni 15 taga yetganda barcha narxlar avtomatik optomga o'tadi!
+  </div>
+
+  <div class="categories" id="cats"></div>
+  <div class="product-list" id="products"></div>
+
+  <div class="cart-bar">
+    <div>
+      <div id="cart-count" style="font-size:12px; color:#8e8e93;">Savat: 0 ta</div>
+      <div id="cart-total" style="font-size:16px; font-weight:bold; color:#1c1c1e;">0 so'm</div>
+    </div>
+    <button class="order-btn" onclick="openCheckout()">Rasmiylashtirish</button>
+  </div>
+
+  <div class="modal" id="checkoutModal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">Buyurtmani rasmiylashtirish</h3>
+      
+      <label>Ismingiz:</label>
+      <input type="text" id="custName" placeholder="Ismingizni kiriting">
+      
+      <label>Telefon raqamingiz:</label>
+      <input type="tel" id="custPhone" placeholder="+998901234567">
+      
+      <label>Yetkazib berish turi:</label>
+      <select id="deliveryType" onchange="toggleDeliveryField()">
+        <option value="BTS">BTS Pochta (Viloyatlar)</option>
+        <option value="Taksi">Taksi orqali (Tezkor)</option>
+      </select>
+
+      <div id="addressBox">
+        <label id="addrLabel">BTS filiali va tuman:</label>
+        <textarea id="custAddress" rows="2" placeholder="Viloyat, tuman yoki manzil..."></textarea>
+      </div>
+
+      <button class="order-btn" style="width:100%; margin-top:8px;" onclick="submitOrder()">Buyurtmani yuborish</button>
+      <button onclick="closeCheckout()" style="width:100%; background:none; border:none; color:#8e8e93; margin-top:10px; cursor:pointer;">Bekor qilish</button>
+    </div>
+  </div>
+
+<script>
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (tg) {
+    tg.expand();
+    tg.ready();
+  }
+
+  const productsData = [
+    { id: 1, brand: 'Samsung', name: 'Samsung A14 5G', type: 'Original', wholesale: 180000, retail: 220000 },
+    { id: 2, brand: 'Samsung', name: 'Samsung A12', type: 'BOE Zavod', wholesale: 140000, retail: 175000 },
+    { id: 3, brand: 'Redmi', name: 'Redmi Note 12', type: 'FOG', wholesale: 150000, retail: 190000 },
+    { id: 4, brand: 'Honor', name: 'Honor 90', type: 'Original', wholesale: 310000, retail: 370000 },
+    { id: 5, brand: 'Honor', name: 'Honor 200', type: 'OLED', wholesale: 350000, retail: 420000 },
+    { id: 6, brand: 'Huawei', name: 'Huawei Nova 9', type: 'OLED', wholesale: 280000, retail: 340000 },
+    { id: 7, brand: 'iPhone', name: 'iPhone 11', type: 'Incell', wholesale: 210000, retail: 260000 },
+    { id: 8, brand: 'Vivo', name: 'Vivo Y20', type: 'Original', wholesale: 130000, retail: 165000 },
+    { id: 9, brand: 'Oppo', name: 'Oppo A54', type: 'TFT', wholesale: 135000, retail: 170000 },
+    { id: 10, brand: 'Tecno', name: 'Tecno Spark 10C', type: 'Oddiy', wholesale: 125000, retail: 160000 },
+    { id: 11, brand: 'Infinix', name: 'Infinix Hot 30', type: 'Oddiy', wholesale: 130000, retail: 165000 }
+  ];
+
+  const brands = ['Barchasi', 'Samsung', 'Redmi', 'Honor', 'Huawei', 'iPhone', 'Vivo', 'Oppo', 'Tecno', 'Infinix'];
+  let currentBrand = 'Barchasi';
+  let cart = {};
+
+  const catBox = document.getElementById('cats');
+  brands.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (b === currentBrand ? ' active' : '');
+    btn.innerText = b;
+    btn.onclick = () => {
+      document.querySelectorAll('.cat-btn').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      currentBrand = b;
+      renderProducts();
+    };
+    catBox.appendChild(btn);
+  });
+
+  function renderProducts() {
+    const list = document.getElementById('products');
+    list.innerHTML = '';
+    const filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
+    
+    let totalQty = 0;
+    for (let id in cart) {
+      totalQty += cart[id];
+    }
+    const isWholesale = totalQty >= 15;
+
+    filtered.forEach(p => {
+      const qty = cart[p.id] || 0;
+      const activePrice = isWholesale ? p.wholesale : p.retail;
+      
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <div>
+          <div class="card-title">${p.name} <span style="font-size:12px; color:#007aff;">(${p.type})</span></div>
+          <div class="card-sub">${p.brand}</div>
+          <div class="price">${activePrice.toLocaleString()} so'm ${isWholesale ? '<span class="badge">Optom</span>' : ''}</div>
+        </div>
+        <div class="counter">
+          ${qty > 0 ? `<button onclick="changeQty(${p.id}, -1)">-</button><span>${qty}</span>` : ''}
+          <button onclick="changeQty(${p.id}, 1)">+</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+
+    updateCartBar(totalQty, isWholesale);
+  }
+
+  function changeQty(id, delta) {
+    cart[id] = (cart[id] || 0) + delta;
+    if (cart[id] <= 0) {
+      delete cart[id];
+    }
+    renderProducts();
+  }
+
+  function updateCartBar(totalQty, isWholesale) {
+    let totalSum = 0;
+    for (let id in cart) {
+      const p = productsData.find(item => item.id == id);
+      if (p) {
+        totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
+      }
+    }
+    document.getElementById('cart-count').innerText = 'Savat: ' + totalQty + ' ta ' + (isWholesale ? '(Optom narxda)' : '');
+    document.getElementById('cart-total').innerText = totalSum.toLocaleString() + " so'm";
+  }
+
+  function openCheckout() {
+    let totalQty = 0;
+    for (let id in cart) { totalQty += cart[id]; }
+    if (totalQty === 0) return alert("Avval savatga tovar qo'shing!");
+    document.getElementById('checkoutModal').style.display = 'flex';
+  }
+
+  function closeCheckout() {
+    document.getElementById('checkoutModal').style.display = 'none';
+  }
+
+  function toggleDeliveryField() {
+    const type = document.getElementById('deliveryType').value;
+    document.getElementById('addrLabel').innerText = type === 'BTS' 
+      ? "BTS filiali va tuman:" 
+      : "Aniq lokatsiya yoki ko'cha nomi (Taksi uchun):";
+  }
+
+  function submitOrder() {
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const delivery = document.getElementById('deliveryType').value;
+    const address = document.getElementById('custAddress').value.trim();
+
+    if (!name || !phone || !address) return alert("Iltimos, barcha maydonlarni to'ldiring!");
+
+    let totalQty = 0;
+    for (let id in cart) { totalQty += cart[id]; }
+    const isWholesale = totalQty >= 15;
+    
+    let totalSum = 0;
+    const items = [];
+    for (let id in cart) {
+      const p = productsData.find(item => item.id == id);
+      if (p) {
+        const price = isWholesale ? p.wholesale : p.retail;
+        const subtotal = price * cart[id];
+        totalSum += subtotal;
+        items.push({
+          name: p.name,
+          type: p.type,
+          qty: cart[id],
+          price: price,
+          subtotal: subtotal
+        });
+      }
+    }
+
+    const orderData = {
+      name: name,
+      phone: phone,
+      delivery: delivery,
+      address: address,
+      items: items,
+      total_qty: totalQty,
+      total_sum: totalSum,
+      price_type: isWholesale ? "Optom (15+)" : "Dona (Chakana)"
+    };
+
+    if (tg) {
+      tg.sendData(JSON.stringify(orderData));
+    }
+  }
+
+  renderProducts();
+</script>
+</body>
+</html>
