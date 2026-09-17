@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Barcha tovarlar va reklamalarni xavfsiz yuklash: -->
-  <script src="data.js?v=201"></script>
+  <script src="data.js?v=sale101"></script>
   <style>
     :root {
       --bg: var(--tg-theme-bg-color, #f8f9fd);
@@ -55,6 +54,11 @@
     .product-card {
       background: var(--card-bg); border-radius: 16px; padding: 12px 14px;
       display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-color);
+      position: relative;
+    }
+    .product-card.has-sale {
+      border: 1.5px solid rgba(220, 38, 38, 0.25);
+      background: linear-gradient(180deg, rgba(254, 242, 242, 0.4) 0%, var(--card-bg) 100%);
     }
     .product-card.out-of-stock { opacity: 0.55; }
     .prod-thumb { width: 65px; height: 65px; border-radius: 12px; object-fit: cover; background: #eef1f6; flex-shrink: 0; }
@@ -64,18 +68,30 @@
     .tag-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
     .tag { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 600; background: rgba(36, 129, 204, 0.1); color: var(--primary); }
     .tag.optom { background: rgba(16, 185, 129, 0.15); color: #059669; }
+    
+    /* QIZIL CHEGIRMA VA NARX DIZAYNI */
+    .badge-sale {
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+      color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px;
+      border-radius: 6px; display: inline-flex; align-items: center; gap: 2px;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+    }
+    .price-box { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .price-main { font-size: 15px; font-weight: 800; color: var(--primary); }
+    .price-main.sale-red { color: #dc2626; font-size: 16px; font-weight: 900; }
+    .price-old { font-size: 11px; color: #9ca3af; text-decoration: line-through; }
+    
     .stock-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
     .stock-available { background: rgba(16, 185, 129, 0.12); color: #059669; }
     .stock-low { background: rgba(245, 158, 11, 0.15); color: #d97706; }
     .stock-out { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
-    .price-box { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
-    .price-main { font-size: 15px; font-weight: 800; color: var(--primary); }
-    .price-old { font-size: 11px; color: var(--hint); text-decoration: line-through; }
+
     .counter-ui { display: flex; align-items: center; background: rgba(142, 149, 163, 0.08); border-radius: 12px; padding: 4px; gap: 6px; }
     .btn-qty {
       width: 32px; height: 32px; border-radius: 9px; border: none; background: var(--primary);
       color: var(--primary-text); font-size: 17px; font-weight: bold; cursor: pointer;
     }
+    .btn-qty.btn-sale { background: #dc2626; }
     .btn-qty:disabled { background: #d1d5db; cursor: not-allowed; color: #9ca3af; }
     .qty-num { font-weight: 700; font-size: 14px; min-width: 18px; text-align: center; }
     .bottom-bar {
@@ -157,7 +173,6 @@
   if (tg) { tg.expand(); tg.ready(); }
   function triggerHaptic() { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e) {} }
 
-  // Banner rotatsiyasi
   let currentBannerIdx = 0;
   function renderBanners() {
     if (typeof bannersData === 'undefined' || !bannersData.length) return;
@@ -232,29 +247,46 @@
 
     filtered.forEach(p => {
       const qty = cart[p.id] || 0;
-      const activePrice = isWholesale ? p.wholesale : p.retail;
       const isOut = p.stock <= 0;
       const isLow = p.stock > 0 && p.stock <= 5;
+      
+      // Chegirma mavjudligini tekshirish
+      const hasDiscount = !isWholesale && p.old_retail && p.old_retail > p.retail;
+
       let stockBadge = isOut ? '<span class="stock-tag stock-out">Tugagan</span>' :
                        (isLow ? '<span class="stock-tag stock-low">Oz qoldi (' + p.stock + ' ta)</span>' :
                                 '<span class="stock-tag stock-available">Omborda bor (' + p.stock + ' ta)</span>');
 
+      // Narx bloki shakllanishi
+      let priceBoxHtml = '';
+      if (isWholesale) {
+        priceBoxHtml = `
+          <span class="price-main">${p.wholesale.toLocaleString()} so'm</span>
+          <span class="price-old">${p.retail.toLocaleString()}</span>
+        `;
+      } else if (hasDiscount) {
+        priceBoxHtml = `
+          <span class="price-main sale-red">${p.retail.toLocaleString()} so'm</span>
+          <span class="price-old">${p.old_retail.toLocaleString()}</span>
+          <span class="badge-sale">🔥 AKSIYA</span>
+        `;
+      } else {
+        priceBoxHtml = `<span class="price-main">${p.retail.toLocaleString()} so'm</span>`;
+      }
+
       const div = document.createElement('div');
-      div.className = 'product-card' + (isOut ? ' out-of-stock' : '');
+      div.className = `product-card ${isOut ? 'out-of-stock' : ''} ${hasDiscount ? 'has-sale' : ''}`;
       div.innerHTML = `
         <img src="${p.img}" class="prod-thumb" alt="${p.name}">
         <div class="prod-info">
           <div class="prod-title">${p.name}</div>
           <div class="prod-brand">${p.brand} • <span class="tag ${isWholesale ? 'optom' : ''}">${p.type}</span></div>
           <div class="tag-row">${stockBadge}</div>
-          <div class="price-box">
-            <span class="price-main">${activePrice.toLocaleString()} so'm</span>
-            ${isWholesale ? `<span class="price-old">${p.retail.toLocaleString()}</span>` : ''}
-          </div>
+          <div class="price-box">${priceBoxHtml}</div>
         </div>
         <div class="counter-ui">
           ${qty > 0 ? `<button class="btn-qty" style="background:transparent; color:var(--text);" onclick="changeQty(${p.id}, -1)">-</button><span class="qty-num">${qty}</span>` : ''}
-          <button class="btn-qty" ${isOut || qty >= p.stock ? 'disabled' : ''} onclick="changeQty(${p.id}, 1)">+</button>
+          <button class="btn-qty ${hasDiscount ? 'btn-sale' : ''}" ${isOut || qty >= p.stock ? 'disabled' : ''} onclick="changeQty(${p.id}, 1)">+</button>
         </div>
       `;
       list.appendChild(div);
