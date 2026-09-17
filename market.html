@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Barcha tovarlar va reklamalarni xavfsiz yuklash: -->
+  <script src="data.js?v=201"></script>
   <style>
     :root {
       --bg: var(--tg-theme-bg-color, #f8f9fd);
@@ -13,13 +15,10 @@
       --hint: var(--tg-theme-hint-color, #8e95a3);
       --primary: var(--tg-theme-button-color, #2481cc);
       --primary-text: var(--tg-theme-button-text-color, #ffffff);
-      --accent-green: #10b981;
       --border-color: rgba(0, 0, 0, 0.06);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
     body { background-color: var(--bg); color: var(--text); padding: 14px 14px 100px; }
-
     .search-container { position: sticky; top: 0; z-index: 20; background: var(--bg); padding-bottom: 10px; }
     .search-box {
       background: var(--card-bg); border: 1px solid var(--border-color);
@@ -27,153 +26,88 @@
       gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     }
     .search-box input { border: none; outline: none; background: transparent; width: 100%; font-size: 15px; color: var(--text); }
-
-    /* REKLAMA VA YANGILIKLAR BANERI DIZAYNI */
     .promo-banner {
-      position: relative; border-radius: 14px; overflow: hidden;
-      margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 12px;
       min-height: 82px; display: flex; align-items: center; padding: 12px 16px;
-      color: #ffffff; transition: background 0.5s ease;
+      color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
-    .banner-badge {
-      position: absolute; top: 8px; right: 12px; font-size: 10px;
-      font-weight: 800; background: rgba(0,0,0,0.25); padding: 2px 7px;
-      border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;
-    }
+    .banner-badge { position: absolute; top: 8px; right: 12px; font-size: 10px; font-weight: 800; background: rgba(0,0,0,0.25); padding: 2px 7px; border-radius: 6px; }
     .banner-title { font-size: 14px; font-weight: 800; line-height: 1.3; margin-bottom: 3px; max-width: 85%; }
     .banner-desc { font-size: 12px; opacity: 0.9; line-height: 1.3; }
-    .banner-dots {
-      position: absolute; bottom: 8px; right: 12px; display: flex; gap: 4px;
-    }
-    .banner-dot {
-      width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.4);
-      transition: all 0.3s ease;
-    }
+    .banner-dots { position: absolute; bottom: 8px; right: 12px; display: flex; gap: 4px; }
+    .banner-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.4); }
     .banner-dot.active { width: 14px; border-radius: 4px; background: #ffffff; }
-
-    /* Optom progress-bari */
     .promo-card {
       background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
       color: #fff; padding: 12px 16px; border-radius: 14px; margin-bottom: 12px;
-      box-shadow: 0 4px 12px rgba(33, 82, 155, 0.15);
     }
     .promo-title { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 6px; }
     .progress-bar-bg { background: rgba(255,255,255,0.25); border-radius: 20px; height: 7px; overflow: hidden; }
     .progress-bar-fill { background: #10b981; height: 100%; width: 0%; border-radius: 20px; transition: width 0.4s ease; }
-
     .categories { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 6px; scrollbar-width: none; }
     .categories::-webkit-scrollbar { display: none; }
     .cat-pill {
       background: var(--card-bg); color: var(--hint); border: 1px solid var(--border-color);
-      padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
-      white-space: nowrap; cursor: pointer; transition: all 0.2s;
+      padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
     }
-    .cat-pill.active {
-      background: var(--primary); color: var(--primary-text);
-      border-color: var(--primary); box-shadow: 0 2px 10px rgba(36, 129, 204, 0.3);
-    }
-
+    .cat-pill.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
     .product-grid { display: flex; flex-direction: column; gap: 10px; }
     .product-card {
       background: var(--card-bg); border-radius: 16px; padding: 12px 14px;
-      display: flex; align-items: center; gap: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03); border: 1px solid var(--border-color);
-      position: relative;
+      display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-color);
     }
     .product-card.out-of-stock { opacity: 0.55; }
-
-    .prod-thumb {
-      width: 65px; height: 65px; border-radius: 12px; object-fit: cover;
-      background: #eef1f6; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.04);
-    }
-
+    .prod-thumb { width: 65px; height: 65px; border-radius: 12px; object-fit: cover; background: #eef1f6; flex-shrink: 0; }
     .prod-info { flex: 1; }
     .prod-title { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.2; }
     .prod-brand { font-size: 12px; color: var(--hint); margin: 3px 0; }
-    
     .tag-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
-    .tag {
-      display: inline-block; padding: 2px 7px; border-radius: 6px;
-      font-size: 10px; font-weight: 600; background: rgba(36, 129, 204, 0.1); color: var(--primary);
-    }
+    .tag { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 600; background: rgba(36, 129, 204, 0.1); color: var(--primary); }
     .tag.optom { background: rgba(16, 185, 129, 0.15); color: #059669; }
-    
     .stock-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
     .stock-available { background: rgba(16, 185, 129, 0.12); color: #059669; }
     .stock-low { background: rgba(245, 158, 11, 0.15); color: #d97706; }
     .stock-out { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
-
     .price-box { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
     .price-main { font-size: 15px; font-weight: 800; color: var(--primary); }
     .price-old { font-size: 11px; color: var(--hint); text-decoration: line-through; }
-
-    .counter-ui {
-      display: flex; align-items: center; background: rgba(142, 149, 163, 0.08);
-      border-radius: 12px; padding: 4px; gap: 6px; flex-shrink: 0;
-    }
+    .counter-ui { display: flex; align-items: center; background: rgba(142, 149, 163, 0.08); border-radius: 12px; padding: 4px; gap: 6px; }
     .btn-qty {
-      width: 32px; height: 32px; border-radius: 9px; border: none;
-      background: var(--primary); color: var(--primary-text);
-      font-size: 17px; font-weight: bold; display: flex; align-items: center;
-      justify-content: center; cursor: pointer;
+      width: 32px; height: 32px; border-radius: 9px; border: none; background: var(--primary);
+      color: var(--primary-text); font-size: 17px; font-weight: bold; cursor: pointer;
     }
     .btn-qty:disabled { background: #d1d5db; cursor: not-allowed; color: #9ca3af; }
-    .btn-qty:active:not(:disabled) { transform: scale(0.92); }
     .qty-num { font-weight: 700; font-size: 14px; min-width: 18px; text-align: center; }
-
     .bottom-bar {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--card-bg); padding: 14px 18px;
-      border-top: 1px solid var(--border-color);
-      display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.06); z-index: 100;
+      position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg);
+      padding: 14px 18px; border-top: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center; z-index: 100;
     }
-    .cart-summary-title { font-size: 12px; color: var(--hint); }
-    .cart-summary-val { font-size: 17px; font-weight: 900; color: var(--text); }
-    .btn-checkout {
-      background: var(--primary); color: var(--primary-text);
-      border: none; border-radius: 14px; padding: 12px 22px;
-      font-size: 15px; font-weight: 700; cursor: pointer;
-    }
-
-    .sheet-modal {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(4px); z-index: 999; align-items: flex-end;
-    }
-    .sheet-content {
-      background: var(--card-bg); width: 100%; border-radius: 24px 24px 0 0;
-      padding: 20px 20px 30px; max-height: 85vh; overflow-y: auto;
-    }
-    .sheet-handle { width: 40px; height: 5px; background: #d1d5db; border-radius: 10px; margin: 0 auto 16px; }
+    .btn-checkout { background: var(--primary); color: var(--primary-text); border: none; border-radius: 14px; padding: 12px 22px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .sheet-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; align-items: flex-end; }
+    .sheet-content { background: var(--card-bg); width: 100%; border-radius: 24px 24px 0 0; padding: 20px 20px 30px; max-height: 85vh; overflow-y: auto; }
     .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
-    .form-control {
-      width: 100%; padding: 11px 13px; border-radius: 12px; border: 1.5px solid var(--border-color);
-      background: var(--bg); color: var(--text); font-size: 14px; outline: none;
-    }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    .form-control { width: 100%; padding: 11px 13px; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
   </style>
 </head>
 <body>
-
-  <!-- Qidiruv -->
   <div class="search-container">
     <div class="search-box">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--hint)"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <input type="text" id="searchInput" placeholder="Model qidirish (A14, Note 12, Honor)..." oninput="onSearch()">
     </div>
   </div>
 
-  <!-- REKLAMA / YANGILIKLAR BANERI -->
   <div class="promo-banner" id="bannerBox" onclick="nextBanner()">
     <span class="banner-badge" id="bannerBadge">Aksiya</span>
     <div>
-      <div class="banner-title" id="bannerTitle">Yangi partiya ekranlar keldi!</div>
-      <div class="banner-desc" id="bannerDesc">Barcha zavod sifatli displeylar omborda mavjud.</div>
+      <div class="banner-title" id="bannerTitle">Yuklanmoqda...</div>
+      <div class="banner-desc" id="bannerDesc"></div>
     </div>
     <div class="banner-dots" id="bannerDots"></div>
   </div>
 
-  <!-- Optom progress-bari -->
   <div class="promo-card">
     <div class="promo-title">
       <span id="promoText">⚡️ 15 ta ekranga optom narx!</span>
@@ -184,32 +118,24 @@
     </div>
   </div>
 
-  <!-- Brendlar -->
   <div class="categories" id="cats"></div>
-
-  <!-- Tovar kartalari -->
   <div class="product-grid" id="products"></div>
 
-  <!-- Savat paneli -->
   <div class="bottom-bar">
     <div>
-      <div class="cart-summary-title" id="cartQtySummary">Savat: 0 ta</div>
-      <div class="cart-summary-val" id="cartTotalSummary">0 so'm</div>
+      <div style="font-size:12px; color:var(--hint);" id="cartQtySummary">Savat: 0 ta</div>
+      <div style="font-size:17px; font-weight:900;" id="cartTotalSummary">0 so'm</div>
     </div>
     <button class="btn-checkout" onclick="openCheckout()">Rasmiylashtirish 🛍</button>
   </div>
 
-  <!-- Modal -->
   <div class="sheet-modal" id="checkoutModal">
     <div class="sheet-content">
-      <div class="sheet-handle"></div>
       <h3 style="font-size:18px; font-weight:800; margin-bottom:14px;">Buyurtmani rasmiylashtirish</h3>
-      
       <div class="form-group">
         <label>Ism-sharifingiz:</label>
-        <input type="text" id="custName" class="form-control" placeholder="Bekzodbek">
+        <input type="text" id="custName" class="form-control" placeholder="Ismingiz">
       </div>
-
       <div class="form-group">
         <label>Yetkazib berish turi:</label>
         <select id="deliveryType" class="form-control" onchange="toggleDeliveryField()">
@@ -217,13 +143,11 @@
           <option value="Taksi">Taksi orqali (Tezkor)</option>
         </select>
       </div>
-
       <div class="form-group">
         <label id="addrLabel">BTS filiali va shahar/tuman:</label>
-        <textarea id="custAddress" class="form-control" rows="2" placeholder="Viloyat, shahar/tuman..."></textarea>
+        <textarea id="custAddress" class="form-control" rows="2" placeholder="Manzil..."></textarea>
       </div>
-
-      <button class="btn-checkout" style="width:100%; padding:14px; margin-top:8px;" onclick="submitOrder()">Tasdiqlash 🚀</button>
+      <button class="btn-checkout" style="width:100%; padding:14px;" onclick="submitOrder()">Tasdiqlash 🚀</button>
       <button onclick="closeCheckout()" style="width:100%; background:none; border:none; color:var(--hint); margin-top:10px; font-weight:600; cursor:pointer;">Yopish</button>
     </div>
   </div>
@@ -231,43 +155,18 @@
 <script>
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
   if (tg) { tg.expand(); tg.ready(); }
+  function triggerHaptic() { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e) {} }
 
-  function triggerHaptic() {
-    try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
-  }
-
-  // --- REKLAMA VA YANGILIKLAR RO'YXATI ---
-  // Istalgan vaqtda shu yerdan yangi e'lon qo'shishingiz yoki o'zgartirishingiz mumkin:
-  const bannersData = [
-    {
-      badge: "YANGILIK",
-      title: "🔥 Yangi original partiya keldi!",
-      desc: "Samsung, Redmi va Honor uchun yangi zavod displeylari omborda.",
-      bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)"
-    },
-    {
-      badge: "YETKAZISH",
-      title: "🚚 Viloyatlarga tezkor BTS Pochta!",
-      desc: "Toshkent bo'yicha taksi orqali bir necha soatda yetkazib beramiz.",
-      bg: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"
-    },
-    {
-      badge: "AKSIYA",
-      title: "🎁 15+ xarid uchun ulgurji narx!",
-      desc: "Savatga 15 ta ekran to'plang va avtomatik optom chegirmaga ega bo'ling.",
-      bg: "linear-gradient(135deg, #f12711 0%, #f5af19 100%)"
-    }
-  ];
-
+  // Banner rotatsiyasi
   let currentBannerIdx = 0;
   function renderBanners() {
+    if (typeof bannersData === 'undefined' || !bannersData.length) return;
     const b = bannersData[currentBannerIdx];
     const box = document.getElementById('bannerBox');
     box.style.background = b.bg;
     document.getElementById('bannerBadge').innerText = b.badge;
     document.getElementById('bannerTitle').innerText = b.title;
     document.getElementById('bannerDesc').innerText = b.desc;
-
     const dotsContainer = document.getElementById('bannerDots');
     dotsContainer.innerHTML = '';
     bannersData.forEach((_, i) => {
@@ -276,73 +175,12 @@
       dotsContainer.appendChild(dot);
     });
   }
-
   function nextBanner() {
+    if (typeof bannersData === 'undefined') return;
     currentBannerIdx = (currentBannerIdx + 1) % bannersData.length;
     renderBanners();
   }
-  // Har 4 soniyada o'zi avtomatik almashib turadi
   setInterval(nextBanner, 4000);
-  renderBanners();
-
-  // --- MAHSULOTLAR RO'YXATI ---
-  const productsData = [
-    { 
-      id: 1, brand: 'Samsung', name: 'Samsung A14 5G', type: 'Original', 
-      wholesale: 180000, retail: 220000, stock: 35,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 2, brand: 'Samsung', name: 'Samsung A12', type: 'BOE Zavod', 
-      wholesale: 140000, retail: 175000, stock: 4,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 3, brand: 'Redmi', name: 'Redmi Note 12', type: 'FOG', 
-      wholesale: 150000, retail: 190000, stock: 0,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 4, brand: 'Honor', name: 'Honor 90', type: 'Original', 
-      wholesale: 310000, retail: 370000, stock: 12,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 5, brand: 'Honor', name: 'Honor 200', type: 'OLED', 
-      wholesale: 350000, retail: 420000, stock: 20,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 6, brand: 'Huawei', name: 'Huawei Nova 9', type: 'OLED', 
-      wholesale: 280000, retail: 340000, stock: 7,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 7, brand: 'iPhone', name: 'iPhone 11', type: 'Incell', 
-      wholesale: 210000, retail: 260000, stock: 15,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 8, brand: 'Vivo', name: 'Vivo Y20', type: 'Original', 
-      wholesale: 130000, retail: 165000, stock: 10,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 9, brand: 'Oppo', name: 'Oppo A54', type: 'TFT', 
-      wholesale: 135000, retail: 170000, stock: 0,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 10, brand: 'Tecno', name: 'Tecno Spark 10C', type: 'Oddiy', 
-      wholesale: 125000, retail: 160000, stock: 18,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 11, brand: 'Infinix', name: 'Infinix Hot 30', type: 'Oddiy', 
-      wholesale: 130000, retail: 165000, stock: 9,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    }
-  ];
 
   const brands = ['Barchasi', 'Samsung', 'Redmi', 'Honor', 'Huawei', 'iPhone', 'Vivo', 'Oppo', 'Tecno', 'Infinix'];
   let currentBrand = 'Barchasi';
@@ -370,34 +208,23 @@
   }
 
   function renderProducts() {
+    if (typeof productsData === 'undefined') return;
     const list = document.getElementById('products');
     list.innerHTML = '';
-    
     let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
     if (searchQuery) {
       filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.type.toLowerCase().includes(searchQuery));
     }
-
     let totalQty = 0;
-    for (let id in cart) { totalQty += cart[id]; }
+    for (let id in cart) totalQty += cart[id];
     const isWholesale = totalQty >= 15;
 
     const promoFill = document.getElementById('promoFill');
-    const promoCount = document.getElementById('promoCount');
-    const promoText = document.getElementById('promoText');
-    const percent = Math.min(100, Math.round((totalQty / 15) * 100));
-    promoFill.style.width = percent + '%';
-    promoCount.innerText = totalQty + ' / 15';
-    
-    if (isWholesale) {
-      promoText.innerText = '🎉 Tabriklaymiz! Optom narx faollashdi!';
-      promoFill.style.background = '#10b981';
-    } else {
-      promoText.innerText = 'Optom narxgacha yana ' + (15 - totalQty) + ' ta qoldi!';
-      promoFill.style.background = '#38bdf8';
-    }
+    promoFill.style.width = Math.min(100, Math.round((totalQty / 15) * 100)) + '%';
+    document.getElementById('promoCount').innerText = totalQty + ' / 15';
+    document.getElementById('promoText').innerText = isWholesale ? '🎉 Tabriklaymiz! Optom narx faollashdi!' : 'Optom narxgacha yana ' + (15 - totalQty) + ' ta qoldi!';
 
-    if (filtered.length === 0) {
+    if (!filtered.length) {
       list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--hint);">Hech narsa topilmadi 🔍</div>';
       updateCartBar(totalQty, isWholesale);
       return;
@@ -408,20 +235,14 @@
       const activePrice = isWholesale ? p.wholesale : p.retail;
       const isOut = p.stock <= 0;
       const isLow = p.stock > 0 && p.stock <= 5;
+      let stockBadge = isOut ? '<span class="stock-tag stock-out">Tugagan</span>' :
+                       (isLow ? '<span class="stock-tag stock-low">Oz qoldi (' + p.stock + ' ta)</span>' :
+                                '<span class="stock-tag stock-available">Omborda bor (' + p.stock + ' ta)</span>');
 
-      let stockBadge = '';
-      if (isOut) {
-        stockBadge = '<span class="stock-tag stock-out">Tugagan</span>';
-      } else if (isLow) {
-        stockBadge = '<span class="stock-tag stock-low">Oz qoldi (' + p.stock + ' ta)</span>';
-      } else {
-        stockBadge = '<span class="stock-tag stock-available">Omborda bor (' + p.stock + ' ta)</span>';
-      }
-      
       const div = document.createElement('div');
       div.className = 'product-card' + (isOut ? ' out-of-stock' : '');
       div.innerHTML = `
-        <img src="${p.img}" class="prod-thumb" alt="${p.name}" loading="lazy">
+        <img src="${p.img}" class="prod-thumb" alt="${p.name}">
         <div class="prod-info">
           <div class="prod-title">${p.name}</div>
           <div class="prod-brand">${p.brand} • <span class="tag ${isWholesale ? 'optom' : ''}">${p.type}</span></div>
@@ -438,20 +259,14 @@
       `;
       list.appendChild(div);
     });
-
     updateCartBar(totalQty, isWholesale);
   }
 
   function changeQty(id, delta) {
     const p = productsData.find(item => item.id == id);
     if (!p) return;
-
     const currentQty = cart[id] || 0;
-    if (delta > 0 && currentQty >= p.stock) {
-      alert("Omborda bu ekrandan jami " + p.stock + " ta mavjud!");
-      return;
-    }
-
+    if (delta > 0 && currentQty >= p.stock) return alert("Omborda jami " + p.stock + " ta mavjud!");
     triggerHaptic();
     cart[id] = currentQty + delta;
     if (cart[id] <= 0) delete cart[id];
@@ -469,34 +284,26 @@
   }
 
   function openCheckout() {
-    triggerHaptic();
     let totalQty = 0;
     for (let id in cart) totalQty += cart[id];
-    if (totalQty === 0) return alert("Avval savatga tovar qo'shing!");
+    if (!totalQty) return alert("Avval savatga tovar qo'shing!");
     document.getElementById('checkoutModal').style.display = 'flex';
   }
-
-  function closeCheckout() {
-    document.getElementById('checkoutModal').style.display = 'none';
-  }
-
+  function closeCheckout() { document.getElementById('checkoutModal').style.display = 'none'; }
   function toggleDeliveryField() {
     const type = document.getElementById('deliveryType').value;
     document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tuman:" : "Yetkazish manzili (Taksi uchun):";
   }
 
   function submitOrder() {
-    triggerHaptic();
     const name = document.getElementById('custName').value.trim();
     const delivery = document.getElementById('deliveryType').value;
     const address = document.getElementById('custAddress').value.trim();
-
-    if (!name || !address) return alert("Iltimos, ism va manzilni to'ldiring!");
+    if (!name || !address) return alert("Iltimos, maydonlarni to'ldiring!");
 
     let totalQty = 0;
     for (let id in cart) totalQty += cart[id];
     const isWholesale = totalQty >= 15;
-    
     let totalSum = 0;
     const items = [];
     for (let id in cart) {
@@ -508,287 +315,10 @@
         items.push({ name: p.name, type: p.type, qty: cart[id], price: price, subtotal: subtotal });
       }
     }
-
-    const orderData = {
-      name: name,
-      delivery: delivery,
-      address: address,
-      items: items,
-      total_qty: totalQty,
-      total_sum: totalSum,
-      price_type: isWholesale ? "Optom (15+)" : "Dona (Chakana)"
-    };
-
-    if (tg) tg.sendData(JSON.stringify(orderData));
+    if (tg) tg.sendData(JSON.stringify({ name, delivery, address, items, total_qty: totalQty, total_sum: totalSum, price_type: isWholesale ? "Optom (15+)" : "Dona (Chakana)" }));
   }
 
-  renderProducts();
-</script>
-</body>
-</html>
-.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 4, 
-      brand: 'Honor', 
-      name: 'Honor 90', 
-      type: 'Original', 
-      wholesale: 310000, 
-      retail: 370000,
-      stock: 12,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 5, 
-      brand: 'Honor', 
-      name: 'Honor 200', 
-      type: 'OLED', 
-      wholesale: 350000, 
-      retail: 420000,
-      stock: 20,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 6, 
-      brand: 'Huawei', 
-      name: 'Huawei Nova 9', 
-      type: 'OLED', 
-      wholesale: 280000, 
-      retail: 340000,
-      stock: 7,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 7, 
-      brand: 'iPhone', 
-      name: 'iPhone 11', 
-      type: 'Incell', 
-      wholesale: 210000, 
-      retail: 260000,
-      stock: 15,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 8, 
-      brand: 'Vivo', 
-      name: 'Vivo Y20', 
-      type: 'Original', 
-      wholesale: 130000, 
-      retail: 165000,
-      stock: 10,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 9, 
-      brand: 'Oppo', 
-      name: 'Oppo A54', 
-      type: 'TFT', 
-      wholesale: 135000, 
-      retail: 170000,
-      stock: 0,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 10, 
-      brand: 'Tecno', 
-      name: 'Tecno Spark 10C', 
-      type: 'Oddiy', 
-      wholesale: 125000, 
-      retail: 160000,
-      stock: 18,
-      img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60'
-    },
-    { 
-      id: 11, 
-      brand: 'Infinix', 
-      name: 'Infinix Hot 30', 
-      type: 'Oddiy', 
-      wholesale: 130000, 
-      retail: 165000,
-      stock: 9,
-      img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60'
-    }
-  ];
-
-  const brands = ['Barchasi', 'Samsung', 'Redmi', 'Honor', 'Huawei', 'iPhone', 'Vivo', 'Oppo', 'Tecno', 'Infinix'];
-  let currentBrand = 'Barchasi';
-  let searchQuery = '';
-  let cart = {};
-
-  const catBox = document.getElementById('cats');
-  brands.forEach(b => {
-    const btn = document.createElement('button');
-    btn.className = 'cat-pill' + (b === currentBrand ? ' active' : '');
-    btn.innerText = b;
-    btn.onclick = () => {
-      triggerHaptic();
-      document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
-      btn.classList.add('active');
-      currentBrand = b;
-      renderProducts();
-    };
-    catBox.appendChild(btn);
-  });
-
-  function onSearch() {
-    searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-    renderProducts();
-  }
-
-  function renderProducts() {
-    const list = document.getElementById('products');
-    list.innerHTML = '';
-    
-    let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
-    if (searchQuery) {
-      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.type.toLowerCase().includes(searchQuery));
-    }
-
-    let totalQty = 0;
-    for (let id in cart) { totalQty += cart[id]; }
-    const isWholesale = totalQty >= 15;
-
-    const promoFill = document.getElementById('promoFill');
-    const promoCount = document.getElementById('promoCount');
-    const promoText = document.getElementById('promoText');
-    const percent = Math.min(100, Math.round((totalQty / 15) * 100));
-    promoFill.style.width = percent + '%';
-    promoCount.innerText = totalQty + ' / 15';
-    
-    if (isWholesale) {
-      promoText.innerText = '🎉 Tabriklaymiz! Optom narx faollashdi!';
-      promoFill.style.background = '#10b981';
-    } else {
-      promoText.innerText = 'Optom narxgacha yana ' + (15 - totalQty) + ' ta qoldi!';
-      promoFill.style.background = '#38bdf8';
-    }
-
-    if (filtered.length === 0) {
-      list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--hint);">Hech narsa topilmadi 🔍</div>';
-      updateCartBar(totalQty, isWholesale);
-      return;
-    }
-
-    filtered.forEach(p => {
-      const qty = cart[p.id] || 0;
-      const activePrice = isWholesale ? p.wholesale : p.retail;
-      const isOut = p.stock <= 0;
-      const isLow = p.stock > 0 && p.stock <= 5;
-
-      let stockBadge = '';
-      if (isOut) {
-        stockBadge = '<span class="stock-tag stock-out">Tugagan</span>';
-      } else if (isLow) {
-        stockBadge = '<span class="stock-tag stock-low">Oz qoldi (' + p.stock + ' ta)</span>';
-      } else {
-        stockBadge = '<span class="stock-tag stock-available">Omborda bor (' + p.stock + ' ta)</span>';
-      }
-      
-      const div = document.createElement('div');
-      div.className = 'product-card' + (isOut ? ' out-of-stock' : '');
-      div.innerHTML = `
-        <img src="${p.img}" class="prod-thumb" alt="${p.name}" loading="lazy">
-        <div class="prod-info">
-          <div class="prod-title">${p.name}</div>
-          <div class="prod-brand">${p.brand} • <span class="tag ${isWholesale ? 'optom' : ''}">${p.type}</span></div>
-          <div class="tag-row">${stockBadge}</div>
-          <div class="price-box">
-            <span class="price-main">${activePrice.toLocaleString()} so'm</span>
-            ${isWholesale ? `<span class="price-old">${p.retail.toLocaleString()}</span>` : ''}
-          </div>
-        </div>
-        <div class="counter-ui">
-          ${qty > 0 ? `<button class="btn-qty" style="background:transparent; color:var(--text);" onclick="changeQty(${p.id}, -1)">-</button><span class="qty-num">${qty}</span>` : ''}
-          <button class="btn-qty" ${isOut || qty >= p.stock ? 'disabled' : ''} onclick="changeQty(${p.id}, 1)">+</button>
-        </div>
-      `;
-      list.appendChild(div);
-    });
-
-    updateCartBar(totalQty, isWholesale);
-  }
-
-  function changeQty(id, delta) {
-    const p = productsData.find(item => item.id == id);
-    if (!p) return;
-
-    const currentQty = cart[id] || 0;
-    if (delta > 0 && currentQty >= p.stock) {
-      alert("Omborda bu ekrandan jami " + p.stock + " ta mavjud!");
-      return;
-    }
-
-    triggerHaptic();
-    cart[id] = currentQty + delta;
-    if (cart[id] <= 0) delete cart[id];
-    renderProducts();
-  }
-
-  function updateCartBar(totalQty, isWholesale) {
-    let totalSum = 0;
-    for (let id in cart) {
-      const p = productsData.find(item => item.id == id);
-      if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
-    }
-    document.getElementById('cartQtySummary').innerText = 'Savat: ' + totalQty + ' ta ' + (isWholesale ? '(Optom)' : '');
-    document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString() + " so'm";
-  }
-
-  function openCheckout() {
-    triggerHaptic();
-    let totalQty = 0;
-    for (let id in cart) totalQty += cart[id];
-    if (totalQty === 0) return alert("Avval savatga tovar qo'shing!");
-    document.getElementById('checkoutModal').style.display = 'flex';
-  }
-
-  function closeCheckout() {
-    document.getElementById('checkoutModal').style.display = 'none';
-  }
-
-  function toggleDeliveryField() {
-    const type = document.getElementById('deliveryType').value;
-    document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tuman:" : "Yetkazish manzili (Taksi uchun):";
-  }
-
-  function submitOrder() {
-    triggerHaptic();
-    const name = document.getElementById('custName').value.trim();
-    const delivery = document.getElementById('deliveryType').value;
-    const address = document.getElementById('custAddress').value.trim();
-
-    if (!name || !address) return alert("Iltimos, ism va manzilni to'ldiring!");
-
-    let totalQty = 0;
-    for (let id in cart) totalQty += cart[id];
-    const isWholesale = totalQty >= 15;
-    
-    let totalSum = 0;
-    const items = [];
-    for (let id in cart) {
-      const p = productsData.find(item => item.id == id);
-      if (p) {
-        const price = isWholesale ? p.wholesale : p.retail;
-        const subtotal = price * cart[id];
-        totalSum += subtotal;
-        items.push({ name: p.name, type: p.type, qty: cart[id], price: price, subtotal: subtotal });
-      }
-    }
-
-    const orderData = {
-      name: name,
-      delivery: delivery,
-      address: address,
-      items: items,
-      total_qty: totalQty,
-      total_sum: totalSum,
-      price_type: isWholesale ? "Optom (15+)" : "Dona (Chakana)"
-    };
-
-    if (tg) tg.sendData(JSON.stringify(orderData));
-  }
-
-  renderProducts();
+  window.onload = () => { renderBanners(); renderProducts(); };
 </script>
 </body>
 </html>
