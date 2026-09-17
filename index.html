@@ -271,6 +271,29 @@
 </script>
 </body>
 </html>
+  }
+    }
+
+    const orderData = {
+      name: name,
+      phone: phone,
+      delivery: delivery,
+      address: address,
+      items: items,
+      total_qty: totalQty,
+      total_sum: totalSum,
+      price_type: isWholesale ? "Optom (15+)" : "Dona (Chakana)"
+    };
+
+    if (tg) {
+      tg.sendData(JSON.stringify(orderData));
+    }
+  }
+
+  renderProducts();
+</script>
+</body>
+</html>
     .counter button {
       background: #007aff; color: white; border: none;
       width: 30px; height: 30px; border-radius: 8px; font-size: 18px;
