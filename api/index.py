@@ -34,9 +34,6 @@ def save_data(filepath, data):
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 
-# ==========================================
-# FOYDALANUVCHILARNI SANASH
-# ==========================================
 def record_visitor(user_id):
     visitors = load_data(ALL_VISITORS_FILE)
     if not isinstance(visitors, dict):
@@ -51,9 +48,6 @@ def get_user_count_display(user_id):
     total = 1250 + count
     return f"{total:,}".replace(",", " ")
 
-# ==========================================
-# STATELESS BUYURTMA PAYLOADI
-# ==========================================
 def encode_order_payload(data):
     raw = json.dumps(data, separators=(',', ':')).encode('utf-8')
     return base64.b64encode(raw).decode('utf-8')
@@ -91,9 +85,6 @@ def get_admin_order_markup(client_id):
     )
     return admin_markup
 
-# ==========================================
-# /START BUYRUG'I
-# ==========================================
 @bot.message_handler(commands=['start'])
 def start_command(message):
     user_id = str(message.chat.id)
@@ -158,9 +149,6 @@ def handle_contact(message):
             parse_mode="HTML"
         )
 
-# ==========================================
-# BUYURTMANI QABUL QILISH
-# ==========================================
 @bot.message_handler(content_types=['web_app_data'])
 def handle_order(message):
     try:
@@ -235,22 +223,17 @@ def handle_order(message):
     except Exception as e:
         print(f"Buyurtma xatoligi: {e}")
 
-# ==========================================
-# OMBORDA YO'Q / KAM TOVARLARNI BOSHQARISH
-# ==========================================
 def render_missing_menu_markup(payload):
     markup = InlineKeyboardMarkup(row_width=1)
     for idx, item in enumerate(payload.get('items', [])):
         oq = item.get('oq', 1)
         aq = item.get('aq', oq)
-        
         if aq == oq:
             status = f"✅ BOR: {item.get('n')[:20]} ({aq}/{oq} ta)"
         elif aq == 0:
             status = f"❌ YO'Q: {item.get('n')[:20]} (0/{oq} ta)"
         else:
             status = f"⚠️ KAM: {item.get('n')[:20]} ({aq}/{oq} ta)"
-
         markup.add(InlineKeyboardButton(status, callback_data=f"edit_it:{idx}"))
 
     markup.add(
@@ -390,7 +373,7 @@ def send_missing_notice_to_client(call):
 
     has_change = any(it.get('aq', it.get('oq')) < it.get('oq') for it in items)
     if not has_change:
-        return bot.answer_callback_query(call.id, "Hech qanday tovar kamaytirilmagan (hammasi to'liq bor)!", show_alert=True)
+        return bot.answer_callback_query(call.id, "Hech qanday tovar kamaytirilmagan!", show_alert=True)
 
     missing_text = ""
     partial_text = ""
@@ -449,9 +432,6 @@ def send_missing_notice_to_client(call):
     )
     bot.answer_callback_query(call.id, "Mijozga xabarnoma ketdi!")
 
-# ==========================================
-# TO'LOV CHEKINI QABUL QILISH
-# ==========================================
 @bot.message_handler(content_types=['photo'])
 def handle_payment_receipt(message):
     client_id = str(message.chat.id)
@@ -501,9 +481,6 @@ def process_payment_decision(call):
     except Exception as e:
         print(f"Qaror xatosi: {e}")
 
-# ==========================================
-# VERCEL WEBHOOK
-# ==========================================
 @app.route('/', defaults={'path': ''}, methods=['POST', 'GET'])
 @app.route('/<path:path>', methods=['POST', 'GET'])
 def webhook(path):
