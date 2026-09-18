@@ -11,6 +11,7 @@ CARD_NAME = "Bekzod M. (Humo / Uzcard)"
 
 USERS_FILE = "/tmp/users.json"
 ORDERS_FILE = "/tmp/orders.json"
+CACHE_ORDERS = {}
 
 def load_data(path):
     if os.path.exists(path):
@@ -24,27 +25,40 @@ def save_data(path, data):
         with open(path, "w") as f: json.dump(data, f)
     except: pass
 
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
-app = Flask(__name__)
-
 def encode_data(d):
     return base64.b64encode(json.dumps(d, separators=(',', ':')).encode()).decode()
 
-def extract_payload(message):
-    if message.entities:
-        for e in message.entities:
-            if e.type == 'text_link' and e.url and 'd=' in e.url:
-                try:
-                    b64 = e.url.split('d=')[1]
-                    return json.loads(base64.b64decode(b64.encode()).decode())
-                except: pass
-    if message.text and "ORD_DATA:" in message.text:
-        try:
-            b64 = message.text.split("ORD_DATA:")[1].split()[0].replace("</tg-spoiler>", "").strip()
-            return json.loads(base64.b64decode(b64.encode()).decode())
-        except: pass
+def decode_data(b64_str):
+    try:
+        return json.loads(base64.b64decode(b64_str.encode()).decode())
+    except:
+        return None
+
+def save_order(cid, payload):
+    CACHE_ORDERS[str(cid)] = payload
     orders = load_data(ORDERS_FILE)
-    return orders.get(str(message.chat.id))
+    orders[str(cid)] = payload
+    save_data(ORDERS_FILE, orders)
+
+def get_payload(c, cid):
+    cid_str = str(cid)
+    if cid_str in CACHE_ORDERS:
+        return CACHE_ORDERS[cid_str]
+    orders = load_data(ORDERS_FILE)
+    if cid_str in orders:
+        CACHE_ORDERS[cid_str] = orders[cid_str]
+        return orders[cid_str]
+    if c.message and c.message.entities:
+        for e in c.message.entities:
+            if e.type == 'text_link' and e.url and 'd=' in e.url:
+                p = decode_data(e.url.split('d=')[1])
+                if p:
+                    save_order(cid_str, p)
+                    return p
+    return None
+
+bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+app = Flask(__name__)
 
 def main_kb():
     m = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -67,6 +81,9 @@ def admin_order_kb(cid):
     )
     return m
 
+# ==========================================
+# /START BUYRUG'I
+# ==========================================
 @bot.message_handler(commands=['start'])
 def handle_start(m):
     uid = str(m.chat.id)
@@ -105,6 +122,9 @@ def handle_contact(m):
             parse_mode="HTML"
         )
 
+# ==========================================
+# BUYURTMANI QABUL QILISH
+# ==========================================
 @bot.message_handler(content_types=['web_app_data'])
 def handle_order(m):
     try:
@@ -127,13 +147,10 @@ def handle_order(m):
             payload_items.append({"n": it.get('name'), "oq": q, "aq": q, "p": p})
 
         payload = {"cid": cid, "name": name, "phone": phone, "deliv": deliv, "addr": addr, "pt": pt, "items": payload_items}
-        
-        orders = load_data(ORDERS_FILE)
-        orders[cid] = payload
-        save_data(ORDERS_FILE, orders)
+        save_order(cid, payload)
 
         b64 = encode_data(payload)
-        hidden_tag = f'<a href="https://t.me/order?d={b64}">&#8203;</a>'
+        tag = f'<a href="https://t.me/ekranchi?d={b64}">📦</a>'
 
         c_txt = (
             f"🛒 <b>Buyurtmangiz qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
@@ -153,149 +170,214 @@ def handle_order(m):
                 f"🔔 <b>YANGI BUYURTMA TUSHDI!</b>\n━━━━━━━━━━━━━━━━━━━\n"
                 f"👤 <b>Mijoz:</b> {name} ({uname})\n📞 <b>Raqam:</b> {phone}\n"
                 f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n📊 <b>Rejim:</b> {pt}\n"
-                f"📦 <b>Tovarlar:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
-                f"💰 <b>Summa:</b> <b>{t_sum:,} so'm</b> ({t_qty} ta){hidden_tag}"
+                f"{tag} <b>Tovarlar:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
+                f"💰 <b>Summa:</b> <b>{t_sum:,} so'm</b> ({t_qty} ta)"
             )
             bot.send_message(ADMIN_ID, a_txt, reply_markup=admin_order_kb(cid), parse_mode="HTML")
     except Exception as e:
         print(f"Order error: {e}")
 
-def missing_markup(p):
+# ==========================================
+# EKRAN SONINI O'ZGARTIRISH VA TUGMALAR
+# ==========================================
+def show_edit_item_screen(chat_id, message_id, p, idx, cid):
+    it = p['items'][idx]
+    oq = it.get('oq', 1)
+    aq = it.get('aq', oq)
+    diff = oq - aq
+
+    m = InlineKeyboardMarkup()
+    m.row(
+        InlineKeyboardButton("-5", callback_data=f"st:{cid}:{idx}:-5"),
+        InlineKeyboardButton("-1", callback_data=f"st:{cid}:{idx}:-1"),
+        InlineKeyboardButton("+1", callback_data=f"st:{cid}:{idx}:1"),
+        InlineKeyboardButton("+5", callback_data=f"st:{cid}:{idx}:5")
+    )
+    m.row(
+        InlineKeyboardButton("❌ Yo'q (0 ta)", callback_data=f"st_set:{cid}:{idx}:0"),
+        InlineKeyboardButton(f"✅ To'liq ({oq} ta)", callback_data=f"st_set:{cid}:{idx}:{oq}")
+    )
+    m.row(InlineKeyboardButton("⬅️ Ro'yxatga qaytish", callback_data=f"back_list:{cid}"))
+
+    b64 = encode_data(p)
+    tag = f'<a href="https://t.me/ekranchi?d={b64}">🛠</a>'
+
+    txt = (
+        f"{tag} <b>MODEL: {it.get('n')}</b>\n━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 Buyurtma qilingan: <b>{oq} dona</b>\n"
+        f"✅ Omborda mavjud soni: <b>{aq} dona</b>\n"
+        f"❌ Yetishmayotgani: <b>{diff} dona</b>\n━━━━━━━━━━━━━━━━━━━\n"
+        f"Pastdagi tugmalar orqali sonini belgilang:"
+    )
+    try:
+        bot.edit_message_text(txt, chat_id, message_id, reply_markup=m, parse_mode="HTML")
+    except Exception:
+        pass
+
+def show_missing_menu_screen(chat_id, message_id, p, cid):
     m = InlineKeyboardMarkup(row_width=1)
     for idx, it in enumerate(p.get('items', [])):
         oq, aq = it.get('oq', 1), it.get('aq', 1)
         if aq == oq: st = f"✅ BOR: {it.get('n')[:20]} ({aq}/{oq} ta)"
         elif aq == 0: st = f"❌ YO'Q: {it.get('n')[:20]} (0/{oq} ta)"
         else: st = f"⚠️ KAM: {it.get('n')[:20]} ({aq}/{oq} ta)"
-        m.add(InlineKeyboardButton(st, callback_data=f"ed:{idx}"))
+        m.add(InlineKeyboardButton(st, callback_data=f"ed:{cid}:{idx}"))
+
     m.add(
-        InlineKeyboardButton("📤 Mijozga xabar yuborish", callback_data="snd_miss"),
-        InlineKeyboardButton("⬅️ Orqaga", callback_data="back_ord")
+        InlineKeyboardButton("📤 Mijozga xabar yuborish", callback_data=f"snd_miss:{cid}"),
+        InlineKeyboardButton("⬅️ Orqaga", callback_data=f"back_ord:{cid}")
     )
-    return m
+
+    b64 = encode_data(p)
+    tag = f'<a href="https://t.me/ekranchi?d={b64}">⚠️</a>'
+    txt = f"{tag} <b>Omborda kam yoki yo'q ekranni tanlang:</b>\n<i>(Kerakli model ustiga bosing)</i>"
+    try:
+        bot.edit_message_text(txt, chat_id, message_id, reply_markup=m, parse_mode="HTML")
+    except Exception:
+        pass
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('missing_menu:'))
-def show_missing(c):
-    p = extract_payload(c.message)
-    if not p: return bot.answer_callback_query(c.id, "Buyurtma topilmadi!", show_alert=True)
-    hidden_tag = f'<a href="https://t.me/order?d={encode_data(p)}">&#8203;</a>'
-    bot.edit_message_text(
-        f"⚠️ <b>Omborda kam yoki yo'q ekranni tanlang:</b>{hidden_tag}",
-        c.message.chat.id, c.message.message_id, reply_markup=missing_markup(p), parse_mode="HTML"
-    )
+def handle_missing_menu(c):
+    cid = c.data.split(':')[1]
+    p = get_payload(c, cid)
+    if not p:
+        return bot.answer_callback_query(c.id, "Buyurtma topilmadi!", show_alert=True)
+    bot.answer_callback_query(c.id)
+    show_missing_menu_screen(c.message.chat.id, c.message.message_id, p, cid)
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('ed:'))
-def edit_item(c):
-    idx = int(c.data.split(':')[1])
-    p = extract_payload(c.message)
-    if not p or idx >= len(p.get('items', [])): return bot.answer_callback_query(c.id, "Xatolik!")
-    it = p['items'][idx]
-    oq, aq = it.get('oq', 1), it.get('aq', 1)
-    
-    m = InlineKeyboardMarkup()
-    m.row(
-        InlineKeyboardButton("-5", callback_data=f"st:{idx}:-5"),
-        InlineKeyboardButton("-1", callback_data=f"st:{idx}:-1"),
-        InlineKeyboardButton("+1", callback_data=f"st:{idx}:1"),
-        InlineKeyboardButton("+5", callback_data=f"st:{idx}:5")
-    )
-    m.row(
-        InlineKeyboardButton("❌ Yo'q (0 ta)", callback_data=f"st_set:{idx}:0"),
-        InlineKeyboardButton(f"✅ To'liq ({oq} ta)", callback_data=f"st_set:{idx}:{oq}")
-    )
-    m.row(InlineKeyboardButton("⬅️ Ro'yxatga qaytish", callback_data="back_list"))
-
-    hidden_tag = f'<a href="https://t.me/order?d={encode_data(p)}">&#8203;</a>'
-    diff = oq - aq
-    txt = (
-        f"🛠 <b>MODEL: {it.get('n')}</b>\n━━━━━━━━━━━━━━━━━━━\n"
-        f"📦 Buyurtma qilingan: <b>{oq} dona</b>\n"
-        f"✅ Omborda mavjud soni: <b>{aq} dona</b>\n"
-        f"❌ Yetishmayotgani: <b>{diff} dona</b>\n━━━━━━━━━━━━━━━━━━━\n"
-        f"Pastdagi tugmalar orqali sonini belgilang:{hidden_tag}"
-    )
-    bot.edit_message_text(txt, c.message.chat.id, c.message.message_id, reply_markup=m, parse_mode="HTML")
+def handle_edit_item(c):
+    bot.answer_callback_query(c.id)
+    parts = c.data.split(':')
+    cid, idx = parts[1], int(parts[2])
+    p = get_payload(c, cid)
+    if not p or idx >= len(p.get('items', [])): return
+    show_edit_item_screen(c.message.chat.id, c.message.message_id, p, idx, cid)
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('st:') or c.data.startswith('st_set:'))
-def change_qty(c):
+def handle_change_qty(c):
     parts = c.data.split(':')
-    idx, val = int(parts[1]), int(parts[2])
-    p = extract_payload(c.message)
-    if not p: return bot.answer_callback_query(c.id, "Xatolik!")
+    action = parts[0]
+    cid = parts[1]
+    idx = int(parts[2])
+    val = int(parts[3])
+
+    p = get_payload(c, cid)
+    if not p or idx >= len(p.get('items', [])):
+        return bot.answer_callback_query(c.id, "Xatolik!")
+
     oq = p['items'][idx].get('oq', 1)
-    if parts[0] == 'st':
-        p['items'][idx]['aq'] = max(0, min(oq, p['items'][idx].get('aq', oq) + val))
+    current_aq = p['items'][idx].get('aq', oq)
+
+    if action == 'st':
+        new_aq = max(0, min(oq, current_aq + val))
     else:
-        p['items'][idx]['aq'] = max(0, min(oq, val))
-    c.data = f"ed:{idx}"
-    edit_item(c)
-    bot.answer_callback_query(c.id, f"Mavjud: {p['items'][idx]['aq']} ta")
+        new_aq = max(0, min(oq, val))
 
-@bot.callback_query_handler(func=lambda c: c.data == 'back_list')
-def back_list(c):
-    p = extract_payload(c.message)
+    p['items'][idx]['aq'] = new_aq
+    save_order(cid, p)
+
+    bot.answer_callback_query(c.id, f"Mavjud: {new_aq} ta")
+    show_edit_item_screen(c.message.chat.id, c.message.message_id, p, idx, cid)
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith('back_list:'))
+def handle_back_list(c):
+    bot.answer_callback_query(c.id)
+    cid = c.data.split(':')[1]
+    p = get_payload(c, cid)
     if p:
-        hidden_tag = f'<a href="https://t.me/order?d={encode_data(p)}">&#8203;</a>'
-        bot.edit_message_text(
-            f"⚠️ <b>Omborda kam yoki yo'q ekranni tanlang:</b>{hidden_tag}",
-            c.message.chat.id, c.message.message_id, reply_markup=missing_markup(p), parse_mode="HTML"
-        )
+        show_missing_menu_screen(c.message.chat.id, c.message.message_id, p, cid)
 
-@bot.callback_query_handler(func=lambda c: c.data == 'back_ord')
-def back_order(c):
-    p = extract_payload(c.message)
+@bot.callback_query_handler(func=lambda c: c.data.startswith('back_ord:'))
+def handle_back_ord(c):
+    bot.answer_callback_query(c.id)
+    cid = c.data.split(':')[1]
+    p = get_payload(c, cid)
     if not p: return
-    cid, items_txt, s_tot, q_tot = p.get('cid'), "", 0, 0
+
+    items_txt, s_tot, q_tot = "", 0, 0
     for i, it in enumerate(p.get('items', []), 1):
         q = it.get('aq', it.get('oq', 1))
         sub = q * it.get('p', 0)
-        s_tot += sub; q_tot += q
+        s_tot += sub
+        q_tot += q
         items_txt += f"{i}. <b>{it.get('n')}</b>\n   └ {q} dona × {it.get('p'):,} = <b>{sub:,} so'm</b>\n"
-    
-    hidden_tag = f'<a href="https://t.me/order?d={encode_data(p)}">&#8203;</a>'
+
+    b64 = encode_data(p)
+    tag = f'<a href="https://t.me/ekranchi?d={b64}">📦</a>'
     txt = (
         f"🔔 <b>BUYURTMA: {p.get('name')}</b>\n━━━━━━━━━━━━━━━━━━━\n"
         f"📞 <b>Raqam:</b> {p.get('phone')}\n"
         f"🚚 <b>Yetkazish:</b> {p.get('deliv')} | 📍 {p.get('addr')}\n"
         f"📊 <b>Rejim:</b> {p.get('pt')}\n━━━━━━━━━━━━━━━━━━━\n"
-        f"📦 <b>Tovarlar:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 <b>Summa:</b> <b>{s_tot:,} so'm</b> ({q_tot} ta){hidden_tag}"
+        f"{tag} <b>Tovarlar:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
+        f"💰 <b>Summa:</b> <b>{s_tot:,} so'm</b> ({q_tot} ta)"
     )
-    bot.edit_message_text(txt, c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML")
+    try:
+        bot.edit_message_text(txt, c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML")
+    except Exception:
+        pass
 
-@bot.callback_query_handler(func=lambda c: c.data == 'snd_miss')
-def send_missing(c):
-    p = extract_payload(c.message)
-    if not p: return bot.answer_callback_query(c.id, "Buyurtma topilmadi!")
-    cid, items = p.get('cid'), p.get('items', [])
+@bot.callback_query_handler(func=lambda c: c.data.startswith('snd_miss:'))
+def handle_snd_miss(c):
+    cid = c.data.split(':')[1]
+    p = get_payload(c, cid)
+    if not p:
+        return bot.answer_callback_query(c.id, "Buyurtma topilmadi!")
+
+    items = p.get('items', [])
+    has_change = any(it.get('aq', it.get('oq')) < it.get('oq') for it in items)
+    if not has_change:
+        return bot.answer_callback_query(c.id, "Hech qanday tovar kamaytirilmagan!", show_alert=True)
+
     miss_t, part_t, av_t, n_sum, n_qty = "", "", "", 0, 0
     for it in items:
-        oq, aq, pr = it.get('oq', 1), it.get('aq', 1), it.get('p', 0)
+        oq = it.get('oq', 1)
+        aq = it.get('aq', oq)
+        pr = it.get('p', 0)
         sub = aq * pr
-        n_sum += sub; n_qty += aq
-        if aq == 0: miss_t += f"❌ <b>{it.get('n')}</b> — {oq} dona (Umuman yo'q)\n"
-        elif aq < oq: part_t += f"⚠️ <b>{it.get('n')}</b> — {oq} ta so'ralgan, omborda <b>{aq} ta bor</b> ({oq-aq} ta yetishmaydi)\n"
-        else: av_t += f"✅ <b>{it.get('n')}</b> — {aq} dona ({sub:,} so'm)\n"
+        n_sum += sub
+        n_qty += aq
+        if aq == 0:
+            miss_t += f"❌ <b>{it.get('n')}</b> — {oq} dona (Umuman yo'q)\n"
+        elif aq < oq:
+            part_t += f"⚠️ <b>{it.get('n')}</b> — {oq} ta so'ralgan, omborda <b>{aq} ta bor</b> ({oq-aq} ta yetishmaydi)\n"
+        else:
+            av_t += f"✅ <b>{it.get('n')}</b> — {aq} dona ({sub:,} so'm)\n"
 
     msg = (
-        f"⚠️ <b>DIQQAT: BUYURTMANING AYRIM MODELLARI OMBORDA KAM YOKI YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-        f"{miss_t}{part_t}━━━━━━━━━━━━━━━━━━━\n"
-        f"📦 <b>Omborda bor tovarlar:</b>\n{av_t if av_t else '<i>Bor tovar qolmadi</i>'}\n━━━━━━━━━━━━━━━━━━━\n"
+        f"⚠️ <b>DIQQAT: BUYURTMANING AYRIM MODELLARI OMBORDA KAM YOKI YO'Q!</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"{miss_t}{part_t}"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 <b>Omborda bor tovarlar:</b>\n"
+        f"{av_t if av_t else '<i>Bor tovar qolmadi</i>'}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
         f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n"
         f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\n"
         f"Qabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
         f"Mavjud tovarlarni chiqarishimiz uchun to'lov qilib chekni yuboring!"
     )
     kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
-    bot.send_message(int(cid), msg, reply_markup=kb, parse_mode="HTML")
-    
-    hidden_tag = f'<a href="https://t.me/order?d={encode_data(p)}">&#8203;</a>'
-    bot.edit_message_text(
-        f"✅ <b>Mijozga xabar ketdi!</b>\n\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta){hidden_tag}",
-        c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML"
-    )
+    try:
+        bot.send_message(int(cid), msg, reply_markup=kb, parse_mode="HTML")
+    except Exception as e:
+        print(f"Error: {e}")
+
+    b64 = encode_data(p)
+    tag = f'<a href="https://t.me/ekranchi?d={b64}">📦</a>'
+    try:
+        bot.edit_message_text(
+            f"✅ <b>Mijozga xabar ketdi!</b>\n\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)\n{tag}",
+            c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML"
+        )
+    except Exception:
+        pass
     bot.answer_callback_query(c.id, "Mijozga yuborildi!")
 
+# ==========================================
+# TO'LOV CHEKI VA STATUS
+# ==========================================
 @bot.message_handler(content_types=['photo'])
 def handle_receipt(m):
     cid = str(m.chat.id)
