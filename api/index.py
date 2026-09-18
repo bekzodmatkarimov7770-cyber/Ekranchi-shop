@@ -13,6 +13,15 @@ USERS_FILE = "/tmp/users.json"
 ORDERS_FILE = "/tmp/orders.json"
 CACHE_ORDERS = {}
 
+# Текст гарантии и условий возврата
+WARRANTY_TEXT = (
+    "🛡 <b>KAFOLAT VA QAYTARISH SHARTLARI (2 OY):</b>\n"
+    "• Barcha displeylarga <b>2 oy kafolat</b> mavjud.\n"
+    "• Zavod braki bo'lsa, xohishingizga ko'ra yangisiga almashtirib beriladi yoki pulingiz to'liq qaytariladi.\n"
+    "• ⚠️ <b>Qat'iy talab:</b> Brakligini isbotlovchi aniq <b>video yoki rasm</b> bo'lishi shart! "
+    "Rasmi yoki videosi bo'lmasa, mahsulot mutlaqo qaytarib olinmaydi!"
+)
+
 def load_data(path):
     if os.path.exists(path):
         try:
@@ -81,9 +90,6 @@ def admin_order_kb(cid):
     )
     return m
 
-# ==========================================
-# /START BUYRUG'I
-# ==========================================
 @bot.message_handler(commands=['start'])
 def handle_start(m):
     uid = str(m.chat.id)
@@ -96,7 +102,7 @@ def handle_start(m):
             f"<b>@ekranchi_bola</b> do'konimizga xush kelibsiz!\n\n"
             f"📦 Omborda barcha turdagi Samsung va Redmi displeylari mavjud.\n"
             f"🚚 Butun O'zbekiston bo'ylab BTS Pochta va tezkor taksi orqali yetkazib beramiz.\n\n"
-            f"Marhamat, pastdagi <b>«🛍 Do'konni ochish»</b> tugmasini bosib buyurtma berishingiz mumkin: 👇"
+            f"Pastdagi <b>«🛍 Do'konni ochish»</b> tugmasini bosib buyurtma berishingiz mumkin: 👇"
         )
         bot.send_message(m.chat.id, txt, reply_markup=main_kb(), parse_mode="HTML")
     else:
@@ -122,9 +128,6 @@ def handle_contact(m):
             parse_mode="HTML"
         )
 
-# ==========================================
-# BUYURTMANI QABUL QILISH
-# ==========================================
 @bot.message_handler(content_types=['web_app_data'])
 def handle_order(m):
     try:
@@ -152,7 +155,7 @@ def handle_order(m):
         b64 = encode_data(payload)
         tag = f'<a href="https://t.me/ekranchi?d={b64}">📦</a>'
 
-        c_txt = (
+        client_txt = (
             f"🛒 <b>Buyurtmangiz qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
             f"👤 <b>Qabul qiluvchi:</b> {name}\n📞 <b>Telefon:</b> {phone}\n"
             f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n📊 <b>Rejim:</b> {pt}\n"
@@ -160,26 +163,24 @@ def handle_order(m):
             f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({t_qty} ta)\n\n"
             f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\n"
             f"Qabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
-            f"📸 To'lov qilgach, chek rasmini shu chatga yuboring."
+            f"📸 To'lov qilgach, chek rasmini shu chatga yuboring.\n\n"
+            f"{WARRANTY_TEXT}"
         )
-        c_kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
-        bot.send_message(int(cid), c_txt, reply_markup=c_kb, parse_mode="HTML")
+        client_kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
+        bot.send_message(int(cid), client_txt, reply_markup=client_kb, parse_mode="HTML", disable_web_page_preview=True)
 
         if ADMIN_ID:
-            a_txt = (
+            admin_txt = (
                 f"🔔 <b>YANGI BUYURTMA TUSHDI!</b>\n━━━━━━━━━━━━━━━━━━━\n"
                 f"👤 <b>Mijoz:</b> {name} ({uname})\n📞 <b>Raqam:</b> {phone}\n"
                 f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n📊 <b>Rejim:</b> {pt}\n"
                 f"{tag} <b>Tovarlar:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
                 f"💰 <b>Summa:</b> <b>{t_sum:,} so'm</b> ({t_qty} ta)"
             )
-            bot.send_message(ADMIN_ID, a_txt, reply_markup=admin_order_kb(cid), parse_mode="HTML")
+            bot.send_message(ADMIN_ID, admin_txt, reply_markup=admin_order_kb(cid), parse_mode="HTML", disable_web_page_preview=True)
     except Exception as e:
         print(f"Order error: {e}")
 
-# ==========================================
-# EKRAN SONINI O'ZGARTIRISH VA TUGMALAR
-# ==========================================
 def show_edit_item_screen(chat_id, message_id, p, idx, cid):
     it = p['items'][idx]
     oq = it.get('oq', 1)
@@ -210,7 +211,7 @@ def show_edit_item_screen(chat_id, message_id, p, idx, cid):
         f"Pastdagi tugmalar orqali sonini belgilang:"
     )
     try:
-        bot.edit_message_text(txt, chat_id, message_id, reply_markup=m, parse_mode="HTML")
+        bot.edit_message_text(txt, chat_id, message_id, reply_markup=m, parse_mode="HTML", disable_web_page_preview=True)
     except Exception:
         pass
 
@@ -232,7 +233,7 @@ def show_missing_menu_screen(chat_id, message_id, p, cid):
     tag = f'<a href="https://t.me/ekranchi?d={b64}">⚠️</a>'
     txt = f"{tag} <b>Omborda kam yoki yo'q ekranni tanlang:</b>\n<i>(Kerakli model ustiga bosing)</i>"
     try:
-        bot.edit_message_text(txt, chat_id, message_id, reply_markup=m, parse_mode="HTML")
+        bot.edit_message_text(txt, chat_id, message_id, reply_markup=m, parse_mode="HTML", disable_web_page_preview=True)
     except Exception:
         pass
 
@@ -314,7 +315,7 @@ def handle_back_ord(c):
         f"💰 <b>Summa:</b> <b>{s_tot:,} so'm</b> ({q_tot} ta)"
     )
     try:
-        bot.edit_message_text(txt, c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML")
+        bot.edit_message_text(txt, c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML", disable_web_page_preview=True)
     except Exception:
         pass
 
@@ -356,11 +357,12 @@ def handle_snd_miss(c):
         f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n"
         f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\n"
         f"Qabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
-        f"Mavjud tovarlarni chiqarishimiz uchun to'lov qilib chekni yuboring!"
+        f"Mavjud tovarlarni chiqarishimiz uchun to'lov qilib chekni yuboring!\n\n"
+        f"{WARRANTY_TEXT}"
     )
     kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
     try:
-        bot.send_message(int(cid), msg, reply_markup=kb, parse_mode="HTML")
+        bot.send_message(int(cid), msg, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
     except Exception as e:
         print(f"Error: {e}")
 
@@ -369,15 +371,12 @@ def handle_snd_miss(c):
     try:
         bot.edit_message_text(
             f"✅ <b>Mijozga xabar ketdi!</b>\n\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)\n{tag}",
-            c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML"
+            c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML", disable_web_page_preview=True
         )
     except Exception:
         pass
     bot.answer_callback_query(c.id, "Mijozga yuborildi!")
 
-# ==========================================
-# TO'LOV CHEKI VA STATUS
-# ==========================================
 @bot.message_handler(content_types=['photo'])
 def handle_receipt(m):
     cid = str(m.chat.id)
