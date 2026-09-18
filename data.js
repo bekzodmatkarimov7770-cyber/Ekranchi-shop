@@ -4,8 +4,8 @@
 const bannersData = [
   {
     badge: "YANGI PARTIYA",
-    title: "🔥 Samsung INCELL HD+ partiyasi keldi!",
-    desc: "70 dan ortiq Samsung modellari uchun yuqori sifatli displeylar omborda.",
+    title: "🔥 Samsung va Redmi INCELL partiyasi keldi!",
+    desc: "90 dan ortiq modellar uchun yuqori sifatli displeylar omborda.",
     bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)"
   },
   {
@@ -23,9 +23,10 @@ const bannersData = [
 ];
 
 // ==========================================
-// 2. DISPLEYLARNING TO'LIQ RO'YXATI (74 TA)
+// 2. DISPLEYLARNING TO'LIQ RO'YXATI (95 TA)
 // ==========================================
 const productsData = [
+  // --- SAMSUNG MODELLARI (1 - 74) ---
   { id: 1, brand: 'Samsung', name: 'Samsung A02S/A03S/A03/A035/A025/A04E/A042', type: 'INCELL HD+', wholesale: 55000, retail: 74250, stock: 2500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
   { id: 2, brand: 'Samsung', name: 'Samsung A102019/A105/M10/M105', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
   { id: 3, brand: 'Samsung', name: 'Samsung A135F/A134G/A13LITE/A135/A137/F13/M13', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
@@ -99,5 +100,28 @@ const productsData = [
   { id: 71, brand: 'Samsung', name: 'Samsung J62018/J600', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 2, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
   { id: 72, brand: 'Samsung', name: 'Samsung A33WF', type: 'INCELL HD+', wholesale: 115000, retail: 155250, stock: 1, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
   { id: 73, brand: 'Samsung', name: 'Samsung A30S-WF', type: 'INCELL HD+', wholesale: 85000, retail: 114750, stock: 1, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
-  { id: 74, brand: 'Samsung', name: 'Samsung A702019/A705-WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 1, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' }
+  { id: 74, brand: 'Samsung', name: 'Samsung A702019/A705-WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 1, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+
+  // --- REDMI INCELL MODELLARI (75 - 95) ---
+  { id: 75, brand: 'Redmi', name: 'Redmi A1/A1+', type: 'INCELL HD+', wholesale: 55000, retail: 74250, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 76, brand: 'Redmi', name: 'Redmi A2/A2+', type: 'INCELL HD+', wholesale: 55000, retail: 74250, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 77, brand: 'Redmi', name: 'Redmi A2 LITE', type: 'INCELL HD+', wholesale: 78000, retail: 105300, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 78, brand: 'Redmi', name: 'Redmi A3/A3X', type: 'INCELL HD+', wholesale: 60000, retail: 81000, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 79, brand: 'Redmi', name: 'Redmi A5 4G/A5 5G/A5New', type: 'INCELL HD+', wholesale: 65000, retail: 87750, stock: 1200, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 80, brand: 'Redmi', name: 'Redmi 6/Redmi 6A', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 81, brand: 'Redmi', name: 'Redmi 6PRO', type: 'INCELL HD+', wholesale: 78000, retail: 105300, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 82, brand: 'Redmi', name: 'Redmi 7/Y3', type: 'INCELL HD+', wholesale: 72000, retail: 97200, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 83, brand: 'Redmi', name: 'Redmi 7A', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 84, brand: 'Redmi', name: 'Redmi 8/8A', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 85, brand: 'Redmi', name: 'Mi 8 LITE', type: 'INCELL HD+', wholesale: 70000, retail: 94500, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 86, brand: 'Redmi', name: 'Redmi 9/9PRIME', type: 'INCELL HD+', wholesale: 60000, retail: 81000, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 87, brand: 'Redmi', name: 'Redmi 9T/POCO M3', type: 'INCELL HD+', wholesale: 60000, retail: 81000, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 88, brand: 'Redmi', name: 'Redmi 10 4G/Redmi 10 prime', type: 'INCELL HD+', wholesale: 66000, retail: 89100, stock: 1200, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 89, brand: 'Redmi', name: 'Redmi 10C', type: 'INCELL HD+', wholesale: 60000, retail: 81000, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 90, brand: 'Redmi', name: 'Redmi 12C/11A/A11', type: 'INCELL HD+', wholesale: 60000, retail: 81000, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 91, brand: 'Redmi', name: 'Redmi 12R/Note 13R /12/13', type: 'INCELL HD+', wholesale: 63000, retail: 85050, stock: 1200, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 92, brand: 'Redmi', name: 'Redmi 13C 4G/13C 5G/13R', type: 'INCELL HD+', wholesale: 62000, retail: 83700, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 93, brand: 'Redmi', name: 'Redmi 14C 4G/14C 5G/Poco C75', type: 'INCELL HD+', wholesale: 62000, retail: 83700, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 94, brand: 'Redmi', name: 'Redmi 15C 4G', type: 'INCELL HD+', wholesale: 66000, retail: 89100, stock: 1200, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 95, brand: 'Redmi', name: 'Redmi 15 4G/5G', type: 'INCELL HD+', wholesale: 80000, retail: 108000, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' }
 ];
