@@ -35,7 +35,7 @@ bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 
 # ==========================================
-# FOYDALANUVCHILARNI SANASH TIZIMI
+# FOYDALANUVCHILARNI SANASH
 # ==========================================
 def record_visitor(user_id):
     visitors = load_data(ALL_VISITORS_FILE)
@@ -48,7 +48,6 @@ def record_visitor(user_id):
 
 def get_user_count_display(user_id):
     count = record_visitor(user_id)
-    # Baza nufuzi uchun 1250 ta doimiy mijoz + yangi a'zolar
     total = 1250 + count
     return f"{total:,}".replace(",", " ")
 
@@ -88,12 +87,12 @@ def get_admin_order_markup(client_id):
         InlineKeyboardButton("⚡️ Bugun yetkazish", callback_data=f"pay:{client_id}:today"),
         InlineKeyboardButton("📦 Ertaga yetkazish", callback_data=f"pay:{client_id}:tomorrow"),
         InlineKeyboardButton("❌ Bekor qilish", callback_data=f"pay:{client_id}:cancel"),
-        InlineKeyboardButton("⚠️ Ayrim tovarlar yo'q (Belgilash)", callback_data=f"missing_menu:{client_id}")
+        InlineKeyboardButton("⚠️ Ayrim tovarlar yo'q / Kam (Belgilash)", callback_data=f"missing_menu:{client_id}")
     )
     return admin_markup
 
 # ==========================================
-# /START BUYRUG'I VA CHIROYLI SALOMLASHISH
+# /START BUYRUG'I
 # ==========================================
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -105,20 +104,20 @@ def start_command(message):
     if user_id in user_phones:
         welcome_text = (
             f"Assalomu alaykum, <b>{user_name}</b>! 👋\n\n"
-            f"🌟 <b>@ekranchi_bola</b> rasmiy kanalining <b>yagona original do'kon botiga</b> xush kelibsiz!\n\n"
+            f"🌟 <b>@ekranchi_bola</b> rasmiy kanalining <b>original do'kon botiga</b> xush kelibsiz!\n\n"
             f"👥 <b>Faol ustalar safimiz:</b> {users_display}+ nafar\n"
             f"📦 <b>Omborda:</b> 95 xil yuqori sifatli Samsung va Redmi displeylari\n"
             f"🚚 <b>Yetkazib berish:</b> Butun O'zbekiston bo'ylab BTS Pochta va tezkor taksi\n\n"
-            f"⚡️ Displeylar ro'yxati, ulgurji (optom 50+) va dona narxlar bilan tanishish hamda buyurtma berish uchun pastdagi tugmani bosing: 👇"
+            f"Pastdagi <b>«🛍 Do'konni ochish»</b> tugmasi orqali narxlar bilan tanishing va buyurtma bering: 👇"
         )
         bot.send_message(message.chat.id, welcome_text, reply_markup=get_store_keyboard(), parse_mode="HTML")
     else:
         welcome_text = (
             f"Assalomu alaykum, <b>{user_name}</b>! 👋\n\n"
-            f"🌟 <b>@ekranchi_bola</b> rasmiy kanalining <b>yagona original do'kon botiga</b> xush kelibsiz!\n\n"
-            f"👥 <b>Botimizdan foydalanuvchilar:</b> {users_display}+ nafar usta va do'kondorlar\n"
+            f"🌟 <b>@ekranchi_bola</b> rasmiy kanalining <b>original do'kon botiga</b> xush kelibsiz!\n\n"
+            f"👥 <b>Bot foydalanuvchilari:</b> {users_display}+ nafar usta va do'kondorlar\n"
             f"🛠 Telefon ekranlarining to'g'ridan-to'g'ri birinchi qo'l ulgurji va chakana ombori.\n\n"
-            f"⚠️ <i>Buyurtmalarni tezkor va xavfsiz qabul qilish uchun, iltimos, pastdagi tugma orqali telefon raqamingizni tasdiqlang:</i> 👇"
+            f"⚠️ <i>Buyurtma berish uchun, iltimos, pastdagi tugma orqali telefon raqamingizni tasdiqlang:</i> 👇"
         )
         bot.send_message(message.chat.id, welcome_text, reply_markup=get_contact_keyboard(), parse_mode="HTML")
 
@@ -145,19 +144,16 @@ def handle_contact(message):
         user_phones = load_data(USERS_FILE)
         user_phones[str(message.chat.id)] = phone
         save_data(USERS_FILE, user_phones)
-        
         bot.send_message(
             message.chat.id,
-            f"✅ <b>Raqamingiz muvaffaqiyatli tasdiqlandi:</b> {phone}\n\n"
-            f"Endi do'konimizdan istalgancha displeylarni xarid qilishingiz mumkin!\n"
-            f"Pastdagi <b>«🛍 Do'konni ochish»</b> tugmasini bosing:",
+            f"✅ <b>Raqamingiz tasdiqlandi:</b> {phone}\n\nPastdagi <b>«🛍 Do'konni ochish»</b> tugmasi orqali katalogga kiring:",
             reply_markup=get_store_keyboard(),
             parse_mode="HTML"
         )
     else:
         bot.send_message(
             message.chat.id,
-            "⚠️ <b>Xatolik:</b> Iltimos, faqat pastdagi <b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing!",
+            "⚠️ Iltimos, faqat pastdagi <b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing!",
             reply_markup=get_contact_keyboard(),
             parse_mode="HTML"
         )
@@ -186,14 +182,15 @@ def handle_order(message):
         payload_items = []
         items_text = ""
         for idx, item in enumerate(items, 1):
-            items_text += f"{idx}. <b>{item.get('name')}</b>\n   └ {item.get('qty')} dona × {item.get('price'):,} = <b>{item.get('subtotal'):,} so'm</b>\n"
+            q = int(item.get('qty', 1))
+            p = int(item.get('price', 0))
+            sub = q * p
+            items_text += f"{idx}. <b>{item.get('name')}</b>\n   └ {q} dona × {p:,} = <b>{sub:,} so'm</b>\n"
             payload_items.append({
                 "n": item.get('name'),
-                "t": item.get('type', ''),
-                "q": item.get('qty', 1),
-                "p": item.get('price', 0),
-                "s": item.get('subtotal', 0),
-                "m": 0
+                "oq": q,     # Buyurtma qilingan soni
+                "aq": q,     # Omborda bor soni (boshida teng)
+                "p": p
             })
 
         order_payload = {
@@ -219,7 +216,7 @@ def handle_order(message):
             f"💰 <b>JAMI TO'LOV:</b> <b>{total_sum:,} so'm</b> ({total_qty} ta)\n\n"
             f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\n"
             f"Qabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
-            f"📸 To'lov qilgach, to'lov cheki rasmini shu chatga yuboring."
+            f"📸 To'lov qilgach, chek rasmini shu chatga rasm qilib yuboring."
         )
         bot.send_message(int(client_id), client_text, reply_markup=client_markup, parse_mode="HTML")
 
@@ -236,72 +233,126 @@ def handle_order(message):
             bot.send_message(ADMIN_ID, admin_text, reply_markup=get_admin_order_markup(client_id), parse_mode="HTML")
 
     except Exception as e:
-        print(f"Xatolik: {e}")
+        print(f"Buyurtma qabulida xatolik: {e}")
 
 # ==========================================
-# OMBORDA YO'Q TOVARLARNI BOSHQARISH
+# OMBORDA YO'Q / KAM TOVARLARNI BOSHQARISH
 # ==========================================
+def render_missing_menu_markup(payload):
+    markup = InlineKeyboardMarkup(row_width=1)
+    for idx, item in enumerate(payload.get('items', [])):
+        oq = item.get('oq', 1)
+        aq = item.get('aq', oq)
+        
+        if aq == oq:
+            status = f"✅ BOR: {item.get('n')[:20]} ({aq}/{oq} ta)"
+        elif aq == 0:
+            status = f"❌ YO'Q: {item.get('n')[:20]} (0/{oq} ta)"
+        else:
+            status = f"⚠️ KAM: {item.get('n')[:20]} ({aq}/{oq} ta)"
+
+        markup.add(InlineKeyboardButton(status, callback_data=f"edit_it:{idx}"))
+
+    markup.add(
+        InlineKeyboardButton("📤 Mijozga xabar yuborish", callback_data="send_missing"),
+        InlineKeyboardButton("⬅️ Orqaga", callback_data=f"back_order:{payload.get('cid')}")
+    )
+    return markup
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('missing_menu:'))
 def show_missing_menu(call):
     payload = extract_order_payload(call.message.text)
     if not payload:
-        return bot.answer_callback_query(call.id, "Buyurtma topilmadi yoki eskirgan!", show_alert=True)
+        return bot.answer_callback_query(call.id, "Buyurtma topilmadi!", show_alert=True)
 
-    client_id = payload.get('cid')
-    markup = InlineKeyboardMarkup(row_width=1)
-    for idx, item in enumerate(payload.get('items', [])):
-        is_missing = item.get('m') == 1
-        status_icon = "❌ YO'Q:" if is_missing else "✅ BOR:"
-        btn_text = f"{status_icon} {item.get('n')[:24]} ({item.get('q')} ta)"
-        markup.add(InlineKeyboardButton(btn_text, callback_data=f"tog:{idx}"))
-
-    markup.add(
-        InlineKeyboardButton("📤 Mijozga xabar yuborish", callback_data="send_missing"),
-        InlineKeyboardButton("⬅️ Orqaga", callback_data=f"back_order:{client_id}")
-    )
-
+    markup = render_missing_menu_markup(payload)
     b64_str = encode_order_payload(payload)
     bot.edit_message_text(
-        f"⚠️ <b>Omborda qolmagan ekranlarni tanlang:</b>\n"
-        f"<i>(Ustiga bossangiz holati 'YO'Q' ga o'zgaradi)</i>\n\n"
+        f"⚠️ <b>Omborda yo'q yoki soni kam bo'lgan ekranni tanlang:</b>\n"
+        f"<i>(Kerakli model ustiga bosing va mavjud sonini belgilang)</i>\n\n"
         f"<tg-spoiler>ORD_DATA:{b64_str}</tg-spoiler>",
         call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="HTML"
     )
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('tog:'))
-def toggle_order_item(call):
+# Bitta tovarni tahrirlash (sonini kamaytirish/ko'paytirish)
+@bot.callback_query_handler(func=lambda call: call.data.startswith('edit_it:'))
+def edit_single_item(call):
     idx = int(call.data.split(':')[1])
     payload = extract_order_payload(call.message.text)
     if not payload or idx >= len(payload.get('items', [])):
         return bot.answer_callback_query(call.id, "Xatolik yuz berdi!")
 
-    current_m = payload['items'][idx].get('m', 0)
-    payload['items'][idx]['m'] = 0 if current_m == 1 else 1
+    it = payload['items'][idx]
+    oq = it.get('oq', 1)
+    aq = it.get('aq', oq)
 
-    client_id = payload.get('cid')
-    markup = InlineKeyboardMarkup(row_width=1)
-    for i, item in enumerate(payload.get('items', [])):
-        is_missing = item.get('m') == 1
-        status_icon = "❌ YO'Q:" if is_missing else "✅ BOR:"
-        btn_text = f"{status_icon} {item.get('n')[:24]} ({item.get('q')} ta)"
-        markup.add(InlineKeyboardButton(btn_text, callback_data=f"tog:{i}"))
-
-    markup.add(
-        InlineKeyboardButton("📤 Mijozga xabar yuborish", callback_data="send_missing"),
-        InlineKeyboardButton("⬅️ Orqaga", callback_data=f"back_order:{client_id}")
+    markup = InlineKeyboardMarkup(row_width=4)
+    markup.row(
+        InlineKeyboardButton("-5", callback_data=f"step:{idx}:-5"),
+        InlineKeyboardButton("-1", callback_data=f"step:{idx}:-1"),
+        InlineKeyboardButton("+1", callback_data=f"step:{idx}:1"),
+        InlineKeyboardButton("+5", callback_data=f"step:{idx}:5")
+    )
+    markup.row(
+        InlineKeyboardButton("❌ Umuman yo'q (0 ta)", callback_data=f"step_set:{idx}:0"),
+        InlineKeyboardButton(f"✅ To'liq bor ({oq} ta)", callback_data=f"step_set:{idx}:{oq}")
+    )
+    markup.row(
+        InlineKeyboardButton("⬅️ Ro'yxatga qaytish", callback_data="back_to_items")
     )
 
-    new_b64 = encode_order_payload(payload)
+    b64_str = encode_order_payload(payload)
+    diff = oq - aq
+    text = (
+        f"🛠 <b>MODEL: {it.get('n')}</b>\n━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 Buyurtma qilingan: <b>{oq} dona</b>\n"
+        f"✅ Omborda mavjud soni: <b>{aq} dona</b>\n"
+        f"❌ Yetishmayotgani: <b>{diff} dona</b>\n━━━━━━━━━━━━━━━━━━━\n"
+        f"Pastdagi tugmalar orqali ombordagi real sonini belgilang:\n\n"
+        f"<tg-spoiler>ORD_DATA:{b64_str}</tg-spoiler>"
+    )
+    bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="HTML")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('step:') or call.data.startswith('step_set:'))
+def process_item_quantity_change(call):
+    parts = call.data.split(':')
+    action = parts[0]
+    idx = int(parts[1])
+    val = int(parts[2])
+
+    payload = extract_order_payload(call.message.text)
+    if not payload or idx >= len(payload.get('items', [])):
+        return bot.answer_callback_query(call.id, "Xatolik!")
+
+    oq = payload['items'][idx].get('oq', 1)
+    if action == 'step':
+        current_aq = payload['items'][idx].get('aq', oq)
+        new_aq = max(0, min(oq, current_aq + val))
+    else:
+        new_aq = max(0, min(oq, val))
+
+    payload['items'][idx]['aq'] = new_aq
+    call.data = f"edit_it:{idx}"
+    call.message.text = f"<tg-spoiler>ORD_DATA:{encode_order_payload(payload)}</tg-spoiler>"
+    edit_single_item(call)
+    bot.answer_callback_query(call.id, f"Mavjud: {new_aq} ta")
+
+@bot.callback_query_handler(func=lambda call: call.data == 'back_to_items')
+def back_to_item_selection(call):
+    payload = extract_order_payload(call.message.text)
+    if not payload:
+        return bot.answer_callback_query(call.id, "Xatolik!")
+
+    markup = render_missing_menu_markup(payload)
+    b64_str = encode_order_payload(payload)
     bot.edit_message_text(
-        f"⚠️ <b>Omborda qolmagan ekranlarni tanlang:</b>\n"
-        f"<i>(Ustiga bossangiz holati 'YO'Q' ga o'zgaradi)</i>\n\n"
-        f"<tg-spoiler>ORD_DATA:{new_b64}</tg-spoiler>",
+        f"⚠️ <b>Omborda yo'q yoki soni kam bo'lgan ekranni tanlang:</b>\n\n"
+        f"<tg-spoiler>ORD_DATA:{b64_str}</tg-spoiler>",
         call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="HTML"
     )
-    bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('back_order:'))
-def back_to_order(call):
+def back_to_order_view(call):
     payload = extract_order_payload(call.message.text)
     if not payload:
         return bot.answer_callback_query(call.id, "Buyurtma topilmadi!")
@@ -311,9 +362,11 @@ def back_to_order(call):
     total_sum = 0
     total_qty = 0
     for idx, it in enumerate(payload.get('items', []), 1):
-        items_text += f"{idx}. <b>{it.get('n')}</b>\n   └ {it.get('q')} dona × {it.get('p'):,} = <b>{it.get('s'):,} so'm</b>\n"
-        total_sum += it.get('s', 0)
-        total_qty += it.get('q', 0)
+        q = it.get('aq', it.get('oq', 1))
+        sub = q * it.get('p', 0)
+        total_sum += sub
+        total_qty += q
+        items_text += f"{idx}. <b>{it.get('n')}</b>\n   └ {q} dona × {it.get('p'):,} = <b>{sub:,} so'm</b>\n"
 
     b64_str = encode_order_payload(payload)
     text = (
@@ -327,6 +380,7 @@ def back_to_order(call):
     )
     bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=get_admin_order_markup(client_id), parse_mode="HTML")
 
+# MIJOZGA QAYTA HISOBLANGAN XABARNI YUBORISH
 @bot.callback_query_handler(func=lambda call: call.data == 'send_missing')
 def send_missing_notice_to_client(call):
     payload = extract_order_payload(call.message.text)
@@ -334,47 +388,68 @@ def send_missing_notice_to_client(call):
         return bot.answer_callback_query(call.id, "Buyurtma topilmadi!")
 
     client_id = payload.get('cid')
-    missing_items = [it for it in payload.get('items', []) if it.get('m') == 1]
-    available_items = [it for it in payload.get('items', []) if it.get('m') == 0]
+    items = payload.get('items', [])
 
-    if not missing_items:
-        return bot.answer_callback_query(call.id, "Hech qaysi tovar 'YO'Q' deb belgilanmadi!", show_alert=True)
-
-    new_total_sum = sum(it.get('s', 0) for it in available_items)
-    new_total_qty = sum(it.get('q', 0) for it in available_items)
+    has_change = any(it.get('aq', it.get('oq')) < it.get('oq') for it in items)
+    if not has_change:
+        return bot.answer_callback_query(call.id, "Hech qanday tovar kamaytirilmagan (hammasi to'liq bor)!", show_alert=True)
 
     missing_text = ""
-    for it in missing_items:
-        missing_text += f"❌ <b>{it.get('n')}</b> — {it.get('q')} dona (Mavjud emas)\n"
+    partial_text = ""
+    available_text = ""
+    new_total_sum = 0
+    new_total_qty = 0
 
-    avail_text = ""
-    for idx, it in enumerate(available_items, 1):
-        avail_text += f"{idx}. <b>{it.get('n')}</b> — {it.get('q')} dona ({it.get('s'):,} so'm)\n"
+    for idx, it in enumerate(items, 1):
+        oq = it.get('oq', 1)
+        aq = it.get('aq', oq)
+        p = it.get('p', 0)
+        sub = aq * p
+        new_total_sum += sub
+        new_total_qty += aq
 
-    client_msg = (
-        f"⚠️ <b>DIQQAT: BUYURTMANING AYRIM MODELLARI OMBORDA YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-        f"Quyidagi ekranlar hozirda do'konda qolmagan (<b>boshqa yerdan olib turishingiz mumkin</b>):\n\n"
-        f"{missing_text}\n"
-        f"✅ <b>Omborda bor va chiqariladigan tovarlar:</b>\n\n"
-        f"{avail_text if avail_text else '<i>Bor tovar qolmadi</i>'}\n━━━━━━━━━━━━━━━━━━━\n"
+        if aq == 0:
+            missing_text += f"❌ <b>{it.get('n')}</b> — {oq} dona (Umuman yo'q)\n"
+        elif aq < oq:
+            diff = oq - aq
+            partial_text += f"⚠️ <b>{it.get('n')}</b> — {oq} ta so'ralgan, lekin omborda <b>{aq} dona bor</b> ({diff} ta yetishmaydi)\n"
+        else:
+            available_text += f"✅ <b>{it.get('n')}</b> — {aq} dona ({sub:,} so'm)\n"
+
+    notice_msg = (
+        f"⚠️ <b>DIQQAT: BUYURTMANING AYRIM MODELLARI OMBORDA KAM YOKI YO'Q!</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"Quyidagi tovarlar do'konimizda yetishmaydi (<b>boshqa yerdan olib turishingiz mumkin</b>):\n\n"
+    )
+    if missing_text:
+        notice_msg += missing_text
+    if partial_text:
+        notice_msg += partial_text
+
+    notice_msg += (
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"📦 <b>Omborda bor va chiqariladigan displeylar:</b>\n\n"
+        f"{available_text if available_text else '<i>Bor tovar qolmadi</i>'}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
         f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{new_total_sum:,} so'm</b> ({new_total_qty} ta)\n"
-        f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\n\n"
-        f"Mavjud tovarlarni chiqarishimiz uchun to'lov qilib chekni yuboring yoki admin bilan bog'laning!"
+        f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\n"
+        f"Qabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
+        f"Mavjud tovarlarni chiqarishimiz uchun to'lov qilib, chekni yuboring yoki admin bilan bog'laning!"
     )
 
     client_markup = InlineKeyboardMarkup()
     client_markup.add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
-    bot.send_message(int(client_id), client_msg, reply_markup=client_markup, parse_mode="HTML")
+    bot.send_message(int(client_id), notice_msg, reply_markup=client_markup, parse_mode="HTML")
 
     new_b64 = encode_order_payload(payload)
     bot.edit_message_text(
-        f"✅ <b>Mijozga yo'q tovarlar haqida xabar ketdi!</b>\n\n"
-        f"💰 Qayta hisoblangan summa: <b>{new_total_sum:,} so'm</b> ({new_total_qty} ta)\n"
+        f"✅ <b>Mijozga yo'q/kam tovarlar haqida xabar yuborildi!</b>\n\n"
+        f"💰 Yangi qayta hisoblangan summa: <b>{new_total_sum:,} so'm</b> ({new_total_qty} ta)\n"
         f"Mijozdan yangi summa bo'yicha to'lov kutilmoqda.\n\n"
         f"<tg-spoiler>ORD_DATA:{new_b64}</tg-spoiler>",
         call.message.chat.id, call.message.message_id, reply_markup=get_admin_order_markup(client_id), parse_mode="HTML"
     )
-    bot.answer_callback_query(call.id, "Mijozga xabarnoma yuborildi!")
+    bot.answer_callback_query(call.id, "Mijozga xabarnoma ketdi!")
 
 # ==========================================
 # TO'LOV CHEKINI QABUL QILISH
@@ -390,9 +465,9 @@ def handle_payment_receipt(message):
     photo_id = message.photo[-1].file_id
     admin_markup = InlineKeyboardMarkup(row_width=2)
     admin_markup.add(
-        InlineKeyboardButton("✅ Pul tushdi (Bugun yetkazish)", callback_data=f"pay:{client_id}:today"),
-        InlineKeyboardButton("✅ Pul tushdi (Ertaga yetkazish)", callback_data=f"pay:{client_id}:tomorrow"),
-        InlineKeyboardButton("❌ Pul tushmadi (Chek soxta)", callback_data=f"pay:{client_id}:fake")
+        InlineKeyboardButton("✅ Pul tushdi (Bugun)", callback_data=f"pay:{client_id}:today"),
+        InlineKeyboardButton("✅ Pul tushdi (Ertaga)", callback_data=f"pay:{client_id}:tomorrow"),
+        InlineKeyboardButton("❌ Pul tushmadi (Soxta)", callback_data=f"pay:{client_id}:fake")
     )
 
     caption_text = (
@@ -400,7 +475,7 @@ def handle_payment_receipt(message):
         f"👤 <b>Mijoz:</b> {name} ({username})\n"
         f"📞 <b>Telefon:</b> {phone}\n"
         f"🆔 <b>ID:</b> <code>{client_id}</code>\n━━━━━━━━━━━━━━━━━━━\n"
-        f"Kartangizni tekshirib, qarorni tanlang:"
+        f"Hisobingizni tekshirib, qarorni tanlang:"
     )
     bot.send_photo(ADMIN_ID, photo_id, caption=caption_text, reply_markup=admin_markup, parse_mode="HTML")
     bot.reply_to(message, "✅ <b>To'lov chekingiz qabul qilindi!</b> Admin tekshirib buyurtmangizni tasdiqlaydi.", parse_mode="HTML")
