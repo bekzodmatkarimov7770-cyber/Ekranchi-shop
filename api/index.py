@@ -188,8 +188,8 @@ def handle_order(message):
             items_text += f"{idx}. <b>{item.get('name')}</b>\n   └ {q} dona × {p:,} = <b>{sub:,} so'm</b>\n"
             payload_items.append({
                 "n": item.get('name'),
-                "oq": q,     # Buyurtma qilingan soni
-                "aq": q,     # Omborda bor soni (boshida teng)
+                "oq": q,
+                "aq": q,
                 "p": p
             })
 
@@ -233,7 +233,7 @@ def handle_order(message):
             bot.send_message(ADMIN_ID, admin_text, reply_markup=get_admin_order_markup(client_id), parse_mode="HTML")
 
     except Exception as e:
-        print(f"Buyurtma qabulida xatolik: {e}")
+        print(f"Buyurtma xatoligi: {e}")
 
 # ==========================================
 # OMBORDA YO'Q / KAM TOVARLARNI BOSHQARISH
@@ -274,7 +274,6 @@ def show_missing_menu(call):
         call.message.chat.id, call.message.message_id, reply_markup=markup, parse_mode="HTML"
     )
 
-# Bitta tovarni tahrirlash (sonini kamaytirish/ko'paytirish)
 @bot.callback_query_handler(func=lambda call: call.data.startswith('edit_it:'))
 def edit_single_item(call):
     idx = int(call.data.split(':')[1])
@@ -380,7 +379,6 @@ def back_to_order_view(call):
     )
     bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=get_admin_order_markup(client_id), parse_mode="HTML")
 
-# MIJOZGA QAYTA HISOBLANGAN XABARNI YUBORISH
 @bot.callback_query_handler(func=lambda call: call.data == 'send_missing')
 def send_missing_notice_to_client(call):
     payload = extract_order_payload(call.message.text)
