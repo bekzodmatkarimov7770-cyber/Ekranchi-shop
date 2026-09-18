@@ -1,139 +1,103 @@
+// ==========================================
 // 1. REKLAMALAR VA YANGILIKLAR BANERI
+// ==========================================
 const bannersData = [
   {
-    badge: "KATTA CHEGIRMA",
-    title: "🔥 Maxsus narxlardagi ekranlar!",
-    desc: "Qizil belgi bilan belgilangan displeylarga ajoyib narxlar qo'yildi.",
-    bg: "linear-gradient(135deg, #b91c1c 0%, #ef4444 100%)"
+    badge: "YANGI PARTIYA",
+    title: "🔥 Samsung INCELL HD+ partiyasi keldi!",
+    desc: "70 dan ortiq Samsung modellari uchun yuqori sifatli displeylar omborda.",
+    bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)"
+  },
+  {
+    badge: "OPTOM NARX",
+    title: "⚡️ 15+ ta displeyga ulgurji narx!",
+    desc: "Savatga jami 15 ta ekran to'plang va eng arzon narxda xarid qiling.",
+    bg: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
   },
   {
     badge: "YETKAZISH",
-    title: "🚚 Viloyatlarga tezkor BTS Pochta!",
-    desc: "Toshkent bo'yicha taksi orqali bir necha soatda yetkaziladi.",
+    title: "🚚 Butun O'zbekiston bo'ylab BTS Pochta!",
+    desc: "Tezkor va xavfsiz yetkazib berish xizmati mavjud.",
     bg: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"
-  },
-  {
-    badge: "AKSIYA",
-    title: "🎁 15+ xarid uchun ulgurji narx!",
-    desc: "15 ta ekran to'plang va avtomatik optom narxga ega bo'ling.",
-    bg: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
   }
 ];
 
-// 2. MAHSULOTLAR RO'YXATI:
-// Agar ekranda aksiya bo'lsa, "old_retail" ga eski qimmat narxi yoziladi!
+// ==========================================
+// 2. DISPLEYLARNING TO'LIQ RO'YXATI (74 TA)
+// ==========================================
 const productsData = [
-  { 
-    id: 1, 
-    brand: 'Samsung', 
-    name: 'Samsung A14 5G', 
-    type: 'Original', 
-    wholesale: 180000, 
-    retail: 220000, 
-    old_retail: 260000, // <--- Eski narxi 260 000 bo'lgan, hozir 220 000 (AKSIYA!)
-    stock: 35, 
-    img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 2, 
-    brand: 'Samsung', 
-    name: 'Samsung A12', 
-    type: 'BOE Zavod', 
-    wholesale: 140000, 
-    retail: 175000, 
-    stock: 4, 
-    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 3, 
-    brand: 'Redmi', 
-    name: 'Redmi Note 12', 
-    type: 'FOG', 
-    wholesale: 150000, 
-    retail: 190000, 
-    stock: 0, 
-    img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 4, 
-    brand: 'Honor', 
-    name: 'Honor 90', 
-    type: 'Original', 
-    wholesale: 310000, 
-    retail: 370000, 
-    old_retail: 430000, // <--- Eski narxi 430 000 (AKSIYA!)
-    stock: 12, 
-    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 5, 
-    brand: 'Honor', 
-    name: 'Honor 200', 
-    type: 'OLED', 
-    wholesale: 350000, 
-    retail: 420000, 
-    stock: 20, 
-    img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 6, 
-    brand: 'Huawei', 
-    name: 'Huawei Nova 9', 
-    type: 'OLED', 
-    wholesale: 280000, 
-    retail: 340000, 
-    stock: 7, 
-    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 7, 
-    brand: 'iPhone', 
-    name: 'iPhone 11', 
-    type: 'Incell', 
-    wholesale: 210000, 
-    retail: 260000, 
-    old_retail: 310000, // <--- Eski narxi 310 000 (AKSIYA!)
-    stock: 15, 
-    img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 8, 
-    brand: 'Vivo', 
-    name: 'Vivo Y20', 
-    type: 'Original', 
-    wholesale: 130000, 
-    retail: 165000, 
-    stock: 10, 
-    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 9, 
-    brand: 'Oppo', 
-    name: 'Oppo A54', 
-    type: 'TFT', 
-    wholesale: 135000, 
-    retail: 170000, 
-    stock: 0, 
-    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 10, 
-    brand: 'Tecno', 
-    name: 'Tecno Spark 10C', 
-    type: 'Oddiy', 
-    wholesale: 125000, 
-    retail: 160000, 
-    stock: 18, 
-    img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' 
-  },
-  { 
-    id: 11, 
-    brand: 'Infinix', 
-    name: 'Infinix Hot 30', 
-    type: 'Oddiy', 
-    wholesale: 130000, 
-    retail: 165000, 
-    stock: 9, 
-    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&auto=format&fit=crop&q=60' 
-  }
+  { id: 1, brand: 'Samsung', name: 'Samsung A02S/A03S/A03/A035/A025/A04E/A042', type: 'INCELL HD+', wholesale: 55000, retail: 74250, stock: 2500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 2, brand: 'Samsung', name: 'Samsung A102019/A105/M10/M105', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 3, brand: 'Samsung', name: 'Samsung A135F/A134G/A13LITE/A135/A137/F13/M13', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 4, brand: 'Samsung', name: 'Samsung A10S2020/A107', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 0, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 5, brand: 'Samsung', name: 'Samsung A20S2020/A207', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 6, brand: 'Samsung', name: 'Samsung J4+/J6+/J415/J610/J410', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 7, brand: 'Samsung', name: 'Samsung A135G/A04S/A136U/A047/A04CORE', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 8, brand: 'Samsung', name: 'Samsung A01CORE/A013/A3CORE', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 400, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 9, brand: 'Samsung', name: 'Samsung A15/M15/M156', type: 'INCELL HD+', wholesale: 66000, retail: 89100, stock: 300, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 10, brand: 'Samsung', name: 'Samsung A04/A045', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 11, brand: 'Samsung', name: 'Samsung A064G/A065', type: 'INCELL HD+', wholesale: 62000, retail: 83700, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 12, brand: 'Samsung', name: 'Samsung A074G', type: 'INCELL HD+', wholesale: 65000, retail: 87750, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 13, brand: 'Samsung', name: 'Samsung A01F2020/A015', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 14, brand: 'Samsung', name: 'Samsung A2Core/A260', type: 'INCELL HD+', wholesale: 52000, retail: 70200, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 15, brand: 'Samsung', name: 'Samsung A05/A055F/M05', type: 'INCELL HD+', wholesale: 60000, retail: 81000, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 16, brand: 'Samsung', name: 'Samsung A05S/A057', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 17, brand: 'Samsung', name: 'Samsung M23', type: 'INCELL HD+', wholesale: 58000, retail: 78300, stock: 250, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 18, brand: 'Samsung', name: 'Samsung A62018/A600', type: 'INCELL HD+', wholesale: 75000, retail: 101250, stock: 80, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 19, brand: 'Samsung', name: 'Samsung A312020/A315-WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 80, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 20, brand: 'Samsung', name: 'Samsung A145G/A146B/A146F/A145F/A145M(BIG）', type: 'INCELL HD+', wholesale: 72000, retail: 97200, stock: 80, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 21, brand: 'Samsung', name: 'Samsung A36/A56', type: 'INCELL HD+', wholesale: 92000, retail: 124200, stock: 80, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 22, brand: 'Samsung', name: 'Samsung A16-WF', type: 'INCELL HD+', wholesale: 98000, retail: 132300, stock: 30, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 23, brand: 'Samsung', name: 'Samsung A344G-WF', type: 'INCELL HD+', wholesale: 115000, retail: 155250, stock: 50, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 24, brand: 'Samsung', name: 'Samsung A72018/A750', type: 'INCELL HD+', wholesale: 76000, retail: 102600, stock: 50, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 25, brand: 'Samsung', name: 'Samsung A17WF', type: 'INCELL HD+', wholesale: 10000, retail: 13500, stock: 50, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 26, brand: 'Samsung', name: 'Samsung A30/A50/A50S-WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 50, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 27, brand: 'Samsung', name: 'Samsung J32016/J320/J300', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 50, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 28, brand: 'Samsung', name: 'Samsung A15WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 82, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 29, brand: 'Samsung', name: 'Samsung A336/A33-WF', type: 'INCELL HD+', wholesale: 11500, retail: 15525, stock: 68, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 30, brand: 'Samsung', name: 'Samsung A53/A536', type: 'INCELL HD+', wholesale: 85000, retail: 114750, stock: 61, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 31, brand: 'Samsung', name: 'Samsung A20/A205', type: 'INCELL HD+', wholesale: 72000, retail: 97200, stock: 58, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 32, brand: 'Samsung', name: 'Samsung J3Prime/J327', type: 'INCELL HD+', wholesale: 78000, retail: 105300, stock: 56, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 33, brand: 'Samsung', name: 'Samsung A26WF', type: 'INCELL HD+', wholesale: 130000, retail: 175500, stock: 55, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 34, brand: 'Samsung', name: 'Samsung A36WF', type: 'INCELL HD+', wholesale: 135000, retail: 182250, stock: 55, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 35, brand: 'Samsung', name: 'Samsung A202019/A205-WF', type: 'INCELL HD+', wholesale: 85000, retail: 114750, stock: 55, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 36, brand: 'Samsung', name: 'Samsung A30S2020/A307', type: 'INCELL HD+', wholesale: 72000, retail: 97200, stock: 50, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 37, brand: 'Samsung', name: 'Samsung A52WF', type: 'INCELL HD+', wholesale: 115000, retail: 155250, stock: 47, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 38, brand: 'Samsung', name: 'Samsung A35WF', type: 'INCELL HD+', wholesale: 125000, retail: 168750, stock: 45, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 39, brand: 'Samsung', name: 'Samsung A144G/A145P/A145B', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 41, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 40, brand: 'Samsung', name: 'Samsung A35/A554GWF', type: 'INCELL HD+', wholesale: 145000, retail: 195750, stock: 39, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 41, brand: 'Samsung', name: 'Samsung A52/A525A524G-WF', type: 'INCELL HD+', wholesale: 115000, retail: 155250, stock: 39, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 42, brand: 'Samsung', name: 'Samsung M52/M53/M54', type: 'INCELL HD+', wholesale: 90000, retail: 121500, stock: 38, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 43, brand: 'Samsung', name: 'Samsung A225G(2021)/A226', type: 'INCELL HD+', wholesale: 70000, retail: 94500, stock: 37, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 44, brand: 'Samsung', name: 'Samsung A73-WF', type: 'INCELL HD+', wholesale: 125000, retail: 168750, stock: 37, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 45, brand: 'Samsung', name: 'Samsung A545G/A546WF', type: 'INCELL HD+', wholesale: 125000, retail: 168750, stock: 36, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 46, brand: 'Samsung', name: 'Samsung A315G/A315N/A315F', type: 'INCELL HD+', wholesale: 78000, retail: 105300, stock: 35, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 47, brand: 'Samsung', name: 'Samsung A402020/A405-WF', type: 'INCELL HD+', wholesale: 115000, retail: 155250, stock: 35, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 48, brand: 'Samsung', name: 'Samsung A112020/A115', type: 'INCELL HD+', wholesale: 73000, retail: 98550, stock: 30, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 49, brand: 'Samsung', name: 'Samsung A53WF', type: 'INCELL HD+', wholesale: 112000, retail: 151200, stock: 29, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 50, brand: 'Samsung', name: 'Samsung A35/A55', type: 'INCELL HD+', wholesale: 90000, retail: 121500, stock: 26, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 51, brand: 'Samsung', name: 'Samsung A53/A535-WF', type: 'INCELL HD+', wholesale: 115000, retail: 155250, stock: 26, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 52, brand: 'Samsung', name: 'Samsung A01M2020/A015', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 25, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 53, brand: 'Samsung', name: 'Samsung S24UWF', type: 'INCELL HD+', wholesale: 250000, retail: 337500, stock: 24, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 54, brand: 'Samsung', name: 'Samsung A24-4G/GalaxyA255G/GalaxyM345G/A26-GalaxyF345G', type: 'INCELL HD+', wholesale: 82000, retail: 110700, stock: 24, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 55, brand: 'Samsung', name: 'Samsung A12/A02/A125/A1272021/A022/A325G/M12/M127/M02', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 21, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 56, brand: 'Samsung', name: 'Samsung A234G/A235/M336', type: 'INCELL HD+', wholesale: 72000, retail: 97200, stock: 16, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 57, brand: 'Samsung', name: 'Samsung J52017/J5Pro/J530', type: 'INCELL HD+', wholesale: 72000, retail: 97200, stock: 15, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 58, brand: 'Samsung', name: 'Samsung A356/A556/A555G/M35WF', type: 'INCELL HD+', wholesale: 145000, retail: 195750, stock: 13, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 59, brand: 'Samsung', name: 'Samsung J2Core/J260', type: 'INCELL HD+', wholesale: 65000, retail: 87750, stock: 9, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 60, brand: 'Samsung', name: 'Samsung A324G/A325/A32LITEWF', type: 'INCELL HD+', wholesale: 92000, retail: 124200, stock: 8, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 61, brand: 'Samsung', name: 'Samsung A21S2020/A217', type: 'INCELL HD+', wholesale: 65000, retail: 87750, stock: 8, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 62, brand: 'Samsung', name: 'Samsung A03CORE/A032', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 7, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 63, brand: 'Samsung', name: 'Samsung A56WF', type: 'INCELL HD+', wholesale: 155000, retail: 209250, stock: 7, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 64, brand: 'Samsung', name: 'Samsung A164G/A17/A175G/A165G/M16/F16', type: 'INCELL HD+', wholesale: 78000, retail: 105300, stock: 6, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 65, brand: 'Samsung', name: 'Samsung A515/A516/M31S-WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 5, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 66, brand: 'Samsung', name: 'Samsung A245/A246/A255/A256/M346', type: 'INCELL HD+', wholesale: 83000, retail: 112050, stock: 5, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 67, brand: 'Samsung', name: 'Samsung S24WF', type: 'INCELL HD+', wholesale: 38000, retail: 51300, stock: 4, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 68, brand: 'Samsung', name: 'Samsung A244G-WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 4, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 69, brand: 'Samsung', name: 'Samsung A725-WF', type: 'INCELL HD+', wholesale: 125000, retail: 168750, stock: 3, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 70, brand: 'Samsung', name: 'Samsung A325N/A325M/A325M/A325F/M325FV/M325F', type: 'INCELL HD+', wholesale: 78000, retail: 105300, stock: 3, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 71, brand: 'Samsung', name: 'Samsung J62018/J600', type: 'INCELL HD+', wholesale: 68000, retail: 91800, stock: 2, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 72, brand: 'Samsung', name: 'Samsung A33WF', type: 'INCELL HD+', wholesale: 115000, retail: 155250, stock: 1, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 73, brand: 'Samsung', name: 'Samsung A30S-WF', type: 'INCELL HD+', wholesale: 85000, retail: 114750, stock: 1, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
+  { id: 74, brand: 'Samsung', name: 'Samsung A702019/A705-WF', type: 'INCELL HD+', wholesale: 95000, retail: 128250, stock: 1, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' }
 ];
