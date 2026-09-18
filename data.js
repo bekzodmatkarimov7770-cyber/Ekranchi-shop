@@ -124,4 +124,10 @@ const productsData = [
   { id: 93, brand: 'Redmi', name: 'Redmi 14C 4G/14C 5G/Poco C75', type: 'IPS LCD', wholesale: 62000, retail: 83700, stock: 1500, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
   { id: 94, brand: 'Redmi', name: 'Redmi 15C 4G', type: 'IPS LCD', wholesale: 66000, retail: 89100, stock: 1200, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' },
   { id: 95, brand: 'Redmi', name: 'Redmi 15 4G/5G', type: 'IPS LCD', wholesale: 80000, retail: 108000, stock: 1000, img: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=200&auto=format&fit=crop&q=60' }
+// Narxlar har qanday holatda chiqishi uchun avtomatik moslashuv:
+productsData.forEach(p => {
+  p.price = p.retail || p.wholesale;
+  p.narx = p.retail || p.wholesale;
+  if (!p.retail) p.retail = p.price;
+});
 ];
