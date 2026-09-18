@@ -5,172 +5,116 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="data.js?v=redmi_new_95"></script>
-
-
+  <!-- Keshni tozalab yangi narxlarni majburiy yuklash -->
+  <script src="data.js?v=final_fix_prices"></script>
   <style>
     :root {
-      --bg: var(--tg-theme-bg-color, #0f172a);
-      --card-bg: var(--tg-theme-secondary-bg-color, #1e293b);
-      --text: var(--tg-theme-text-color, #f8fafc);
-      --text-muted: var(--tg-theme-hint-color, #94a3b8);
-      --accent: var(--tg-theme-button-color, #38bdf8);
-      --accent-text: var(--tg-theme-button-text-color, #ffffff);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --badge-bg: rgba(56, 189, 248, 0.12);
-      --badge-text: #38bdf8;
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border: #e2e8f0;
+      --sale-red: #ef4444;
+      --optom-green: #10b981;
     }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
-
     body {
-      background: var(--bg);
+      background-color: var(--bg);
       color: var(--text);
-      padding: 12px 14px 115px;
-      -webkit-font-smoothing: antialiased;
+      padding: 12px 12px 110px;
     }
-
-    /* QIDIRUV */
-    .search-wrap {
+    .search-container {
       position: sticky;
       top: 0;
       z-index: 30;
       background: var(--bg);
-      padding-bottom: 12px;
-      backdrop-filter: blur(12px);
+      padding-bottom: 10px;
     }
-    .search-bar {
+    .search-box {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
       display: flex;
       align-items: center;
       gap: 10px;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 11px 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      transition: border-color 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
     }
-    .search-bar:focus-within {
-      border-color: var(--accent);
-    }
-    .search-bar svg {
-      width: 18px;
-      height: 18px;
-      stroke: var(--text-muted);
-      flex-shrink: 0;
-    }
-    .search-bar input {
-      width: 100%;
+    .search-box input {
       border: none;
       outline: none;
       background: transparent;
+      width: 100%;
+      font-size: 15px;
       color: var(--text);
-      font-size: 14.5px;
-      font-weight: 500;
     }
-    .search-bar input::placeholder {
-      color: var(--text-muted);
-    }
-
-    /* BANNER */
-    .banner {
+    .promo-banner {
       position: relative;
-      border-radius: 18px;
-      padding: 16px 18px;
-      color: #ffffff;
-      min-height: 90px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      margin-bottom: 14px;
+      border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      cursor: pointer;
+      margin-bottom: 12px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      color: #ffffff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     }
     .banner-badge {
-      align-self: flex-start;
+      position: absolute;
+      top: 8px;
+      right: 12px;
       font-size: 10px;
       font-weight: 800;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      padding: 3px 8px;
+      background: rgba(0,0,0,0.3);
+      padding: 2px 8px;
       border-radius: 6px;
-      background: rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(8px);
-      margin-bottom: 6px;
     }
     .banner-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
-      line-height: 1.25;
-      margin-bottom: 4px;
-      max-width: 90%;
+      margin-bottom: 3px;
+      max-width: 85%;
     }
     .banner-desc {
       font-size: 12px;
-      opacity: 0.9;
-      line-height: 1.3;
+      opacity: 0.95;
     }
-    .banner-dots {
-      position: absolute;
-      bottom: 12px;
-      right: 16px;
-      display: flex;
-      gap: 5px;
-    }
-    .banner-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.35);
-      transition: 0.3s;
-    }
-    .banner-dot.active {
-      width: 16px;
-      border-radius: 4px;
-      background: #ffffff;
-    }
-
-    /* STATUS PANELI */
-    .wholesale-status {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
+    .promo-tracker {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #ffffff;
       padding: 12px 16px;
-      margin-bottom: 14px;
+      border-radius: 14px;
+      margin-bottom: 12px;
     }
-    .status-header {
+    .tracker-title {
+      font-size: 13px;
+      font-weight: 700;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      font-size: 12.5px;
-      font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
-    .status-bar-bg {
-      background: rgba(255, 255, 255, 0.08);
-      height: 6px;
-      border-radius: 10px;
+    .tracker-bg {
+      background: rgba(255,255,255,0.25);
+      border-radius: 20px;
+      height: 8px;
       overflow: hidden;
     }
-    .status-bar-fill {
+    .tracker-fill {
+      background: #10b981;
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, var(--accent) 0%, var(--success) 100%);
-      border-radius: 10px;
-      transition: width 0.35s ease;
+      border-radius: 20px;
+      transition: width 0.3s ease;
     }
-
-    /* KATEGORIYALAR */
     .categories {
       display: flex;
       gap: 8px;
@@ -179,371 +123,303 @@
       margin-bottom: 4px;
       scrollbar-width: none;
     }
-    .categories::-webkit-scrollbar {
-      display: none;
-    }
-    .cat-btn {
+    .categories::-webkit-scrollbar { display: none; }
+    .cat-pill {
       background: var(--card-bg);
       color: var(--text-muted);
-      border: 1px solid var(--card-border);
-      padding: 8px 16px;
-      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 7px 16px;
+      border-radius: 20px;
       font-size: 13px;
       font-weight: 600;
       white-space: nowrap;
       cursor: pointer;
-      transition: all 0.2s;
     }
-    .cat-btn.active {
-      background: var(--accent);
-      color: var(--accent-text);
-      border-color: var(--accent);
-      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+    .cat-pill.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
     }
-
-    /* GRID & KARTALAR */
-    .grid {
+    .product-grid {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
-    .card {
+    .product-card {
       background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 13px;
+      border-radius: 16px;
+      padding: 12px 14px;
       display: flex;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      border: 1.5px solid var(--border);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.02);
     }
-    .card.out-stock {
-      opacity: 0.55;
+    .product-card.has-sale {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: linear-gradient(180deg, #fff5f5 0%, #ffffff 100%);
     }
-    .card-img {
-      width: 72px;
-      height: 72px;
-      border-radius: 14px;
+    .prod-thumb {
+      width: 68px;
+      height: 68px;
+      border-radius: 12px;
       object-fit: cover;
-      background: rgba(255, 255, 255, 0.04);
+      background: #e2e8f0;
       flex-shrink: 0;
-      border: 1px solid var(--card-border);
     }
-
-    .card-info {
+    .prod-info {
       flex: 1;
       min-width: 0;
     }
-    .card-title {
-      font-size: 13.5px;
+    .prod-title {
+      font-size: 14px;
       font-weight: 800;
-      line-height: 1.35;
       color: var(--text);
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      margin-bottom: 4px;
+      line-height: 1.3;
     }
-    .badge-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 5px;
-      margin-bottom: 6px;
+    .prod-brand {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 2px 0 4px;
     }
-    .badge {
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
       font-size: 10px;
       font-weight: 700;
-      padding: 2.5px 7px;
-      border-radius: 6px;
-      white-space: nowrap;
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
     }
-    .badge-type {
-      background: var(--badge-bg);
-      color: var(--badge-text);
-    }
-    .badge-stock {
+    .tag.tag-ips {
       background: rgba(16, 185, 129, 0.12);
-      color: var(--success);
+      color: #059669;
     }
-    .badge-stock.low {
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--warning);
-    }
-    .badge-stock.out {
-      background: rgba(239, 68, 68, 0.15);
-      color: var(--danger);
-    }
-
-    /* NARXLAR BLOKI */
     .price-box {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      margin-top: 4px;
-    }
-    .price-primary {
       display: flex;
       align-items: baseline;
       gap: 6px;
+      margin-top: 5px;
+      flex-wrap: wrap;
     }
-    .price-val {
+    .price-main {
       font-size: 15px;
       font-weight: 900;
-      color: var(--accent);
-      letter-spacing: -0.3px;
+      color: #1e3a8a !important;
     }
-    .price-val.active-optom {
-      color: var(--success);
+    .price-main.sale-red {
+      color: #dc2626 !important;
+      font-size: 16px;
+    }
+    .price-main.optom-green {
+      color: #059669 !important;
+      font-size: 16px;
     }
     .price-old {
       font-size: 11px;
-      color: var(--text-muted);
+      color: #94a3b8;
       text-decoration: line-through;
     }
-    .price-optom-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10.5px;
-      font-weight: 700;
-      color: var(--success);
-      background: rgba(16, 185, 129, 0.12);
-      padding: 2.5px 6px;
-      border-radius: 6px;
-      width: fit-content;
-      border: 1px solid rgba(16, 185, 129, 0.2);
+    .badge-sale {
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 5px;
     }
-
-    /* COUNTER */
-    .counter {
+    .badge-optom {
+      background: #10b981;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+    .counter-ui {
       display: flex;
       align-items: center;
-      gap: 5px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--card-border);
+      background: #f1f5f9;
       border-radius: 12px;
       padding: 4px;
-      flex-shrink: 0;
+      gap: 6px;
     }
-    .btn-step {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
+    .btn-qty {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
       border: none;
-      background: var(--accent);
-      color: var(--accent-text);
-      font-size: 16px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: bold;
       cursor: pointer;
-      transition: transform 0.1s;
     }
-    .btn-step:active {
-      transform: scale(0.92);
-    }
-    .btn-step.btn-minus {
-      background: transparent;
-      color: var(--text);
-    }
-    .btn-step:disabled {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-muted);
+    .btn-qty:disabled {
+      background: #cbd5e1;
       cursor: not-allowed;
-      transform: none;
     }
-    .qty-display {
-      font-size: 14px;
+    .qty-num {
       font-weight: 800;
+      font-size: 14px;
       min-width: 18px;
       text-align: center;
-      color: var(--text);
     }
-
-    /* PASTKI DOCK */
-    .bottom-dock {
+    .bottom-bar {
       position: fixed;
-      bottom: 12px;
-      left: 14px;
-      right: 14px;
+      bottom: 0;
+      left: 0;
+      right: 0;
       background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
       padding: 12px 18px;
+      border-top: 1.5px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
       z-index: 100;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
     }
-    .dock-title {
-      font-size: 11.5px;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-    .dock-total {
-      font-size: 17px;
-      font-weight: 900;
-      color: var(--text);
-    }
-    .btn-order {
-      background: linear-gradient(135deg, var(--accent) 0%, #0284c7 100%);
+    .btn-checkout {
+      background: var(--primary);
       color: #ffffff;
       border: none;
       border-radius: 14px;
-      padding: 11px 22px;
-      font-size: 14.5px;
+      padding: 12px 22px;
+      font-size: 15px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
-      transition: transform 0.1s;
     }
-    .btn-order:active {
-      transform: scale(0.96);
-    }
-
-    /* MODAL */
-    .modal-overlay {
+    .sheet-modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.65);
-      backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.6);
       z-index: 999;
       align-items: flex-end;
     }
-    .sheet {
+    .sheet-content {
       background: var(--card-bg);
       width: 100%;
-      border-radius: 26px 26px 0 0;
-      border-top: 1px solid var(--card-border);
-      padding: 22px 20px 32px;
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px 30px;
       max-height: 85vh;
       overflow-y: auto;
-      animation: slideUp 0.25s ease-out;
     }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+    .form-group {
+      margin-bottom: 12px;
     }
-    .field {
-      margin-bottom: 14px;
-    }
-    .field label {
+    .form-group label {
       display: block;
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 700;
       margin-bottom: 6px;
-      color: var(--text-muted);
     }
-    .input {
+    .form-control {
       width: 100%;
-      padding: 12px 14px;
-      border-radius: 14px;
-      border: 1px solid var(--card-border);
-      background: var(--bg);
+      padding: 11px 13px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: #f8fafc;
       color: var(--text);
       font-size: 14px;
       outline: none;
-    }
-    .input:focus {
-      border-color: var(--accent);
     }
   </style>
 </head>
 <body>
 
-  <div class="search-wrap">
-    <div class="search-bar">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input type="text" id="searchInput" placeholder="Model qidirish (A02, A13, A54)..." oninput="onSearch()">
+  <!-- Qidiruv bo'limi -->
+  <div class="search-container">
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="searchInput" placeholder="Model qidirish (A14, Note 12)..." oninput="onSearch()">
     </div>
   </div>
 
-  <div class="banner" id="bannerBox" onclick="nextBanner()">
+  <!-- Aksiya baneri -->
+  <div class="promo-banner" id="bannerBox" onclick="nextBanner()">
     <span class="banner-badge" id="bannerBadge">Yangilik</span>
-    <div class="banner-title" id="bannerTitle">Ekranchi Servis</div>
-    <div class="banner-desc" id="bannerDesc">Original va sifatli ekranlar omborda</div>
-    <div class="banner-dots" id="bannerDots"></div>
-  </div>
-
-  <div class="wholesale-status">
-    <div class="status-header">
-      <span id="promoText">⚡️ 15 ta ekranga optom narx!</span>
-      <span id="promoCount" style="color:var(--accent);">0 / 15</span>
-    </div>
-    <div class="status-bar-bg">
-      <div class="status-bar-fill" id="promoFill"></div>
-    </div>
-  </div>
-
-  <div class="categories" id="cats"></div>
-  <div class="grid" id="products"></div>
-
-  <div class="bottom-dock">
     <div>
-      <div class="dock-title" id="cartQtySummary">Savat: 0 ta</div>
-      <div class="dock-total" id="cartTotalSummary">0 so'm</div>
+      <div class="banner-title" id="bannerTitle">Yuklanmoqda...</div>
+      <div class="banner-desc" id="bannerDesc"></div>
     </div>
-    <button class="btn-order" onclick="openCheckout()">Buyurtma 🛍</button>
   </div>
 
-  <div class="modal-overlay" id="checkoutModal">
-    <div class="sheet">
-      <div style="width:38px; height:4px; background:var(--card-border); border-radius:10px; margin:0 auto 16px;"></div>
-      <h3 style="font-size:18px; font-weight:800; margin-bottom:16px;">Buyurtmani tasdiqlash</h3>
-      <div class="field">
-        <label>Ismingiz:</label>
-        <input type="text" id="custName" class="input" placeholder="Ism-sharifingiz">
+  <!-- 15+ Optom hisoblagichi -->
+  <div class="promo-tracker">
+    <div class="tracker-title">
+      <span id="trackerText">⚡️ 15 ta ekranga optom narx!</span>
+      <span id="trackerCount">0 / 15</span>
+    </div>
+    <div class="tracker-bg">
+      <div class="tracker-fill" id="trackerFill"></div>
+    </div>
+  </div>
+
+  <!-- Kategoriyalar -->
+  <div class="categories" id="cats"></div>
+
+  <!-- Mahsulotlar ro'yxati -->
+  <div class="product-grid" id="products"></div>
+
+  <!-- Pastki savat paneli -->
+  <div class="bottom-bar">
+    <div>
+      <div style="font-size:12px; color:var(--text-muted);" id="cartQtySummary">Savat: 0 ta</div>
+      <div style="font-size:17px; font-weight:900; color:var(--text);" id="cartTotalSummary">0 so'm</div>
+    </div>
+    <button class="btn-checkout" onclick="openCheckout()">Rasmiylashtirish 🛍</button>
+  </div>
+
+  <!-- Buyurtma oynasi -->
+  <div class="sheet-modal" id="checkoutModal">
+    <div class="sheet-content">
+      <h3 style="font-size:18px; font-weight:800; margin-bottom:14px;">Buyurtmani rasmiylashtirish</h3>
+      <div class="form-group">
+        <label>Ism-sharifingiz:</label>
+        <input type="text" id="custName" class="form-control" placeholder="Ismingiz">
       </div>
-      <div class="field">
-        <label>Yetkazib berish usuli:</label>
-        <select id="deliveryType" class="input" onchange="toggleDeliveryField()">
-          <option value="BTS">BTS Pochta (Viloyatlar bo'ylab)</option>
-          <option value="Taksi">Taksi orqali (Tezkor yetkazish)</option>
+      <div class="form-group">
+        <label>Yetkazib berish turi:</label>
+        <select id="deliveryType" class="form-control" onchange="toggleDeliveryField()">
+          <option value="BTS">BTS Pochta (Viloyatlar)</option>
+          <option value="Taksi">Taksi orqali (Tezkor)</option>
         </select>
       </div>
-      <div class="field">
-        <label id="addrLabel">BTS filiali va shahar/tumaningiz:</label>
-        <textarea id="custAddress" class="input" rows="2" placeholder="Manzilni aniq kiriting..."></textarea>
+      <div class="form-group">
+        <label id="addrLabel">BTS filiali va shahar/tuman:</label>
+        <textarea id="custAddress" class="form-control" rows="2" placeholder="Viloyat, tuman, manzil..."></textarea>
       </div>
-      <button class="btn-order" style="width:100%; padding:14px; margin-top:8px;" onclick="submitOrder()">Yuborish 🚀</button>
-      <button onclick="closeCheckout()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; font-weight:700; cursor:pointer;">Bekor qilish</button>
+      <button class="btn-checkout" style="width:100%; padding:14px;" onclick="submitOrder()">Tasdiqlash 🚀</button>
+      <button onclick="closeCheckout()" style="width:100%; background:none; border:none; color:var(--text-muted); margin-top:12px; font-weight:700; cursor:pointer;">Yopish</button>
     </div>
   </div>
 
 <script>
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
   if (tg) { tg.expand(); tg.ready(); }
-  function haptic() { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e) {} }
+  function triggerHaptic() { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e) {} }
 
-  let bannerIdx = 0;
+  // 1. Banerlar mantiqi
+  let currentBannerIdx = 0;
   function renderBanners() {
     if (typeof bannersData === 'undefined' || !bannersData.length) return;
-    const b = bannersData[bannerIdx];
+    const b = bannersData[currentBannerIdx];
     const box = document.getElementById('bannerBox');
     box.style.background = b.bg;
     document.getElementById('bannerBadge').innerText = b.badge;
     document.getElementById('bannerTitle').innerText = b.title;
     document.getElementById('bannerDesc').innerText = b.desc;
-    const dots = document.getElementById('bannerDots');
-    dots.innerHTML = '';
-    bannersData.forEach((_, i) => {
-      const dot = document.createElement('div');
-      dot.className = 'banner-dot' + (i === bannerIdx ? ' active' : '');
-      dots.appendChild(dot);
-    });
   }
   function nextBanner() {
-    if (typeof bannersData === 'undefined') return;
-    bannerIdx = (bannerIdx + 1) % bannersData.length;
+    if (typeof bannersData === 'undefined' || !bannersData.length) return;
+    currentBannerIdx = (currentBannerIdx + 1) % bannersData.length;
     renderBanners();
   }
   setInterval(nextBanner, 4500);
 
-  const brands = ['Barchasi', 'Samsung', 'Redmi', 'Honor', 'iPhone'];
+  // 2. Kategoriya tugmalari
+  const brands = ['Barchasi', 'Samsung', 'Redmi'];
   let currentBrand = 'Barchasi';
   let searchQuery = '';
   let cart = {};
@@ -551,11 +427,11 @@
   const catBox = document.getElementById('cats');
   brands.forEach(b => {
     const btn = document.createElement('button');
-    btn.className = 'cat-btn' + (b === currentBrand ? ' active' : '');
+    btn.className = 'cat-pill' + (b === currentBrand ? ' active' : '');
     btn.innerText = b;
     btn.onclick = () => {
-      haptic();
-      document.querySelectorAll('.cat-btn').forEach(el => el.classList.remove('active'));
+      triggerHaptic();
+      document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
       btn.classList.add('active');
       currentBrand = b;
       renderProducts();
@@ -568,12 +444,13 @@
     renderProducts();
   }
 
+  // 3. Mahsulotlarni chiqarish va NARXNI ANIQ HISOBLASH
   function renderProducts() {
-    if (typeof productsData === 'undefined') return;
+    if (typeof productsData === 'undefined' || !productsData.length) return;
     const list = document.getElementById('products');
     list.innerHTML = '';
 
-    let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand.toLowerCase() === currentBrand.toLowerCase());
+    let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
     if (searchQuery) {
       filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.type.toLowerCase().includes(searchQuery));
     }
@@ -582,135 +459,150 @@
     for (let id in cart) totalQty += cart[id];
     const isWholesale = totalQty >= 15;
 
-    document.getElementById('promoFill').style.width = Math.min(100, Math.round((totalQty / 15) * 100)) + '%';
-    document.getElementById('promoCount').innerText = totalQty + ' / 15';
-    document.getElementById('promoText').innerText = isWholesale ? '🎉 Optom narx faollashdi!' : 'Optom narxgacha yana ' + (15 - totalQty) + ' ta qoldi';
+    // Progress bar
+    const trackerFill = document.getElementById('trackerFill');
+    trackerFill.style.width = Math.min(100, Math.round((totalQty / 15) * 100)) + '%';
+    document.getElementById('trackerCount').innerText = totalQty + ' / 15';
+    document.getElementById('trackerText').innerText = isWholesale ? '🎉 Optom narx faollashdi!' : 'Optom narxgacha yana ' + (15 - totalQty) + ' ta qoldi!';
 
     if (!filtered.length) {
-      list.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted); font-size:14px;">Bunday ekran topilmadi 🔍</div>';
-      updateDock(totalQty, isWholesale);
+      list.innerHTML = '<div style="text-align:center; padding:35px; color:var(--text-muted); font-size:15px;">Hech narsa topilmadi 🔍</div>';
+      updateCartBar(totalQty, isWholesale);
       return;
     }
 
     filtered.forEach(p => {
       const qty = cart[p.id] || 0;
-      const isOut = p.stock <= 0;
-      const isLow = p.stock > 0 && p.stock <= 10;
+      
+      // NARXNI ANIQLASH (Hech qachon bo'sh yoki 0 chiqmasligi uchun):
+      const wholesalePrice = Number(p.wholesale || p.optom || p.price || 0);
+      const retailPrice = Number(p.retail || p.narx || p.price || Math.round(wholesalePrice * 1.35));
+      const oldRetailPrice = Number(p.old_retail || 0);
 
-      let stockTag = isOut 
-        ? '<span class="badge badge-stock out">Tugagan</span>'
-        : (isLow ? `<span class="badge badge-stock low">Oz qoldi (${p.stock})</span>` : `<span class="badge badge-stock">Omborda: ${p.stock} ta</span>`);
+      const hasSale = !isWholesale && oldRetailPrice > retailPrice;
 
-      // NARXNI TAGIDA OPTOM NARXINI HAM KO'RSATISH MANTIQI
-      let priceBoxHtml = '';
+      let priceHtml = '';
       if (isWholesale) {
-        priceBoxHtml = `
-          <div class="price-box">
-            <div class="price-primary">
-              <span class="price-val active-optom">${p.wholesale.toLocaleString()} so'm</span>
-              <span class="price-old">${p.retail.toLocaleString()} so'm</span>
-            </div>
-            <div class="price-optom-tag" style="background:rgba(16,185,129,0.22);">
-              ✅ Optom narx qo'llandi
-            </div>
-          </div>
+        priceHtml = `
+          <span class="price-main optom-green">${wholesalePrice.toLocaleString('uz-UZ')} so'm</span>
+          <span class="price-old">${retailPrice.toLocaleString('uz-UZ')}</span>
+          <span class="badge-optom">OPTOM</span>
+        `;
+      } else if (hasSale) {
+        priceHtml = `
+          <span class="price-main sale-red">${retailPrice.toLocaleString('uz-UZ')} so'm</span>
+          <span class="price-old">${oldRetailPrice.toLocaleString('uz-UZ')}</span>
+          <span class="badge-sale">🔥 AKSIYA</span>
         `;
       } else {
-        priceBoxHtml = `
-          <div class="price-box">
-            <div class="price-primary">
-              <span class="price-val">${p.retail.toLocaleString()} so'm</span>
-              <span style="font-size:10.5px; color:var(--text-muted); font-weight:600;">(dona)</span>
-            </div>
-            <div class="price-optom-tag">
-              ⚡️ Optom (15+): <b>${p.wholesale.toLocaleString()} so'm</b>
-            </div>
-          </div>
-        `;
+        priceHtml = `<span class="price-main">${retailPrice.toLocaleString('uz-UZ')} so'm</span>`;
       }
 
-      const card = document.createElement('div');
-      card.className = 'card' + (isOut ? ' out-stock' : '');
-      card.innerHTML = `
-        <img src="${p.img}" class="card-img" alt="${p.name}">
-        <div class="card-info">
-          <div class="card-title">${p.name}</div>
-          <div class="badge-wrap">
-            <span class="badge badge-type">${p.type}</span>
-            ${stockTag}
-          </div>
-          ${priceBoxHtml}
+      const isIps = p.type.includes('IPS');
+
+      const div = document.createElement('div');
+      div.className = `product-card ${hasSale ? 'has-sale' : ''}`;
+      div.innerHTML = `
+        <img src="${p.img}" class="prod-thumb" alt="${p.name}">
+        <div class="prod-info">
+          <div class="prod-title">${p.name}</div>
+          <div class="prod-brand">${p.brand} • <span class="tag ${isIps ? 'tag-ips' : ''}">${p.type}</span></div>
+          <div class="price-box">${priceHtml}</div>
         </div>
-        <div class="counter">
-          ${qty > 0 ? `<button class="btn-step btn-minus" onclick="changeQty(${p.id}, -1)">−</button><span class="qty-display">${qty}</span>` : ''}
-          <button class="btn-step" ${isOut || qty >= p.stock ? 'disabled' : ''} onclick="changeQty(${p.id}, 1)">+</button>
+        <div class="counter-ui">
+          ${qty > 0 ? `<button class="btn-qty" style="background:#e2e8f0; color:#0f172a;" onclick="changeQty(${p.id}, -1)">-</button><span class="qty-num">${qty}</span>` : ''}
+          <button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button>
         </div>
       `;
-      list.appendChild(card);
+      list.appendChild(div);
     });
-
-    updateDock(totalQty, isWholesale);
+    updateCartBar(totalQty, isWholesale);
   }
 
   function changeQty(id, delta) {
-    const p = productsData.find(item => item.id == id);
-    if (!p) return;
-    const currentQty = cart[id] || 0;
-    if (delta > 0 && currentQty >= p.stock) return;
-    haptic();
-    cart[id] = currentQty + delta;
+    triggerHaptic();
+    cart[id] = (cart[id] || 0) + delta;
     if (cart[id] <= 0) delete cart[id];
     renderProducts();
   }
 
-  function updateDock(totalQty, isWholesale) {
+  function updateCartBar(totalQty, isWholesale) {
     let totalSum = 0;
     for (let id in cart) {
       const p = productsData.find(item => item.id == id);
-      if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
+      if (p) {
+        const wholesalePrice = Number(p.wholesale || p.optom || p.price || 0);
+        const retailPrice = Number(p.retail || p.narx || p.price || Math.round(wholesalePrice * 1.35));
+        totalSum += (isWholesale ? wholesalePrice : retailPrice) * cart[id];
+      }
     }
-    document.getElementById('cartQtySummary').innerText = `Savat: ${totalQty} ta ${isWholesale ? '(Optom)' : ''}`;
-    document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString() + " so'm";
+    document.getElementById('cartQtySummary').innerText = 'Savat: ' + totalQty + ' ta ' + (isWholesale ? '(Optom)' : '');
+    document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString('uz-UZ') + " so'm";
   }
 
   function openCheckout() {
     let totalQty = 0;
     for (let id in cart) totalQty += cart[id];
-    if (!totalQty) return alert("Savat bo'sh! Avval mahsulot tanlang.");
+    if (!totalQty) return alert("Avval savatga tovar qo'shing!");
     document.getElementById('checkoutModal').style.display = 'flex';
   }
+
   function closeCheckout() {
     document.getElementById('checkoutModal').style.display = 'none';
   }
+
   function toggleDeliveryField() {
     const type = document.getElementById('deliveryType').value;
-    document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tumaningiz:" : "Yetkazish manzili (Taksi uchun):";
+    document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tuman:" : "Yetkazish manzili (Taksi uchun):";
   }
 
   function submitOrder() {
     const name = document.getElementById('custName').value.trim();
     const delivery = document.getElementById('deliveryType').value;
     const address = document.getElementById('custAddress').value.trim();
-    if (!name || !address) return alert("Iltimos, ismingiz va manzilingizni yozing!");
+    if (!name || !address) return alert("Iltimos, ism va manzilni to'ldiring!");
 
     let totalQty = 0;
     for (let id in cart) totalQty += cart[id];
     const isWholesale = totalQty >= 15;
     let totalSum = 0;
     const items = [];
+
     for (let id in cart) {
       const p = productsData.find(item => item.id == id);
       if (p) {
-        const price = isWholesale ? p.wholesale : p.retail;
+        const wholesalePrice = Number(p.wholesale || p.optom || p.price || 0);
+        const retailPrice = Number(p.retail || p.narx || p.price || Math.round(wholesalePrice * 1.35));
+        const price = isWholesale ? wholesalePrice : retailPrice;
         const subtotal = price * cart[id];
         totalSum += subtotal;
-        items.push({ name: p.name, type: p.type, qty: cart[id], price: price, subtotal: subtotal });
+        items.push({
+          name: p.name,
+          type: p.type,
+          qty: cart[id],
+          price: price,
+          subtotal: subtotal
+        });
       }
     }
-    if (tg) tg.sendData(JSON.stringify({ name, delivery, address, items, total_qty: totalQty, total_sum: totalSum, price_type: isWholesale ? "Optom (15+)" : "Chakana" }));
+
+    if (tg) {
+      tg.sendData(JSON.stringify({
+        name: name,
+        delivery: delivery,
+        address: address,
+        items: items,
+        total_qty: totalQty,
+        total_sum: totalSum,
+        price_type: isWholesale ? "Optom (15+)" : "Chakana"
+      }));
+    }
   }
 
-  window.onload = () => { renderBanners(); renderProducts(); };
+  window.onload = () => {
+    renderBanners();
+    renderProducts();
+  };
 </script>
 </body>
 </html>
