@@ -13,7 +13,7 @@ import os
 
 BOT_TOKEN = "8484579263:AAGZu38VEXN4Hx5Yup12JoZnBZa1TlCDVy0"
 ADMIN_ID = 1758833704
-WEB_APP_URL = "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=sale202"
+WEB_APP_URL = "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=showoptom5"
 CARD_NUMBER = "9860 1266 0304 4796"
 CARD_NAME = "Bekzod M. (Humo / Uzcard)"
 
