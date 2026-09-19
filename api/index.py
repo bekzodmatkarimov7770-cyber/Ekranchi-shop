@@ -13,7 +13,6 @@ USERS_FILE = "/tmp/users.json"
 ORDERS_FILE = "/tmp/orders.json"
 CACHE_ORDERS = {}
 
-# Текст гарантии и условий возврата
 WARRANTY_TEXT = (
     "🛡 <b>KAFOLAT VA QAYTARISH SHARTLARI (2 OY):</b>\n"
     "• Barcha displeylarga <b>2 oy kafolat</b> mavjud.\n"
@@ -112,6 +111,17 @@ def handle_start(m):
             f"Displeylarni tanlash va buyurtma berish uchun, iltimos, pastdagi <b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing: 👇"
         )
         bot.send_message(m.chat.id, txt, reply_markup=contact_kb(), parse_mode="HTML")
+
+@bot.message_handler(commands=['stat'])
+def handle_stat(m):
+    if str(m.chat.id) == str(ADMIN_ID):
+        users = load_data(USERS_FILE)
+        txt = (
+            f"📊 <b>BOT STATISTIKASI:</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"👥 Ro'yxatdan o'tgan ustalar: <b>{len(users)} ta</b>"
+        )
+        bot.send_message(m.chat.id, txt, parse_mode="HTML")
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(m):
