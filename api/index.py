@@ -93,9 +93,9 @@ def admin_order_kb(cid):
 def handle_start(m):
     uid = str(m.chat.id)
     name = m.from_user.first_name or "Mijoz"
-    phones = load_data(USERS_FILE)
+    users = load_data(USERS_FILE)
 
-    if uid in phones:
+    if uid in users and isinstance(users[uid], dict) and users[uid].get('role'):
         txt = (
             f"Assalomu alaykum, <b>{name}</b>! 👋\n\n"
             f"<b>@ekranchi_bola</b> do'konimizga xush kelibsiz!\n\n"
@@ -116,10 +116,16 @@ def handle_start(m):
 def handle_stat(m):
     if str(m.chat.id) == str(ADMIN_ID):
         users = load_data(USERS_FILE)
+        total = len(users)
+        optom_count = sum(1 for u in users.values() if isinstance(u, dict) and u.get('role') == 'Optom')
+        retail_count = sum(1 for u in users.values() if isinstance(u, dict) and u.get('role') == 'Chakana')
+        
         txt = (
-            f"📊 <b>BOT STATISTIKASI:</b>\n"
+            f"📊 <b>BOT STATISTIKASI (CRM):</b>\n"
             f"━━━━━━━━━━━━━━━━━━━\n"
-            f"👥 Ro'yxatdan o'tgan ustalar: <b>{len(users)} ta</b>"
+            f"👥 Jami foydalanuvchilar: <b>{total} ta</b>\n"
+            f"🤝 Optomchilar (Usta/Do'kon): <b>{optom_count} ta</b>\n"
+            f"👤 Chakanachilar (Dona): <b>{retail_count} ta</b>"
         )
         bot.send_message(m.chat.id, txt, parse_mode="HTML")
 
@@ -128,22 +134,55 @@ def handle_contact(m):
     if m.contact and m.contact.user_id == m.from_user.id:
         phone = m.contact.phone_number
         if not phone.startswith('+'): phone = '+' + phone
-        phones = load_data(USERS_FILE)
-        phones[str(m.chat.id)] = phone
-        save_data(USERS_FILE, phones)
+        uid = str(m.chat.id)
+        
+        users = load_data(USERS_FILE)
+        users[uid] = {"phone": phone, "role": None, "name": m.from_user.first_name}
+        save_data(USERS_FILE, users)
+
+        kb = InlineKeyboardMarkup(row_width=2)
+        kb.add(
+            InlineKeyboardButton("🤝 Optom (Do'kon / Usta)", callback_data="set_role:Optom"),
+            InlineKeyboardButton("👤 Chakana (Dona)", callback_data="set_role:Chakana")
+        )
         bot.send_message(
             m.chat.id, 
-            f"✅ <b>Raqamingiz tasdiqlandi:</b> {phone}\n\nDo'konimizdan bemalol buyurtma berishingiz mumkin!", 
-            reply_markup=main_kb(), 
+            f"✅ <b>Raqamingiz tasdiqlandi:</b> {phone}\n\nIltimos, xarid qilish rejimini tanlang:", 
+            reply_markup=kb, 
             parse_mode="HTML"
         )
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith('set_role:'))
+def handle_role_selection(c):
+    role = c.data.split(':')[1]
+    uid = str(c.message.chat.id)
+    
+    users = load_data(USERS_FILE)
+    if uid in users and isinstance(users[uid], dict):
+        users[uid]['role'] = role
+        save_data(USERS_FILE, users)
+        
+    bot.answer_callback_query(c.id, f"Siz '{role}' rejimini tanladingiz!")
+    try:
+        bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=None)
+    except:
+        pass
+        
+    txt = (
+        f"✅ <b>Muvaffaqiyatli saqlandi!</b> Sizning rejimingiz: <b>{role}</b>\n\n"
+        f"Endi pastdagi <b>«🛍 Do'konni ochish»</b> tugmasi orqali katalikka o'tishingiz mumkin:"
+    )
+    bot.send_message(c.message.chat.id, txt, reply_markup=main_kb(), parse_mode="HTML")
 
 @bot.message_handler(content_types=['web_app_data'])
 def handle_order(m):
     try:
         data = json.loads(m.web_app_data.data)
         cid = str(m.chat.id)
-        phone = load_data(USERS_FILE).get(cid, "Ko'rsatilmagan")
+        user_info = load_data(USERS_FILE).get(cid, {})
+        phone = user_info.get('phone', 'Ko\'rsatilmagan') if isinstance(user_info, dict) else str(user_info)
+        role = user_info.get('role', 'Aniqlanmagan') if isinstance(user_info, dict) else 'Aniqlanmagan'
+        
         name = data.get('name', 'Mijoz')
         deliv = data.get('delivery', 'BTS')
         addr = data.get('address', '')
@@ -183,6 +222,7 @@ def handle_order(m):
             admin_txt = (
                 f"🔔 <b>YANGI BUYURTMA TUSHDI!</b>\n━━━━━━━━━━━━━━━━━━━\n"
                 f"👤 <b>Mijoz:</b> {name} ({uname})\n📞 <b>Raqam:</b> {phone}\n"
+                f"🏷 <b>Mijoz Turi (CRM):</b> <b>{role}</b>\n"
                 f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n📊 <b>Rejim:</b> {pt}\n"
                 f"{tag} <b>Tovarlar:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
                 f"💰 <b>Summa:</b> <b>{t_sum:,} so'm</b> ({t_qty} ta)"
@@ -390,14 +430,17 @@ def handle_snd_miss(c):
 @bot.message_handler(content_types=['photo'])
 def handle_receipt(m):
     cid = str(m.chat.id)
-    phone = load_data(USERS_FILE).get(cid, "Ko'rsatilmagan")
+    user_info = load_data(USERS_FILE).get(cid, {})
+    phone = user_info.get('phone', 'Ko\'rsatilmagan') if isinstance(user_info, dict) else str(user_info)
+    role = user_info.get('role', 'Aniqlanmagan') if isinstance(user_info, dict) else 'Aniqlanmagan'
+    
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(
         InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
         InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
         InlineKeyboardButton("❌ Soxta chek", callback_data=f"pay:{cid}:fake")
     )
-    cap = f"🧾 <b>TO'LOV CHEKI KELDI!</b>\n👤 {m.from_user.first_name}\n📞 {phone}\n🆔 <code>{cid}</code>"
+    cap = f"🧾 <b>TO'LOV CHEKI KELDI!</b>\n👤 {m.from_user.first_name}\n📞 {phone}\n🏷 Tur: <b>{role}</b>\n🆔 <code>{cid}</code>"
     bot.send_photo(ADMIN_ID, m.photo[-1].file_id, caption=cap, reply_markup=kb, parse_mode="HTML")
     bot.reply_to(m, "✅ Chekingiz qabul qilindi!")
 
