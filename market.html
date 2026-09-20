@@ -6,7 +6,7 @@
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Keshni tozalash uchun yangi versiya -->
-  <script src="data.js?v=final_v105"></script>
+  <script src="data.js?v=excel_v1"></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -435,7 +435,7 @@
   <div class="search-container">
     <div class="search-box">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input type="text" id="searchInput" placeholder="Model qidirish (A14, Spark 8, Reno 8, 11 Pro)..." oninput="onSearch()">
+      <input type="text" id="searchInput" placeholder="Model qidirish..." oninput="onSearch()">
     </div>
   </div>
 
@@ -544,9 +544,7 @@
   }
   setInterval(nextBanner, 4500);
 
-  const brands = [
-    'Barchasi', 'Samsung', 'iPhone', 'Redmi', 'Xiaomi', 'Tecno & Infinix', 'Oppo', 'Vivo', 'Realme', 'Honor', 'Huawei'
-  ];
+  const brands = ['Barchasi', 'Samsung', 'iPhone', 'Redmi', 'Xiaomi', 'Tecno & Infinix', 'Oppo', 'Vivo', 'Realme', 'Honor', 'Huawei'];
 
   const catBox = document.getElementById('cats');
   brands.forEach(b => {
@@ -572,7 +570,7 @@
     const list = document.getElementById('products');
     
     if (typeof productsData === 'undefined' || !productsData.length) {
-      list.innerHTML = '<div style="text-align:center; padding:30px; color:#dc2626; font-size:15px; font-weight:bold;">⚠️ Diqqat! Ekranlar bazasi topilmadi (data.js xatosi).<br><br><span style="font-size:12px;color:gray;">Iltimos, data.js fayli Githubga to\'g\'ri yuklanganini tekshiring.</span></div>';
+      list.innerHTML = '<div style="text-align:center; padding:30px; color:#dc2626; font-size:15px; font-weight:bold;">⚠️ Diqqat! Ekranlar bazasi topilmadi (data.js xatosi).</div>';
       return;
     }
 
@@ -580,10 +578,7 @@
 
     let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
     if (searchQuery) {
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(searchQuery) || 
-        p.brand.toLowerCase().includes(searchQuery)
-      );
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.brand.toLowerCase().includes(searchQuery));
     }
 
     let totalQty = 0;
@@ -593,7 +588,7 @@
     const trackerFill = document.getElementById('trackerFill');
     trackerFill.style.width = Math.min(100, Math.round((totalQty / 50) * 100)) + '%';
     document.getElementById('trackerCount').innerText = totalQty + ' / 50';
-    document.getElementById('trackerText').innerText = isWholesale ? '🎉 Optom narx (50+) faollashdi!' : 'Optom narxgacha: ' + (50 - totalQty) + ' ta qoldi';
+    document.getElementById('trackerText').innerText = isWholesale ? '🎉 Optom narx faollashdi!' : 'Optomgacha: ' + (50 - totalQty) + ' ta qoldi';
 
     if (!filtered.length) {
       list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--muted); font-size:14px;">Hech narsa topilmadi 🔍</div>';
@@ -666,32 +661,23 @@
     cart[id] = (cart[id] || 0) + delta;
     if (cart[id] <= 0) delete cart[id];
     renderProducts();
-    if (document.getElementById('cartModal').style.display === 'flex') {
-      renderCartItems();
-    }
+    if (document.getElementById('cartModal').style.display === 'flex') renderCartItems();
   }
 
   function setQtyDirect(id, value) {
     triggerHaptic();
     let num = parseInt(value);
-    if (isNaN(num) || num <= 0) {
-      delete cart[id];
-    } else {
-      cart[id] = num;
-    }
+    if (isNaN(num) || num <= 0) delete cart[id];
+    else cart[id] = num;
     renderProducts();
-    if (document.getElementById('cartModal').style.display === 'flex') {
-      renderCartItems();
-    }
+    if (document.getElementById('cartModal').style.display === 'flex') renderCartItems();
   }
 
   function updateCartBar(totalQty, isWholesale) {
     let totalSum = 0;
     for (let id in cart) {
       const p = productsData.find(item => item.id == id);
-      if (p) {
-        totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
-      }
+      if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
     }
     document.getElementById('cartQtySummary').innerText = totalQty + ' ta tovar ' + (isWholesale ? '(Optom)' : '(Chakana)');
     document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString('uz-UZ') + " so'm";
@@ -702,16 +688,14 @@
     for (let id in cart) totalQty += cart[id];
     if (!totalQty) {
       if (tg && tg.showAlert) tg.showAlert("Savatchangiz bo'sh! Avval tovar qo'shing.");
-      else alert("Savatchangiz bo'sh! Avval tovar qo'shing.");
+      else alert("Savatchangiz bo'sh!");
       return;
     }
     renderCartItems();
     document.getElementById('cartModal').style.display = 'flex';
   }
 
-  function closeCartModal() {
-    document.getElementById('cartModal').style.display = 'none';
-  }
+  function closeCartModal() { document.getElementById('cartModal').style.display = 'none'; }
 
   function clearCart() {
     if (confirm("Rostdan ham savatchani tozalamoqchimisiz?")) {
@@ -751,7 +735,6 @@
       `;
       list.appendChild(row);
     }
-
     document.getElementById('cartPricingStatus').innerText = isWholesale ? "Jami (Optom narxda):" : "Jami (Chakana narxda):";
     document.getElementById('cartModalTotal').innerText = totalSum.toLocaleString('uz-UZ') + " so'm";
   }
@@ -761,24 +744,21 @@
     document.getElementById('checkoutModal').style.display = 'flex';
   }
 
-  function closeCheckout() {
-    document.getElementById('checkoutModal').style.display = 'none';
-  }
+  function closeCheckout() { document.getElementById('checkoutModal').style.display = 'none'; }
 
   function viewImage(imgUrl, name) {
     document.getElementById('imgModalTag').src = imgUrl;
     document.getElementById('imgModalTitle').innerText = name;
     document.getElementById('imgModal').style.display = 'flex';
   }
-  function closeImgModal() {
-    document.getElementById('imgModal').style.display = 'none';
-  }
+  function closeImgModal() { document.getElementById('imgModal').style.display = 'none'; }
 
   function toggleDeliveryField() {
     const type = document.getElementById('deliveryType').value;
     document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tuman:" : "Yetkazish manzili (Taksi uchun):";
   }
 
+  // === SIQILGAN MA'LUMOT YUBORISH (XATOLIK YO'QOLDI!) ===
   function submitOrder() {
     const name = document.getElementById('custName').value.trim();
     const delivery = document.getElementById('deliveryType').value;
@@ -791,59 +771,41 @@
     }
 
     let totalQty = 0;
+    let totalSum = 0;
     for (let id in cart) totalQty += cart[id];
     
-    if (totalQty === 0) {
-      if (tg && tg.showAlert) tg.showAlert("Savatingiz bo'sh!");
-      return;
-    }
-
     const isWholesale = totalQty >= 50;
-    let totalSum = 0;
-    
+    let items = [];
+
     for (let id in cart) {
       const p = productsData.find(item => item.id == id);
-      if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
+      if (p) {
+        const price = isWholesale ? p.wholesale : p.retail;
+        totalSum += price * cart[id];
+        // Uzun nomlarni xato bermasligi uchun qisqartirib yuboramiz
+        let shortName = p.name.length > 40 ? p.name.substring(0, 38) + ".." : p.name;
+        // i: nom, q: soni, p: narxi
+        items.push({ n: shortName, q: cart[id], p: price });
+      }
     }
 
-    let nameLimit = 60;
-    let payloadString = "";
-    
-    // YASHIRIN KOMPRESSIYA - Endi xato chiqmaydi, o'zi qisqartirib yuboradi
-    while(true) {
-        let tempItems = [];
-        for (let id in cart) {
-            const p = productsData.find(item => item.id == id);
-            if (p) {
-                let sn = p.name;
-                if (sn.length > nameLimit) {
-                    sn = sn.substring(0, nameLimit) + "..";
-                }
-                tempItems.push({
-                    name: sn,
-                    qty: cart[id],
-                    price: (isWholesale ? p.wholesale : p.retail)
-                });
-            }
-        }
-        
-        const payload = {
-          name: name.substring(0, 30),
-          delivery: delivery,
-          address: address.substring(0, 80),
-          items: tempItems,
-          total_qty: totalQty,
-          total_sum: totalSum,
-          price_type: isWholesale ? "Optom" : "Chakana"
-        };
-        
+    // Yuboriladigan siqilgan kod:
+    let payload = {
+      n: name.substring(0, 30),
+      d: delivery,
+      a: address.substring(0, 80),
+      i: items,
+      tq: totalQty,
+      ts: totalSum,
+      pt: isWholesale ? "Optom" : "Chakana"
+    };
+
+    let payloadString = JSON.stringify(payload);
+
+    // Agar 100 tadan ko'p xil ekran tanlasa va baribir 4000 belgidan oshsa, yana ham siqamiz
+    if (payloadString.length > 4000) {
+        payload.i = payload.i.map(x => ({n: x.n.substring(0, 15) + ".", q: x.q, p: x.p}));
         payloadString = JSON.stringify(payload);
-        
-        // Telegram limiti - 4000 bayt
-        if (payloadString.length < 4000 || nameLimit <= 10) {
-            break;
-        }
-        nameLimit -= 5;
     }
 
     if (tg && tg.sendData) {
