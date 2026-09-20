@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Ma'lumotlarni keshdan emas, har doim yangi o'qishi uchun -->
-  <script src="data.js?v=tozalandi_v2"></script>
+  <!-- KESHNI MAJBURAN YANGILASH UCHUN MANA SHU QATOR JAVOBGAR -->
+  <script src="data.js?v=final_versiya_100"></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -545,17 +545,7 @@
   setInterval(nextBanner, 4500);
 
   const brands = [
-    'Barchasi', 
-    'Samsung', 
-    'iPhone', 
-    'Redmi', 
-    'Xiaomi',
-    'Tecno & Infinix', 
-    'Oppo', 
-    'Vivo', 
-    'Realme',
-    'Honor', 
-    'Huawei'
+    'Barchasi', 'Samsung', 'iPhone', 'Redmi', 'Xiaomi', 'Tecno & Infinix', 'Oppo', 'Vivo', 'Realme', 'Honor', 'Huawei'
   ];
 
   const catBox = document.getElementById('cats');
@@ -579,8 +569,14 @@
   }
 
   function renderProducts() {
-    if (typeof productsData === 'undefined' || !productsData.length) return;
     const list = document.getElementById('products');
+    
+    // ERROR CHECK: data.js fayli to'g'ri o'qildimi?
+    if (typeof productsData === 'undefined' || !productsData.length) {
+      list.innerHTML = '<div style="text-align:center; padding:30px; color:#dc2626; font-size:15px; font-weight:bold;">⚠️ Diqqat! Ekranlar bazasi topilmadi (data.js xatosi).<br><br><span style="font-size:12px;color:gray;">Iltimos, data.js fayli Githubga to\'g\'ri yuklanganini tekshiring.</span></div>';
+      return;
+    }
+
     list.innerHTML = '';
 
     let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
@@ -637,8 +633,8 @@
       const div = document.createElement('div');
       div.className = 'product-card';
       div.innerHTML = `
-        <div class="thumb-wrapper" onclick="viewImage('${p.img}', '${p.name}')">
-          <img src="${p.img}" class="prod-thumb" alt="${p.name}">
+        <div class="thumb-wrapper" onclick="viewImage('${p.img || 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=300&q=75'}', '${p.name}')">
+          <img src="${p.img || 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=300&q=75'}" class="prod-thumb" alt="${p.name}">
           <span class="thumb-zoom-hint">🔍</span>
         </div>
         <div class="prod-info">
@@ -698,7 +694,7 @@
         totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
       }
     }
-    document.getElementById('cartQtySummary').innerText = totalQty + ' ta tovar ' + (isWholesale ? '(Optom 50+)' : '(Chakana)');
+    document.getElementById('cartQtySummary').innerText = totalQty + ' ta tovar ' + (isWholesale ? '(Optom)' : '(Chakana)');
     document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString('uz-UZ') + " so'm";
   }
 
@@ -789,13 +785,9 @@
     const delivery = document.getElementById('deliveryType').value;
     const address = document.getElementById('custAddress').value.trim();
     
-    // 1. Ma'lumotlarni tekshirish (Telegram xato xabari yordamida)
     if (!name || !address) {
-      if (tg && tg.showAlert) {
-         tg.showAlert("Iltimos, ism va manzilni to'ldiring!");
-      } else {
-         alert("Iltimos, ism va manzilni to'ldiring!");
-      }
+      if (tg && tg.showAlert) tg.showAlert("Iltimos, ism va manzilni to'ldiring!");
+      else alert("Iltimos, ism va manzilni to'ldiring!");
       return;
     }
 
@@ -818,7 +810,6 @@
         const subtotal = price * cart[id];
         totalSum += subtotal;
         
-        // Telegram botga yuboriladigan ma'lumot hajmi kattalashib ketmasligi uchun nomni qisqartirish
         let shortName = p.name;
         if (shortName.length > 50) {
             shortName = shortName.substring(0, 47) + "...";
@@ -840,17 +831,15 @@
 
     const payloadString = JSON.stringify(payload);
     
-    // 2. Telegram WebApp fayl yuborish uzunligi limiti (4096 bayt). Shu limitga yetmaslik nazorati.
     if (payloadString.length > 4000) {
         if (tg && tg.showAlert) {
-           tg.showAlert("Savatda modellar soni juda ko'p bo'lib ketdi! Iltimos, xaridingizni 2 yoki 3 ga bo'lib alohida buyurtma bering.");
+           tg.showAlert("Savatda modellar soni juda ko'p bo'lib ketdi! Iltimos, xaridingizni 2-3 ga bo'lib alohida buyurtma bering.");
         } else {
            alert("Xatolik: Buyurtma hajmi juda katta!");
         }
         return;
     }
 
-    // 3. Botga ma'lumotni jo'natish
     if (tg && tg.sendData) {
       tg.sendData(payloadString);
     } else {
@@ -859,8 +848,11 @@
   }
 
   window.onload = () => {
-    renderBanners();
-    renderProducts();
+    // 3 soniya kutib keyin ko'rsatish (kesh muammosini oldini olish uchun yordam beradi)
+    setTimeout(() => {
+        renderBanners();
+        renderProducts();
+    }, 200);
   };
 </script>
 </body>
