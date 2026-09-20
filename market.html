@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- KESHNI MAJBURAN YANGILASH UCHUN MANA SHU QATOR JAVOBGAR -->
-  <script src="data.js?v=final_versiya_100"></script>
+  <!-- Keshni tozalash uchun yangi versiya -->
+  <script src="data.js?v=final_v105"></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -571,7 +571,6 @@
   function renderProducts() {
     const list = document.getElementById('products');
     
-    // ERROR CHECK: data.js fayli to'g'ri o'qildimi?
     if (typeof productsData === 'undefined' || !productsData.length) {
       list.innerHTML = '<div style="text-align:center; padding:30px; color:#dc2626; font-size:15px; font-weight:bold;">⚠️ Diqqat! Ekranlar bazasi topilmadi (data.js xatosi).<br><br><span style="font-size:12px;color:gray;">Iltimos, data.js fayli Githubga to\'g\'ri yuklanganini tekshiring.</span></div>';
       return;
@@ -801,54 +800,60 @@
 
     const isWholesale = totalQty >= 50;
     let totalSum = 0;
-    const items = [];
-
+    
     for (let id in cart) {
       const p = productsData.find(item => item.id == id);
-      if (p) {
-        const price = isWholesale ? p.wholesale : p.retail;
-        const subtotal = price * cart[id];
-        totalSum += subtotal;
-        
-        let shortName = p.name;
-        if (shortName.length > 50) {
-            shortName = shortName.substring(0, 47) + "...";
-        }
-
-        items.push({ name: shortName, qty: cart[id], price: price });
-      }
+      if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
     }
 
-    const payload = {
-      name: name,
-      delivery: delivery,
-      address: address,
-      items: items,
-      total_qty: totalQty,
-      total_sum: totalSum,
-      price_type: isWholesale ? "Optom (50+)" : "Chakana"
-    };
-
-    const payloadString = JSON.stringify(payload);
+    let nameLimit = 60;
+    let payloadString = "";
     
-    if (payloadString.length > 4000) {
-        if (tg && tg.showAlert) {
-           tg.showAlert("Savatda modellar soni juda ko'p bo'lib ketdi! Iltimos, xaridingizni 2-3 ga bo'lib alohida buyurtma bering.");
-        } else {
-           alert("Xatolik: Buyurtma hajmi juda katta!");
+    // YASHIRIN KOMPRESSIYA - Endi xato chiqmaydi, o'zi qisqartirib yuboradi
+    while(true) {
+        let tempItems = [];
+        for (let id in cart) {
+            const p = productsData.find(item => item.id == id);
+            if (p) {
+                let sn = p.name;
+                if (sn.length > nameLimit) {
+                    sn = sn.substring(0, nameLimit) + "..";
+                }
+                tempItems.push({
+                    name: sn,
+                    qty: cart[id],
+                    price: (isWholesale ? p.wholesale : p.retail)
+                });
+            }
         }
-        return;
+        
+        const payload = {
+          name: name.substring(0, 30),
+          delivery: delivery,
+          address: address.substring(0, 80),
+          items: tempItems,
+          total_qty: totalQty,
+          total_sum: totalSum,
+          price_type: isWholesale ? "Optom" : "Chakana"
+        };
+        
+        payloadString = JSON.stringify(payload);
+        
+        // Telegram limiti - 4000 bayt
+        if (payloadString.length < 4000 || nameLimit <= 10) {
+            break;
+        }
+        nameLimit -= 5;
     }
 
     if (tg && tg.sendData) {
       tg.sendData(payloadString);
     } else {
-      alert("Xatolik: Telegram ilovasidan kirmagansiz yoki tizim ulanmadi!");
+      alert("Xatolik: Telegram tizimi ulanmadi!");
     }
   }
 
   window.onload = () => {
-    // 3 soniya kutib keyin ko'rsatish (kesh muammosini oldini olish uchun yordam beradi)
     setTimeout(() => {
         renderBanners();
         renderProducts();
