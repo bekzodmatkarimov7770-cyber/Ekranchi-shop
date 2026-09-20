@@ -4,7 +4,7 @@ from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Inlin
 import json, base64, os
 
 BOT_TOKEN = "8484579263:AAGZu38VEXN4Hx5Yup12JoZnBZa1TlCDVy0"
-WEB_APP_URL = "[https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=v101](https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=v101)"
+WEB_APP_URL = "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=v110"
 ADMIN_ID = 1758833704
 CARD_NUMBER = "9860 1266 0304 4796"
 CARD_NAME = "Bekzod M. (Humo / Uzcard)"
