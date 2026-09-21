@@ -5,429 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ekranchi Do'kon</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Keshni tozalash uchun yangi versiya -->
-  <script src="data.js?v=excel_v1"></script>
+  <!-- KESHNI TOZALASH -->
+  <script src="data.js?v=super_v2"></script>
   <style>
-    :root {
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --text: #0f172a;
-      --muted: #64748b;
-      --primary: #2563eb;
-      --border: #e2e8f0;
-      --green: #059669;
-      --green-bg: #ecfdf5;
-      --red: #dc2626;
-      --purple: #7c3aed;
-      --purple-bg: #f5f3ff;
-      --orange: #ea580c;
-      --orange-bg: #fff7ed;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      padding: 10px 10px 110px;
-    }
-    .search-container {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: var(--bg);
-      padding-bottom: 8px;
-    }
-    .search-box {
-      background: var(--card-bg);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 9px 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-    }
-    .search-box input {
-      border: none;
-      outline: none;
-      background: transparent;
-      width: 100%;
-      font-size: 14px;
-      color: var(--text);
-    }
-    .promo-banner {
-      border-radius: 12px;
-      padding: 10px 14px;
-      margin-bottom: 10px;
-      color: #ffffff;
-      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-    }
-    .banner-badge {
-      align-self: flex-start;
-      font-size: 9px;
-      font-weight: 800;
-      background: rgba(0,0,0,0.35);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    .banner-title { font-size: 13px; font-weight: 800; }
-    .banner-desc { font-size: 11px; opacity: 0.9; }
-
-    .promo-tracker {
-      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-      color: #ffffff;
-      padding: 10px 14px;
-      border-radius: 12px;
-      margin-bottom: 10px;
-    }
-    .tracker-title {
-      font-size: 12px;
-      font-weight: 700;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-    }
-    .tracker-bg {
-      background: rgba(255,255,255,0.25);
-      border-radius: 10px;
-      height: 6px;
-      overflow: hidden;
-    }
-    .tracker-fill {
-      background: #10b981;
-      height: 100%;
-      width: 0%;
-      border-radius: 10px;
-      transition: width 0.3s ease;
-    }
-
-    .categories {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-      margin-bottom: 6px;
-      scrollbar-width: none;
-    }
+    :root { --bg: #f8fafc; --card-bg: #ffffff; --text: #0f172a; --muted: #64748b; --primary: #2563eb; --border: #e2e8f0; --green: #059669; --green-bg: #ecfdf5; --purple: #7c3aed; --purple-bg: #f5f3ff; --orange: #ea580c; --orange-bg: #fff7ed; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); padding: 10px 10px 110px; }
+    .search-container { position: sticky; top: 0; z-index: 20; background: var(--bg); padding-bottom: 8px; }
+    .search-box { background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
+    .search-box input { border: none; outline: none; background: transparent; width: 100%; font-size: 14px; color: var(--text); }
+    .promo-banner { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; color: #ffffff; background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); display: flex; flex-direction: column; gap: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+    .banner-badge { align-self: flex-start; font-size: 9px; font-weight: 800; background: rgba(0,0,0,0.35); padding: 2px 6px; border-radius: 4px; }
+    .banner-title { font-size: 13px; font-weight: 800; } .banner-desc { font-size: 11px; opacity: 0.9; }
+    .promo-tracker { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 10px 14px; border-radius: 12px; margin-bottom: 10px; }
+    .tracker-title { font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .tracker-bg { background: rgba(255,255,255,0.25); border-radius: 10px; height: 6px; overflow: hidden; }
+    .tracker-fill { background: #10b981; height: 100%; width: 0%; border-radius: 10px; transition: width 0.3s ease; }
+    .categories { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 6px; scrollbar-width: none; }
     .categories::-webkit-scrollbar { display: none; }
-    .cat-pill {
-      background: var(--card-bg);
-      color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 6px 14px;
-      border-radius: 16px;
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
-      cursor: pointer;
-    }
-    .cat-pill.active {
-      background: var(--primary);
-      color: #ffffff;
-      border-color: var(--primary);
-    }
-
-    .product-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .product-card {
-      background: var(--card-bg);
-      border-radius: 14px;
-      padding: 10px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      border: 1px solid var(--border);
-    }
-    .thumb-wrapper {
-      position: relative;
-      width: 64px;
-      height: 64px;
-      min-width: 64px;
-      border-radius: 10px;
-      overflow: hidden;
-      cursor: pointer;
-    }
-    .prod-thumb {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #e2e8f0;
-      display: block;
-    }
-    .thumb-zoom-hint {
-      position: absolute;
-      bottom: 2px;
-      right: 2px;
-      background: rgba(0,0,0,0.55);
-      color: #ffffff;
-      font-size: 8px;
-      padding: 2px 4px;
-      border-radius: 4px;
-    }
-    .prod-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .prod-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.35;
-      word-break: break-word;
-    }
-    .prod-meta {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin: 2px 0 4px;
-      flex-wrap: wrap;
-    }
-    .tag {
-      font-size: 9px;
-      font-weight: 700;
-      padding: 1px 5px;
-      border-radius: 4px;
-      background: rgba(37, 99, 235, 0.1);
-      color: var(--primary);
-    }
-    .tag.tag-ips { background: var(--green-bg); color: var(--green); }
-    .tag.tag-oled { background: var(--purple-bg); color: var(--purple); }
-    .tag.tag-orig { background: var(--orange-bg); color: var(--orange); }
-
-    .price-container {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-    .price-main-row {
-      display: flex;
-      align-items: baseline;
-      gap: 4px;
-    }
-    .price-main {
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--text);
-    }
-    .price-main.highlight { color: var(--green); }
-    .price-wholesale-sub {
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--green);
-      background: var(--green-bg);
-      padding: 1px 6px;
-      border-radius: 4px;
-      display: inline-block;
-      align-self: flex-start;
-      margin-top: 2px;
-    }
-    .price-strike {
-      font-size: 10px;
-      color: var(--muted);
-      text-decoration: line-through;
-    }
-
-    .counter-ui {
-      display: flex;
-      align-items: center;
-      background: #f1f5f9;
-      border-radius: 10px;
-      padding: 2px;
-      gap: 2px;
-      flex-shrink: 0;
-    }
-    .btn-qty {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      border: none;
-      background: var(--primary);
-      color: #ffffff;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .qty-input {
-      width: 38px;
-      height: 28px;
-      border: 1px solid var(--border);
-      background: #ffffff;
-      border-radius: 6px;
-      text-align: center;
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--text);
-      outline: none;
-      -moz-appearance: textfield;
-    }
-    .qty-input::-webkit-outer-spin-button,
-    .qty-input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    .btn-add-pill {
-      background: rgba(37, 99, 235, 0.1);
-      color: var(--primary);
-      border: none;
-      font-size: 12px;
-      font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    .bottom-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--card-bg);
-      padding: 10px 14px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 100;
-      box-shadow: 0 -4px 10px rgba(0,0,0,0.04);
-    }
-    .cart-summary-trigger { cursor: pointer; }
-    .btn-checkout {
-      background: var(--primary);
-      color: #ffffff;
-      border: none;
-      border-radius: 12px;
-      padding: 10px 16px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .cart-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.65);
-      z-index: 999;
-      align-items: flex-end;
-    }
-    .cart-content {
-      background: var(--card-bg);
-      width: 100%;
-      border-radius: 20px 20px 0 0;
-      padding: 16px 16px 24px;
-      max-height: 85vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .cart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-    }
+    .cat-pill { background: var(--card-bg); color: var(--muted); border: 1px solid var(--border); padding: 6px 14px; border-radius: 16px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+    .cat-pill.active { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+    .product-grid { display: flex; flex-direction: column; gap: 8px; }
+    .product-card { background: var(--card-bg); border-radius: 14px; padding: 10px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); }
+    .thumb-wrapper { position: relative; width: 64px; height: 64px; min-width: 64px; border-radius: 10px; overflow: hidden; cursor: pointer; }
+    .prod-thumb { width: 100%; height: 100%; object-fit: cover; background: #e2e8f0; display: block; }
+    .thumb-zoom-hint { position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.55); color: #ffffff; font-size: 8px; padding: 2px 4px; border-radius: 4px; }
+    .prod-info { flex: 1; min-width: 0; }
+    .prod-title { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.35; word-break: break-word; }
+    .prod-meta { display: flex; align-items: center; gap: 5px; margin: 2px 0 4px; flex-wrap: wrap; }
+    .tag { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(37, 99, 235, 0.1); color: var(--primary); }
+    .tag.tag-ips { background: var(--green-bg); color: var(--green); } .tag.tag-oled { background: var(--purple-bg); color: var(--purple); } .tag.tag-orig { background: var(--orange-bg); color: var(--orange); }
+    .price-container { display: flex; flex-direction: column; gap: 1px; }
+    .price-main-row { display: flex; align-items: baseline; gap: 4px; }
+    .price-main { font-size: 14px; font-weight: 800; color: var(--text); } .price-main.highlight { color: var(--green); }
+    .price-wholesale-sub { font-size: 10px; font-weight: 600; color: var(--green); background: var(--green-bg); padding: 1px 6px; border-radius: 4px; display: inline-block; align-self: flex-start; margin-top: 2px; }
+    .price-strike { font-size: 10px; color: var(--muted); text-decoration: line-through; }
+    .counter-ui { display: flex; align-items: center; background: #f1f5f9; border-radius: 10px; padding: 2px; gap: 2px; flex-shrink: 0; }
+    .btn-qty { width: 28px; height: 28px; border-radius: 8px; border: none; background: var(--primary); color: #ffffff; font-size: 15px; font-weight: bold; cursor: pointer; }
+    .qty-input { width: 38px; height: 28px; border: 1px solid var(--border); background: #ffffff; border-radius: 6px; text-align: center; font-weight: 700; font-size: 13px; color: var(--text); outline: none; }
+    .btn-add-pill { background: rgba(37, 99, 235, 0.1); color: var(--primary); border: none; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); padding: 10px 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 100; box-shadow: 0 -4px 10px rgba(0,0,0,0.04); }
+    .btn-checkout { background: var(--primary); color: #ffffff; border: none; border-radius: 12px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .cart-modal, .sheet-modal, .img-modal { display: none; position: fixed; inset: 0; z-index: 999; }
+    .cart-modal { background: rgba(0,0,0,0.65); align-items: flex-end; }
+    .cart-content { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 16px 16px 24px; max-height: 85vh; display: flex; flex-direction: column; }
+    .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
     .cart-title { font-size: 16px; font-weight: 800; }
-    .cart-clear-btn { background: none; border: none; color: var(--red); font-size: 12px; font-weight: 700; cursor: pointer; }
-    .cart-items-list {
-      overflow-y: auto;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .cart-item-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding-bottom: 8px;
-      border-bottom: 1px dashed var(--border);
-    }
-    .cart-item-name { font-size: 13px; font-weight: 700; }
-    .cart-item-price { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .cart-footer {
-      margin-top: 14px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-    }
-    .cart-total-box {
-      display: flex;
-      justify-content: space-between;
-      font-size: 15px;
-      font-weight: 800;
-      margin-bottom: 12px;
-    }
-
-    .img-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      padding: 20px;
-    }
-    .img-modal-content {
-      max-width: 90%;
-      max-height: 70vh;
-      border-radius: 14px;
-    }
-    .img-modal-title {
-      color: #ffffff;
-      font-size: 14px;
-      font-weight: 700;
-      margin-top: 12px;
-      text-align: center;
-    }
-    .img-modal-close {
-      color: #cbd5e1;
-      font-size: 12px;
-      margin-top: 6px;
-    }
-
-    .sheet-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 1001;
-      align-items: flex-end;
-    }
-    .sheet-content {
-      background: var(--card-bg);
-      width: 100%;
-      border-radius: 20px 20px 0 0;
-      padding: 18px 16px 26px;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
-    .form-control {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #f8fafc;
-      color: var(--text);
-      font-size: 13px;
-      outline: none;
-    }
+    .cart-clear-btn { background: none; border: none; color: #dc2626; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .cart-items-list { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .cart-item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+    .cart-item-name { font-size: 13px; font-weight: 700; } .cart-item-price { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .cart-footer { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .cart-total-box { display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; margin-bottom: 12px; }
+    .img-modal { background: rgba(0,0,0,0.85); align-items: center; justify-content: center; flex-direction: column; padding: 20px; z-index: 1000; }
+    .img-modal-content { max-width: 90%; max-height: 70vh; border-radius: 14px; }
+    .img-modal-title { color: #ffffff; font-size: 14px; font-weight: 700; margin-top: 12px; text-align: center; }
+    .img-modal-close { color: #cbd5e1; font-size: 12px; margin-top: 6px; }
+    .sheet-modal { background: rgba(0,0,0,0.6); align-items: flex-end; z-index: 1001; }
+    .sheet-content { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 18px 16px 26px; max-height: 85vh; overflow-y: auto; }
+    .form-group { margin-bottom: 10px; } .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .form-control { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #f8fafc; color: var(--text); font-size: 13px; outline: none; }
   </style>
 </head>
 <body>
@@ -479,12 +116,8 @@
           <span id="cartPricingStatus">Jami to'lov:</span>
           <span id="cartModalTotal" style="color:var(--primary);">0 so'm</span>
         </div>
-        <button class="btn-checkout" style="width:100%; justify-content:center; padding:12px;" onclick="goToCheckout()">
-          Rasmiylashtirishga o'tish 🚀
-        </button>
-        <button onclick="closeCartModal()" style="width:100%; background:none; border:none; color:var(--muted); margin-top:10px; font-weight:700; cursor:pointer;">
-          Tovarlarni ko'rishda davom etish
-        </button>
+        <button class="btn-checkout" style="width:100%; justify-content:center; padding:12px;" onclick="goToCheckout()">Rasmiylashtirishga o'tish 🚀</button>
+        <button onclick="closeCartModal()" style="width:100%; background:none; border:none; color:var(--muted); margin-top:10px; font-weight:700; cursor:pointer;">Tovarlarni ko'rishda davom etish</button>
       </div>
     </div>
   </div>
@@ -523,16 +156,12 @@
   if (tg) { tg.expand(); tg.ready(); }
   function triggerHaptic() { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e) {} }
 
-  let cart = {};
-  let currentBrand = 'Barchasi';
-  let searchQuery = '';
+  let cart = {}; let currentBrand = 'Barchasi'; let searchQuery = ''; let currentBannerIdx = 0;
 
-  let currentBannerIdx = 0;
   function renderBanners() {
     if (typeof bannersData === 'undefined' || !bannersData.length) return;
     const b = bannersData[currentBannerIdx];
-    const box = document.getElementById('bannerBox');
-    box.style.background = b.bg;
+    document.getElementById('bannerBox').style.background = b.bg;
     document.getElementById('bannerBadge').innerText = b.badge;
     document.getElementById('bannerTitle').innerText = b.title;
     document.getElementById('bannerDesc').innerText = b.desc;
@@ -541,48 +170,32 @@
     if (typeof bannersData === 'undefined' || !bannersData.length) return;
     currentBannerIdx = (currentBannerIdx + 1) % bannersData.length;
     renderBanners();
-  }
-  setInterval(nextBanner, 4500);
+  } setInterval(nextBanner, 4500);
 
   const brands = ['Barchasi', 'Samsung', 'iPhone', 'Redmi', 'Xiaomi', 'Tecno & Infinix', 'Oppo', 'Vivo', 'Realme', 'Honor', 'Huawei'];
-
   const catBox = document.getElementById('cats');
   brands.forEach(b => {
     const btn = document.createElement('button');
     btn.className = 'cat-pill' + (b === currentBrand ? ' active' : '');
     btn.innerText = b;
     btn.onclick = () => {
-      triggerHaptic();
-      document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
-      btn.classList.add('active');
-      currentBrand = b;
-      renderProducts();
-    };
-    catBox.appendChild(btn);
+      triggerHaptic(); document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active'); currentBrand = b; renderProducts();
+    }; catBox.appendChild(btn);
   });
 
-  function onSearch() {
-    searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-    renderProducts();
-  }
+  function onSearch() { searchQuery = document.getElementById('searchInput').value.toLowerCase().trim(); renderProducts(); }
 
   function renderProducts() {
     const list = document.getElementById('products');
-    
     if (typeof productsData === 'undefined' || !productsData.length) {
-      list.innerHTML = '<div style="text-align:center; padding:30px; color:#dc2626; font-size:15px; font-weight:bold;">⚠️ Diqqat! Ekranlar bazasi topilmadi (data.js xatosi).</div>';
-      return;
+      list.innerHTML = '<div style="text-align:center; padding:30px; color:#dc2626; font-size:15px; font-weight:bold;">⚠️ Diqqat! Ekranlar bazasi topilmadi (data.js xatosi).</div>'; return;
     }
-
     list.innerHTML = '';
-
     let filtered = currentBrand === 'Barchasi' ? productsData : productsData.filter(p => p.brand === currentBrand);
-    if (searchQuery) {
-      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.brand.toLowerCase().includes(searchQuery));
-    }
+    if (searchQuery) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery) || p.brand.toLowerCase().includes(searchQuery));
 
-    let totalQty = 0;
-    for (let id in cart) totalQty += cart[id];
+    let totalQty = 0; for (let id in cart) totalQty += cart[id];
     const isWholesale = totalQty >= 50;
 
     const trackerFill = document.getElementById('trackerFill');
@@ -590,65 +203,29 @@
     document.getElementById('trackerCount').innerText = totalQty + ' / 50';
     document.getElementById('trackerText').innerText = isWholesale ? '🎉 Optom narx faollashdi!' : 'Optomgacha: ' + (50 - totalQty) + ' ta qoldi';
 
-    if (!filtered.length) {
-      list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--muted); font-size:14px;">Hech narsa topilmadi 🔍</div>';
-      updateCartBar(totalQty, isWholesale);
-      return;
-    }
+    if (!filtered.length) { list.innerHTML = '<div style="text-align:center; padding:30px; color:var(--muted); font-size:14px;">Hech narsa topilmadi 🔍</div>'; updateCartBar(totalQty, isWholesale); return; }
 
     filtered.forEach(p => {
       const qty = cart[p.id] || 0;
-      const wholesalePrice = p.wholesale;
-      const retailPrice = p.retail;
+      const priceHtml = isWholesale 
+        ? `<div class="price-main-row"><span class="price-main highlight">${p.wholesale.toLocaleString('uz-UZ')} so'm</span><span class="price-strike">${p.retail.toLocaleString('uz-UZ')}</span></div><span class="price-wholesale-sub">⚡️ Optom</span>`
+        : `<div class="price-main-row"><span class="price-main">${p.retail.toLocaleString('uz-UZ')} so'm</span></div><span class="price-wholesale-sub">Optom (50+): ${p.wholesale.toLocaleString('uz-UZ')}</span>`;
 
-      let priceHtml = '';
-      if (isWholesale) {
-        priceHtml = `
-          <div class="price-main-row">
-            <span class="price-main highlight">${wholesalePrice.toLocaleString('uz-UZ')} so'm</span>
-            <span class="price-strike">${retailPrice.toLocaleString('uz-UZ')}</span>
-          </div>
-          <span class="price-wholesale-sub">⚡️ Optom rejim</span>
-        `;
-      } else {
-        priceHtml = `
-          <div class="price-main-row">
-            <span class="price-main">${retailPrice.toLocaleString('uz-UZ')} so'm</span>
-          </div>
-          <span class="price-wholesale-sub">Optom (50+): ${wholesalePrice.toLocaleString('uz-UZ')} so'm</span>
-        `;
-      }
-
-      let tagClass = '';
-      if (p.type.includes('IPS')) tagClass = 'tag-ips';
-      else if (p.type.includes('OLED')) tagClass = 'tag-oled';
-      else if (p.type.includes('Servis')) tagClass = 'tag-orig';
+      let tagClass = p.type.includes('IPS') ? 'tag-ips' : (p.type.includes('OLED') ? 'tag-oled' : 'tag-orig');
 
       const div = document.createElement('div');
       div.className = 'product-card';
       div.innerHTML = `
         <div class="thumb-wrapper" onclick="viewImage('${p.img || 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=300&q=75'}', '${p.name}')">
-          <img src="${p.img || 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=300&q=75'}" class="prod-thumb" alt="${p.name}">
-          <span class="thumb-zoom-hint">🔍</span>
+          <img src="${p.img || 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=300&q=75'}" class="prod-thumb" alt="${p.name}"><span class="thumb-zoom-hint">🔍</span>
         </div>
         <div class="prod-info">
           <div class="prod-title">${p.name}</div>
-          <div class="prod-meta">
-            <span style="font-size:11px; color:var(--muted); font-weight:700;">${p.brand}</span>
-            <span class="tag ${tagClass}">${p.type}</span>
-          </div>
+          <div class="prod-meta"><span style="font-size:11px; color:var(--muted); font-weight:700;">${p.brand}</span><span class="tag ${tagClass}">${p.type}</span></div>
           <div class="price-container">${priceHtml}</div>
         </div>
         <div>
-          ${qty > 0 ? `
-            <div class="counter-ui">
-              <button class="btn-qty" onclick="changeQty(${p.id}, -1)">-</button>
-              <input type="number" class="qty-input" min="0" value="${qty}" onchange="setQtyDirect(${p.id}, this.value)" onfocus="this.select()">
-              <button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button>
-            </div>
-          ` : `
-            <button class="btn-add-pill" onclick="changeQty(${p.id}, 1)">+ Tanlash</button>
-          `}
+          ${qty > 0 ? `<div class="counter-ui"><button class="btn-qty" onclick="changeQty(${p.id}, -1)">-</button><input type="number" class="qty-input" min="0" value="${qty}" onchange="setQtyDirect(${p.id}, this.value)" onfocus="this.select()"><button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button></div>` : `<button class="btn-add-pill" onclick="changeQty(${p.id}, 1)">+ Tanlash</button>`}
         </div>
       `;
       list.appendChild(div);
@@ -656,171 +233,82 @@
     updateCartBar(totalQty, isWholesale);
   }
 
-  function changeQty(id, delta) {
-    triggerHaptic();
-    cart[id] = (cart[id] || 0) + delta;
-    if (cart[id] <= 0) delete cart[id];
-    renderProducts();
-    if (document.getElementById('cartModal').style.display === 'flex') renderCartItems();
-  }
-
-  function setQtyDirect(id, value) {
-    triggerHaptic();
-    let num = parseInt(value);
-    if (isNaN(num) || num <= 0) delete cart[id];
-    else cart[id] = num;
-    renderProducts();
-    if (document.getElementById('cartModal').style.display === 'flex') renderCartItems();
-  }
+  function changeQty(id, delta) { triggerHaptic(); cart[id] = (cart[id] || 0) + delta; if (cart[id] <= 0) delete cart[id]; renderProducts(); if (document.getElementById('cartModal').style.display === 'flex') renderCartItems(); }
+  function setQtyDirect(id, value) { triggerHaptic(); let num = parseInt(value); if (isNaN(num) || num <= 0) delete cart[id]; else cart[id] = num; renderProducts(); if (document.getElementById('cartModal').style.display === 'flex') renderCartItems(); }
 
   function updateCartBar(totalQty, isWholesale) {
     let totalSum = 0;
-    for (let id in cart) {
-      const p = productsData.find(item => item.id == id);
-      if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
-    }
+    for (let id in cart) { const p = productsData.find(item => item.id == id); if (p) totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id]; }
     document.getElementById('cartQtySummary').innerText = totalQty + ' ta tovar ' + (isWholesale ? '(Optom)' : '(Chakana)');
     document.getElementById('cartTotalSummary').innerText = totalSum.toLocaleString('uz-UZ') + " so'm";
   }
 
   function openCartModal() {
-    let totalQty = 0;
-    for (let id in cart) totalQty += cart[id];
-    if (!totalQty) {
-      if (tg && tg.showAlert) tg.showAlert("Savatchangiz bo'sh! Avval tovar qo'shing.");
-      else alert("Savatchangiz bo'sh!");
-      return;
-    }
-    renderCartItems();
-    document.getElementById('cartModal').style.display = 'flex';
+    let totalQty = 0; for (let id in cart) totalQty += cart[id];
+    if (!totalQty) { if (tg && tg.showAlert) tg.showAlert("Savatchangiz bo'sh! Avval tovar qo'shing."); else alert("Savatchangiz bo'sh!"); return; }
+    renderCartItems(); document.getElementById('cartModal').style.display = 'flex';
   }
-
   function closeCartModal() { document.getElementById('cartModal').style.display = 'none'; }
-
-  function clearCart() {
-    if (confirm("Rostdan ham savatchani tozalamoqchimisiz?")) {
-      cart = {};
-      closeCartModal();
-      renderProducts();
-    }
-  }
+  function clearCart() { if (confirm("Rostdan ham savatchani tozalamoqchimisiz?")) { cart = {}; closeCartModal(); renderProducts(); } }
 
   function renderCartItems() {
-    const list = document.getElementById('cartItemsList');
-    list.innerHTML = '';
-    let totalQty = 0;
-    for (let id in cart) totalQty += cart[id];
-    const isWholesale = totalQty >= 50;
+    const list = document.getElementById('cartItemsList'); list.innerHTML = '';
+    let totalQty = 0; for (let id in cart) totalQty += cart[id];
+    const isWholesale = totalQty >= 50; let totalSum = 0;
 
-    let totalSum = 0;
     for (let id in cart) {
-      const p = productsData.find(item => item.id == id);
-      if (!p) continue;
-      const price = isWholesale ? p.wholesale : p.retail;
-      const subtotal = price * cart[id];
-      totalSum += subtotal;
-
-      const row = document.createElement('div');
-      row.className = 'cart-item-row';
+      const p = productsData.find(item => item.id == id); if (!p) continue;
+      const price = isWholesale ? p.wholesale : p.retail; const subtotal = price * cart[id]; totalSum += subtotal;
+      const row = document.createElement('div'); row.className = 'cart-item-row';
       row.innerHTML = `
-        <div style="flex:1; min-width:0;">
-          <div class="cart-item-name">${p.name}</div>
-          <div class="cart-item-price">${cart[id]} dona × ${price.toLocaleString('uz-UZ')} = <b>${subtotal.toLocaleString('uz-UZ')} so'm</b></div>
-        </div>
-        <div class="counter-ui">
-          <button class="btn-qty" onclick="changeQty(${p.id}, -1)">-</button>
-          <input type="number" class="qty-input" min="0" value="${cart[id]}" onchange="setQtyDirect(${p.id}, this.value)" onfocus="this.select()">
-          <button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button>
-        </div>
-      `;
-      list.appendChild(row);
+        <div style="flex:1; min-width:0;"><div class="cart-item-name">${p.name}</div><div class="cart-item-price">${cart[id]} dona × ${price.toLocaleString('uz-UZ')} = <b>${subtotal.toLocaleString('uz-UZ')} so'm</b></div></div>
+        <div class="counter-ui"><button class="btn-qty" onclick="changeQty(${p.id}, -1)">-</button><input type="number" class="qty-input" min="0" value="${cart[id]}" onchange="setQtyDirect(${p.id}, this.value)" onfocus="this.select()"><button class="btn-qty" onclick="changeQty(${p.id}, 1)">+</button></div>
+      `; list.appendChild(row);
     }
     document.getElementById('cartPricingStatus').innerText = isWholesale ? "Jami (Optom narxda):" : "Jami (Chakana narxda):";
     document.getElementById('cartModalTotal').innerText = totalSum.toLocaleString('uz-UZ') + " so'm";
   }
 
-  function goToCheckout() {
-    closeCartModal();
-    document.getElementById('checkoutModal').style.display = 'flex';
-  }
-
+  function goToCheckout() { closeCartModal(); document.getElementById('checkoutModal').style.display = 'flex'; }
   function closeCheckout() { document.getElementById('checkoutModal').style.display = 'none'; }
-
-  function viewImage(imgUrl, name) {
-    document.getElementById('imgModalTag').src = imgUrl;
-    document.getElementById('imgModalTitle').innerText = name;
-    document.getElementById('imgModal').style.display = 'flex';
-  }
+  function viewImage(imgUrl, name) { document.getElementById('imgModalTag').src = imgUrl; document.getElementById('imgModalTitle').innerText = name; document.getElementById('imgModal').style.display = 'flex'; }
   function closeImgModal() { document.getElementById('imgModal').style.display = 'none'; }
+  function toggleDeliveryField() { const type = document.getElementById('deliveryType').value; document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tuman:" : "Yetkazish manzili (Taksi uchun):"; }
 
-  function toggleDeliveryField() {
-    const type = document.getElementById('deliveryType').value;
-    document.getElementById('addrLabel').innerText = type === 'BTS' ? "BTS filiali va shahar/tuman:" : "Yetkazish manzili (Taksi uchun):";
-  }
-
-  // === SIQILGAN MA'LUMOT YUBORISH (XATOLIK YO'QOLDI!) ===
+  // 🚀 SUPER SIQILGAN MA'LUMOT YUBORISH (HECH QACHON XATO BERMAYDI!)
   function submitOrder() {
     const name = document.getElementById('custName').value.trim();
     const delivery = document.getElementById('deliveryType').value;
     const address = document.getElementById('custAddress').value.trim();
-    
-    if (!name || !address) {
-      if (tg && tg.showAlert) tg.showAlert("Iltimos, ism va manzilni to'ldiring!");
-      else alert("Iltimos, ism va manzilni to'ldiring!");
-      return;
-    }
+    if (!name || !address) { if (tg && tg.showAlert) tg.showAlert("Iltimos, ism va manzilni to'ldiring!"); else alert("Iltimos, ism va manzilni to'ldiring!"); return; }
 
-    let totalQty = 0;
-    let totalSum = 0;
+    let totalQty = 0; let totalSum = 0; let itemsArr = [];
     for (let id in cart) totalQty += cart[id];
-    
-    const isWholesale = totalQty >= 50;
-    let items = [];
+    if (totalQty === 0) { if (tg && tg.showAlert) tg.showAlert("Savatingiz bo'sh!"); return; }
 
+    const isWholesale = totalQty >= 50;
     for (let id in cart) {
       const p = productsData.find(item => item.id == id);
       if (p) {
-        const price = isWholesale ? p.wholesale : p.retail;
-        totalSum += price * cart[id];
-        // Uzun nomlarni xato bermasligi uchun qisqartirib yuboramiz
-        let shortName = p.name.length > 40 ? p.name.substring(0, 38) + ".." : p.name;
-        // i: nom, q: soni, p: narxi
-        items.push({ n: shortName, q: cart[id], p: price });
+        totalSum += (isWholesale ? p.wholesale : p.retail) * cart[id];
+        itemsArr.push([parseInt(id), cart[id]]); // FAQAT ID VA SONI JO'NATILADI (Juda qisqa kod!)
       }
     }
 
-    // Yuboriladigan siqilgan kod:
     let payload = {
       n: name.substring(0, 30),
       d: delivery,
       a: address.substring(0, 80),
-      i: items,
+      i: itemsArr,
       tq: totalQty,
       ts: totalSum,
       pt: isWholesale ? "Optom" : "Chakana"
     };
 
-    let payloadString = JSON.stringify(payload);
-
-    // Agar 100 tadan ko'p xil ekran tanlasa va baribir 4000 belgidan oshsa, yana ham siqamiz
-    if (payloadString.length > 4000) {
-        payload.i = payload.i.map(x => ({n: x.n.substring(0, 15) + ".", q: x.q, p: x.p}));
-        payloadString = JSON.stringify(payload);
-    }
-
-    if (tg && tg.sendData) {
-      tg.sendData(payloadString);
-    } else {
-      alert("Xatolik: Telegram tizimi ulanmadi!");
-    }
+    if (tg && tg.sendData) { tg.sendData(JSON.stringify(payload)); } else { alert("Xatolik: Telegram tizimi ulanmadi!"); }
   }
 
-  window.onload = () => {
-    setTimeout(() => {
-        renderBanners();
-        renderProducts();
-    }, 200);
-  };
+  window.onload = () => { setTimeout(() => { renderBanners(); renderProducts(); }, 200); };
 </script>
 </body>
 </html>
