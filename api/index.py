@@ -4,7 +4,7 @@ from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Inlin
 import json, base64, os
 import io, csv
 
-BOT_TOKEN = "8484579263:AAGZu38VEXN4Hx5Yup12JoZnBZa1TlCDVy0"
+BOT_TOKEN = "8484579263:AAFP56jsQHBJwxkprSIGfR5kB-lZNqx5cbU"
 WEB_APP_URL = "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=excel_direct_v1"
 ADMIN_ID = 1758833704
 CARD_NUMBER = "9860 1266 0304 4796"
@@ -506,6 +506,20 @@ def get_payload(cid):
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 
+# ===== AVTOMATIK ULANISH (WEBHOOK) =====
+@app.route('/ulash')
+def ulash():
+    try:
+        host = request.host
+        webhook_url = f"https://{host}/"
+        res = bot.set_webhook(url=webhook_url)
+        if res:
+            return f"✅ TIZIM YANGILANDI!<br><br>Bot <b>{webhook_url}</b> manziliga muvaffaqiyatli ulandi.<br>Endi Telegramga kirib botga /start deb yozib ko'ring.", 200
+        else:
+            return "❌ Webhook ulashda xato yuz berdi!", 500
+    except Exception as e:
+        return f"XATOLIK: {e}", 500
+
 def main_kb():
     m = ReplyKeyboardMarkup(resize_keyboard=True)
     m.add(KeyboardButton("🛍 Do'konni ochish", web_app=WebAppInfo(url=WEB_APP_URL)))
@@ -604,6 +618,7 @@ def handle_order(m):
         writer.writerow(["№", "Model nomi", "Soni", "Narxi (UZS)", "Umumiy summa (UZS)"])
 
         payload_items = []
+        items_txt = ""
         is_wholesale = (pt == "Optom")
 
         for idx, it in enumerate(items_arr, 1):
@@ -615,41 +630,60 @@ def handle_order(m):
             subtotal = q_it * p_it
             writer.writerow([idx, n_it, q_it, p_it, subtotal])
             payload_items.append({"n": n_it, "oq": q_it, "aq": q_it, "p": p_it})
+            
+            if idx <= 15:
+                items_txt += f"• <b>{n_it[:30]}</b>: {q_it} dona\n"
+            elif idx == 16:
+                items_txt += f"<i>... va yana tovarlar bor (jami {len(items_arr)} xil model)</i>\n"
 
         payload = {"name": name, "phone": phone, "deliv": deliv, "addr": addr, "pt": pt, "items": payload_items}
         save_order(cid, payload)
 
         csv_bytes = csv_buffer.getvalue().encode('utf-8-sig')
+        csv_name = f"Buyurtma_{name.replace(' ', '_')}.csv"
         csv_file = io.BytesIO(csv_bytes)
-        csv_file.name = f"Buyurtma_{name.replace(' ', '_')}.csv"
+        csv_file.name = csv_name
 
         # MIJOZGA XABAR
         client_txt = (
             f"🛒 <b>Buyurtmangiz muvaffaqiyatli qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>Qabul qiluvchi:</b> {name}\n📞 <b>Telefon:</b> {phone}\n"
+            f"👤 <b>Mijoz:</b> {name}\n📞 <b>Telefon:</b> {phone}\n"
             f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n"
-            f"📦 <b>Jami ekranlar:</b> {t_qty} dona ({len(items_arr)} xil model)\n"
-            f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({pt} narxda)\n━━━━━━━━━━━━━━━━━━━\n"
-            f"💳 Karta: <code>{CARD_NUMBER}</code>\nQabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
+            f"📦 <b>Tarkibi:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
+            f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({pt} narxda)\n\n"
+            f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\nQabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
             f"📸 To'lov qilgach, chek rasmini shu chatga yuboring.\n\n{WARRANTY_TEXT}"
         )
-        bot.send_message(int(cid), client_txt, parse_mode="HTML")
+        try:
+            bot.send_message(int(cid), client_txt, parse_mode="HTML")
+        except Exception as msg_e:
+            pass
 
         # ADMINGA EXCEL FAYL BILAN TO'G'RIDAN-TO'G'RI JO'NATISH
-        admin_txt = (
-            f"🔔 <b>YANGI BUYURTMA KELDI!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>Mijoz:</b> {name} ({uname})\n"
-            f"📞 <b>Raqam:</b> {phone} ({role})\n"
-            f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n"
-            f"📊 <b>Rejim:</b> {pt}\n"
-            f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(items_arr)} xil model)\n"
-            f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>\n━━━━━━━━━━━━━━━━━━━\n"
-            f"📥 <i>Buyurtmaning barcha modellari ilova qilingan Excel faylda 👇</i>"
-        )
-        bot.send_document(ADMIN_ID, csv_file, caption=admin_txt, reply_markup=admin_order_kb(cid), parse_mode="HTML")
+        if ADMIN_ID:
+            admin_txt = (
+                f"🔔 <b>YANGI BUYURTMA KELDI!</b>\n━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 <b>Mijoz:</b> {name} ({uname})\n"
+                f"📞 <b>Raqam:</b> {phone} ({role})\n"
+                f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n"
+                f"📊 <b>Rejim:</b> {pt}\n"
+                f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(items_arr)} xil model)\n"
+                f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>\n━━━━━━━━━━━━━━━━━━━\n"
+                f"📥 <i>To'liq ro'yxatni pastdagi Excel (.csv) fayldan ko'ring 👇</i>"
+            )
+            try:
+                bot.send_document(
+                    ADMIN_ID, 
+                    document=csv_file,
+                    caption=admin_txt, 
+                    reply_markup=admin_order_kb(cid), 
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                bot.send_message(ADMIN_ID, f"⚠️ Fayl yuborishda xatolik yuz berdi: {e}")
 
     except Exception as e:
-        bot.send_message(ADMIN_ID, f"⚠️ Xatolik yuz berdi: {e}")
+        bot.send_message(ADMIN_ID, f"⚠️ Asosiy tizim xatosi: {e}")
 
 def show_missing_menu_screen(chat_id, message_id, p, cid):
     m = InlineKeyboardMarkup(row_width=1)
@@ -781,7 +815,7 @@ def process_pay(c):
 @app.route('/', defaults={'path': ''}, methods=['POST', 'GET'])
 @app.route('/<path:path>', methods=['POST', 'GET'])
 def webhook(path):
-    if request.method == 'GET': return "Ekranchi Bot Active", 200
+    if request.method == 'GET': return "✅ Ekranchi Bot faol! Webhook ulash uchun sayt_nomi/ulash sahifasiga kiring.", 200
     if request.headers.get('content-type') == 'application/json':
         bot.process_new_updates([telebot.types.Update.de_json(request.get_data().decode('utf-8'))])
         return jsonify({"status": "ok"}), 200
