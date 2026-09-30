@@ -22,7 +22,7 @@ log = logging.getLogger("ekranchi")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
-WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v2")
+WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v3")
 CARD_NUMBER = os.environ.get("CARD_NUMBER", "9860 1266 0304 4796")
 CARD_NAME = os.environ.get("CARD_NAME", "Bekzod M. (Humo / Uzcard)")
 
