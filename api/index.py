@@ -8,7 +8,7 @@ Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
   CARD_NUMBER, CARD_NAME - (ixtiyoriy) to'lov kartasi
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN - doimiy baza (Vercel Marketplace > Upstash)
 
-Webhookni ulash: https://<sayt>/ulash?key=<WEBHOOK_SECRET>
+Webhookni ulash: https://<sayt>/api/index?ulash=1&key=<WEBHOOK_SECRET>
 """
 from flask import Flask, request, jsonify
 import telebot
@@ -594,16 +594,19 @@ def notify_admin(text):
         safe_send(ADMIN_ID, text)
 
 
-@app.route('/ulash')
-def ulash():
+def do_ulash():
     key = request.args.get("key", "")
     if not WEBHOOK_SECRET or not hmac.compare_digest(key, WEBHOOK_SECRET):
-        return "Forbidden", 403
+        return "Forbidden: kalit noto'g'ri", 403
     try:
-        webhook_url = f"https://{request.host}/"
+        # Vercel'da funksiya /api/index manzilida ishlaydi
+        webhook_url = f"https://{request.host}/api/index"
         ok = bot.set_webhook(url=webhook_url, secret_token=WEBHOOK_SECRET,
                              allowed_updates=["message", "callback_query"], drop_pending_updates=False)
-        return (f"✅ Bot <b>{h(webhook_url)}</b> manziliga ulandi.", 200) if ok else ("❌ Webhook ulanmadi", 500)
+        me = bot.get_me()
+        if ok:
+            return f"✅ Bot @{h(me.username)} <b>{h(webhook_url)}</b> manziliga ulandi. Endi Telegramda /start yozing.", 200
+        return "❌ Webhook ulanmadi", 500
     except Exception as e:
         log.exception("set_webhook")
         return f"XATOLIK: {h(e)}", 500
@@ -968,6 +971,8 @@ def process_pay(c):
 @app.route('/<path:path>', methods=['POST', 'GET'])
 def webhook(path):
     if request.method == 'GET':
+        if "ulash" in request.args or path.rstrip("/").endswith("ulash"):
+            return do_ulash()
         return "✅ Ekranchi bot ishlayapti.", 200
     token = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
     if not WEBHOOK_SECRET or not hmac.compare_digest(token, WEBHOOK_SECRET):

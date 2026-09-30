@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/ulash", "destination": "/api/index?ulash=1" }
+  ]
+}
