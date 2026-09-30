@@ -30,8 +30,9 @@ WHOLESALE_MIN = 50          # shuncha va undan ko'p dona bo'lsa optom narx
 MAX_QTY_PER_ITEM = 9999
 ALLOWED_DELIVERY = {"BTS", "Taksi"}
 
-REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "").rstrip("/")
-REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+# Vercel Marketplace Upstash integratsiyasi KV_REST_API_* nomlarini qo'shadi
+REDIS_URL = (os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL") or "").rstrip("/")
+REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN") or ""
 
 CATALOG = {
     '1': {'n': 'A02S / A03S / A03 / A035 / A025 / A04E / A042', 'w': 57000, 'r': 77000},
