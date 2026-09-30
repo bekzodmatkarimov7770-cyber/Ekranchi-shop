@@ -1,18 +1,37 @@
+"""Ekranchi Telegram bot (Vercel serverless, Flask).
+
+Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
+  BOT_TOKEN        - @BotFather dan olingan YANGI token (eskisini revoke qiling!)
+  ADMIN_ID         - admin Telegram ID raqami
+  WEBHOOK_SECRET   - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
+  WEB_APP_URL      - (ixtiyoriy) market.html manzili
+  CARD_NUMBER, CARD_NAME - (ixtiyoriy) to'lov kartasi
+  UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN - doimiy baza (Vercel Marketplace > Upstash)
+
+Webhookni ulash: https://<sayt>/ulash?key=<WEBHOOK_SECRET>
+"""
 from flask import Flask, request, jsonify
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
-import json, base64, os
-import io, csv
+from html import escape
+import json, os, io, csv, hmac, logging, requests
 
-BOT_TOKEN = "8484579263:AAFP56jsQHBJwxkprSIGfR5kB-lZNqx5cbU"
-WEB_APP_URL = "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=excel_direct_v1"
-ADMIN_ID = 1758833704
-CARD_NUMBER = "9860 1266 0304 4796"
-CARD_NAME = "Bekzod M. (Humo / Uzcard)"
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("ekranchi")
 
-USERS_FILE = "/tmp/users.json"
-VISITORS_FILE = "/tmp/visitors.json"
-ORDERS_FILE = "/tmp/orders.json"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
+WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v2")
+CARD_NUMBER = os.environ.get("CARD_NUMBER", "9860 1266 0304 4796")
+CARD_NAME = os.environ.get("CARD_NAME", "Bekzod M. (Humo / Uzcard)")
+
+WHOLESALE_MIN = 50          # shuncha va undan ko'p dona bo'lsa optom narx
+MAX_QTY_PER_ITEM = 9999
+ALLOWED_DELIVERY = {"BTS", "Taksi"}
+
+REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "").rstrip("/")
+REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
 
 CATALOG = {
     '1': {'n': 'A02S / A03S / A03 / A035 / A025 / A04E / A042', 'w': 57000, 'r': 77000},
@@ -482,43 +501,113 @@ WARRANTY_TEXT = (
     "Rasmi yoki videosi bo'lmasa, mahsulot mutlaqo qaytarib olinmaydi!"
 )
 
-def load_data(path):
-    if os.path.exists(path):
-        try:
-            with open(path, "r") as f: return json.load(f)
-        except: return {}
-    return {}
 
-def save_data(path, data):
+def h(value):
+    """Foydalanuvchi matnini HTML xabarga xavfsiz qo'yish."""
+    return escape(str(value if value is not None else ""), quote=False)
+
+
+# ===================== SAQLASH (Upstash Redis, bo'lmasa /tmp) =====================
+def _redis(*cmd):
+    r = requests.post(REDIS_URL, headers={"Authorization": f"Bearer {REDIS_TOKEN}"}, json=list(cmd), timeout=5)
+    r.raise_for_status()
+    return r.json().get("result")
+
+_TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json"}
+
+def _file_load(name):
     try:
-        with open(path, "w") as f: json.dump(data, f)
-    except: pass
+        with open(_TMP[name]) as f:
+            return json.load(f)
+    except (FileNotFoundError, ValueError):
+        return {}
 
-def save_order(cid, payload):
-    orders = load_data(ORDERS_FILE)
-    orders[str(cid)] = payload
-    save_data(ORDERS_FILE, orders)
+def _file_save(name, data):
+    with open(_TMP[name], "w") as f:
+        json.dump(data, f)
 
-def get_payload(cid):
-    orders = load_data(ORDERS_FILE)
-    return orders.get(str(cid))
+def store_get(name, key):
+    try:
+        if REDIS_URL:
+            raw = _redis("HGET", name, str(key))
+            return json.loads(raw) if raw else None
+        return _file_load(name).get(str(key))
+    except Exception:
+        log.exception("store_get %s %s", name, key)
+        return None
 
+def store_set(name, key, value):
+    try:
+        if REDIS_URL:
+            _redis("HSET", name, str(key), json.dumps(value, ensure_ascii=False))
+        else:
+            data = _file_load(name)
+            data[str(key)] = value
+            _file_save(name, data)
+    except Exception:
+        log.exception("store_set %s %s", name, key)
+
+def store_all(name):
+    try:
+        if REDIS_URL:
+            flat = _redis("HGETALL", name) or []
+            return {flat[i]: json.loads(flat[i + 1]) for i in range(0, len(flat), 2)}
+        return _file_load(name)
+    except Exception:
+        log.exception("store_all %s", name)
+        return {}
+
+def get_user(uid):
+    u = store_get("users", uid)
+    return u if isinstance(u, dict) else {}
+
+def save_order(cid, payload): store_set("orders", cid, payload)
+def get_payload(cid): return store_get("orders", cid)
+
+
+# ===================== BOT =====================
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 
-# ===== AVTOMATIK ULANISH (WEBHOOK) =====
+def is_admin(uid):
+    return ADMIN_ID != 0 and int(uid) == ADMIN_ID
+
+def admin_only(handler):
+    """Admin tugmalarini boshqa odam bosa olmasligi uchun."""
+    def wrapper(c):
+        if not is_admin(c.from_user.id):
+            try: bot.answer_callback_query(c.id, "Bu tugma faqat admin uchun.", show_alert=True)
+            except Exception: pass
+            return
+        return handler(c)
+    wrapper.__name__ = handler.__name__
+    return wrapper
+
+def safe_send(chat_id, text, **kw):
+    try:
+        return bot.send_message(int(chat_id), text, **kw)
+    except Exception:
+        log.exception("send_message -> %s", chat_id)
+
+def notify_admin(text):
+    if ADMIN_ID:
+        safe_send(ADMIN_ID, text)
+
+
 @app.route('/ulash')
 def ulash():
+    key = request.args.get("key", "")
+    if not WEBHOOK_SECRET or not hmac.compare_digest(key, WEBHOOK_SECRET):
+        return "Forbidden", 403
     try:
-        host = request.host
-        webhook_url = f"https://{host}/"
-        res = bot.set_webhook(url=webhook_url)
-        if res:
-            return f"✅ TIZIM YANGILANDI!<br><br>Bot <b>{webhook_url}</b> manziliga muvaffaqiyatli ulandi.<br>Endi Telegramga kirib botga /start deb yozib ko'ring.", 200
-        else:
-            return "❌ Webhook ulashda xato yuz berdi!", 500
+        webhook_url = f"https://{request.host}/"
+        ok = bot.set_webhook(url=webhook_url, secret_token=WEBHOOK_SECRET,
+                             allowed_updates=["message", "callback_query"], drop_pending_updates=False)
+        return (f"✅ Bot <b>{h(webhook_url)}</b> manziliga ulandi.", 200) if ok else ("❌ Webhook ulanmadi", 500)
     except Exception as e:
-        return f"XATOLIK: {e}", 500
+        log.exception("set_webhook")
+        return f"XATOLIK: {h(e)}", 500
+
 
 def main_kb():
     m = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -541,163 +630,192 @@ def admin_order_kb(cid):
     )
     return m
 
+
 @bot.message_handler(commands=['start'])
 def handle_start(m):
-    uid = str(m.chat.id)
-    name = m.from_user.first_name or "Mijoz"
-    users = load_data(USERS_FILE)
-    if uid in users and isinstance(users[uid], dict) and users[uid].get('role'):
-        txt = f"Assalomu alaykum, <b>{name}</b>! 👋\n\n<b>@ekranchi_bola</b> do'konimizga xush kelibsiz!\n\nPastdagi <b>«🛍 Do'konni ochish»</b> tugmasini bosib bemalol buyurtma berishingiz mumkin: 👇"
+    name = h(m.from_user.first_name or "Mijoz")
+    user = get_user(m.chat.id)
+    if user.get('role'):
+        txt = (f"Assalomu alaykum, <b>{name}</b>! 👋\n\n<b>@ekranchi_bola</b> do'konimizga xush kelibsiz!\n\n"
+               f"Pastdagi <b>«🛍 Do'konni ochish»</b> tugmasini bosib buyurtma berishingiz mumkin: 👇")
         bot.send_message(m.chat.id, txt, reply_markup=main_kb(), parse_mode="HTML")
     else:
-        txt = f"Assalomu alaykum, <b>{name}</b>!\nDo'kondan buyurtma berish uchun, iltimos, <b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing: 👇"
+        txt = (f"Assalomu alaykum, <b>{name}</b>!\nDo'kondan buyurtma berish uchun, iltimos, "
+               f"<b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing: 👇")
         bot.send_message(m.chat.id, txt, reply_markup=contact_kb(), parse_mode="HTML")
+
 
 @bot.message_handler(commands=['stat'])
 def handle_stat(m):
-    if str(m.chat.id) == str(ADMIN_ID):
-        users = load_data(USERS_FILE)
-        visitors = load_data(VISITORS_FILE)
-        total_v = max(len(users), len(visitors))
-        optom_count = sum(1 for u in users.values() if isinstance(u, dict) and u.get('role') == 'Optom')
-        retail_count = sum(1 for u in users.values() if isinstance(u, dict) and u.get('role') == 'Chakana')
-        txt = (
-            f"📊 <b>BOT STATISTIKASI (CRM):</b>\n━━━━━━━━━━━━━━━━━━━\n"
-            f"👥 Jami foydalanuvchilar: <b>{1200 + total_v} ta</b>\n"
-            f"📱 Raqam tasdiqlaganlar: <b>{len(users)} ta</b>\n"
-            f"🤝 Optomchilar: <b>{optom_count} ta</b>\n"
-            f"👤 Chakanachilar: <b>{retail_count} ta</b>"
-        )
-        bot.send_message(m.chat.id, txt, parse_mode="HTML")
+    if not is_admin(m.chat.id):
+        return
+    users = store_all("users")
+    optom = sum(1 for u in users.values() if isinstance(u, dict) and u.get('role') == 'Optom')
+    retail = sum(1 for u in users.values() if isinstance(u, dict) and u.get('role') == 'Chakana')
+    txt = (f"📊 <b>BOT STATISTIKASI:</b>\n━━━━━━━━━━━━━━━━━━━\n"
+           f"📱 Raqam tasdiqlaganlar: <b>{len(users)} ta</b>\n"
+           f"🤝 Optomchilar: <b>{optom} ta</b>\n"
+           f"👤 Chakanachilar: <b>{retail} ta</b>")
+    if not REDIS_URL:
+        txt += "\n\n⚠️ Doimiy baza ulanmagan: ma'lumotlar /tmp da, vaqti-vaqti bilan o'chib ketadi."
+    bot.send_message(m.chat.id, txt, parse_mode="HTML")
+
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(m):
-    if m.contact and m.contact.user_id == m.from_user.id:
-        phone = '+' + m.contact.phone_number if not m.contact.phone_number.startswith('+') else m.contact.phone_number
-        uid = str(m.chat.id)
-        users = load_data(USERS_FILE)
-        users[uid] = {"phone": phone, "role": None, "name": m.from_user.first_name}
-        save_data(USERS_FILE, users)
-        kb = InlineKeyboardMarkup(row_width=2)
-        kb.add(InlineKeyboardButton("🤝 Optom (Do'kon / Usta)", callback_data="set_role:Optom"), InlineKeyboardButton("👤 Chakana (Dona)", callback_data="set_role:Chakana"))
-        bot.send_message(m.chat.id, f"✅ Raqamingiz tasdiqlandi: {phone}\nIltimos, xarid qilish rejimini tanlang:", reply_markup=kb)
+    if not (m.contact and m.contact.user_id == m.from_user.id):
+        bot.send_message(m.chat.id, "Iltimos, pastdagi tugma orqali o'z raqamingizni yuboring.", reply_markup=contact_kb())
+        return
+    num = m.contact.phone_number
+    phone = num if num.startswith('+') else '+' + num
+    store_set("users", m.chat.id, {"phone": phone, "role": None, "name": m.from_user.first_name})
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(InlineKeyboardButton("🤝 Optom (Do'kon / Usta)", callback_data="set_role:Optom"),
+           InlineKeyboardButton("👤 Chakana (Dona)", callback_data="set_role:Chakana"))
+    bot.send_message(m.chat.id, f"✅ Raqamingiz tasdiqlandi: {h(phone)}\nIltimos, xarid qilish rejimini tanlang:", reply_markup=kb)
+
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('set_role:'))
 def handle_role_selection(c):
-    role = c.data.split(':')[1]
-    uid = str(c.message.chat.id)
-    users = load_data(USERS_FILE)
-    if uid in users and isinstance(users[uid], dict):
-        users[uid]['role'] = role
-        save_data(USERS_FILE, users)
+    role = c.data.split(':', 1)[1]
+    if role not in ("Optom", "Chakana"):
+        return bot.answer_callback_query(c.id)
+    user = get_user(c.message.chat.id)
+    if user:
+        user['role'] = role
+        store_set("users", c.message.chat.id, user)
     try: bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=None)
-    except: pass
-    bot.send_message(c.message.chat.id, f"✅ Rejimingiz: <b>{role}</b> qilib belgilandi!\nKatalogni ochib xarid qilishingiz mumkin:", reply_markup=main_kb(), parse_mode="HTML")
+    except Exception: pass
+    bot.answer_callback_query(c.id)
+    bot.send_message(c.message.chat.id, f"✅ Rejimingiz: <b>{role}</b>\nKatalogni ochib xarid qilishingiz mumkin:",
+                     reply_markup=main_kb(), parse_mode="HTML")
+
 
 @bot.message_handler(content_types=['web_app_data'])
 def handle_order(m):
+    cid = str(m.chat.id)
     try:
         data = json.loads(m.web_app_data.data)
-        cid = str(m.chat.id)
-        user_info = load_data(USERS_FILE).get(cid, {})
-        phone = user_info.get('phone', "Noma'lum") if isinstance(user_info, dict) else str(user_info)
-        role = user_info.get('role', "Noma'lum") if isinstance(user_info, dict) else "Noma'lum"
+    except (ValueError, TypeError):
+        bot.send_message(m.chat.id, "⚠️ Buyurtmani o'qib bo'lmadi. Do'konni qayta ochib, yana urinib ko'ring.")
+        return
+    try:
+        user = get_user(cid)
+        phone = user.get('phone', "Noma'lum")
+        role = user.get('role') or "Noma'lum"
 
-        name = data.get('n', 'Mijoz')
-        deliv = data.get('d', 'BTS')
-        addr = data.get('a', '')
-        t_qty = int(data.get('tq', 0))
-        t_sum = int(data.get('ts', 0))
-        pt = data.get('pt', 'Chakana')
-        items_arr = data.get('i', [])
+        name = str(data.get('n', 'Mijoz'))[:30].strip() or 'Mijoz'
+        deliv = data.get('d') if data.get('d') in ALLOWED_DELIVERY else 'BTS'
+        addr = str(data.get('a', ''))[:80].strip()
         uname = f"@{m.from_user.username}" if m.from_user.username else "-"
 
-        # EXCEL (CSV) FAYLNI YARATISH
+        # 1) Tovarlarni tekshirish: faqat katalogdagi ID lar, musbat butun son
+        clean = {}
+        for it in data.get('i', []) or []:
+            try:
+                item_id, q = str(int(it[0])), int(it[1])
+            except (ValueError, TypeError, IndexError):
+                continue
+            if item_id in CATALOG and q > 0:
+                clean[item_id] = min(MAX_QTY_PER_ITEM, clean.get(item_id, 0) + q)
+        if not clean:
+            bot.send_message(m.chat.id, "⚠️ Savatingiz bo'sh yoki noto'g'ri. Do'konni qayta ochib ko'ring.")
+            return
+
+        # 2) Narx va rejimni SERVER hisoblaydi (mijoz yuborgan summaga ishonilmaydi)
+        t_qty = sum(clean.values())
+        is_wholesale = t_qty >= WHOLESALE_MIN
+        pt = "Optom" if is_wholesale else "Chakana"
+
         csv_buffer = io.StringIO()
-        writer = csv.writer(csv_buffer, delimiter=',')
+        writer = csv.writer(csv_buffer)
         writer.writerow(["№", "Model nomi", "Soni", "Narxi (UZS)", "Umumiy summa (UZS)"])
-
-        payload_items = []
-        items_txt = ""
-        is_wholesale = (pt == "Optom")
-
-        for idx, it in enumerate(items_arr, 1):
-            item_id = str(it[0])
-            q_it = int(it[1])
-            cat_item = CATALOG.get(item_id, {})
-            n_it = cat_item.get('n', f"Model-{item_id}")
-            p_it = int(cat_item.get('w', 0)) if is_wholesale else int(cat_item.get('r', 0))
-            subtotal = q_it * p_it
-            writer.writerow([idx, n_it, q_it, p_it, subtotal])
-            payload_items.append({"n": n_it, "oq": q_it, "aq": q_it, "p": p_it})
-            
+        payload_items, items_txt, t_sum = [], "", 0
+        for idx, (item_id, q) in enumerate(clean.items(), 1):
+            cat = CATALOG[item_id]
+            price = cat['w'] if is_wholesale else cat['r']
+            subtotal = q * price
+            t_sum += subtotal
+            writer.writerow([idx, cat['n'], q, price, subtotal])
+            payload_items.append({"id": item_id, "n": cat['n'], "oq": q, "aq": q, "p": price})
             if idx <= 15:
-                items_txt += f"• <b>{n_it[:30]}</b>: {q_it} dona\n"
+                items_txt += f"• <b>{h(cat['n'][:30])}</b>: {q} dona\n"
             elif idx == 16:
-                items_txt += f"<i>... va yana tovarlar bor (jami {len(items_arr)} xil model)</i>\n"
+                items_txt += f"<i>... va yana (jami {len(clean)} xil model)</i>\n"
+        writer.writerow([])
+        writer.writerow(["", "JAMI", t_qty, "", t_sum])
 
-        payload = {"name": name, "phone": phone, "deliv": deliv, "addr": addr, "pt": pt, "items": payload_items}
-        save_order(cid, payload)
+        save_order(cid, {"name": name, "phone": phone, "deliv": deliv, "addr": addr, "pt": pt, "items": payload_items})
 
-        csv_bytes = csv_buffer.getvalue().encode('utf-8-sig')
-        csv_name = f"Buyurtma_{name.replace(' ', '_')}.csv"
-        csv_file = io.BytesIO(csv_bytes)
-        csv_file.name = csv_name
+        csv_file = io.BytesIO(csv_buffer.getvalue().encode('utf-8-sig'))
+        csv_file.name = f"Buyurtma_{cid}.csv"
 
-        # MIJOZGA XABAR
         client_txt = (
-            f"🛒 <b>Buyurtmangiz muvaffaqiyatli qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>Mijoz:</b> {name}\n📞 <b>Telefon:</b> {phone}\n"
-            f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n"
+            f"🛒 <b>Buyurtmangiz qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 <b>Mijoz:</b> {h(name)}\n📞 <b>Telefon:</b> {h(phone)}\n"
+            f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
             f"📦 <b>Tarkibi:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
-            f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({pt} narxda)\n\n"
-            f"💳 Karta raqami: <code>{CARD_NUMBER}</code>\nQabul qiluvchi: <b>{CARD_NAME}</b>\n\n"
+            f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({pt} narxda, {t_qty} dona)\n\n"
+            f"💳 Karta raqami: <code>{h(CARD_NUMBER)}</code>\nQabul qiluvchi: <b>{h(CARD_NAME)}</b>\n\n"
             f"📸 To'lov qilgach, chek rasmini shu chatga yuboring.\n\n{WARRANTY_TEXT}"
         )
+        safe_send(cid, client_txt, parse_mode="HTML")
+
+        client_ts = data.get('ts')
+        mismatch = ""
         try:
-            bot.send_message(int(cid), client_txt, parse_mode="HTML")
-        except Exception as msg_e:
+            if client_ts is not None and int(client_ts) != t_sum:
+                mismatch = f"\n⚠️ Ilovadagi summa boshqacha edi: {int(client_ts):,} so'm (server narxi ishlatildi)"
+        except (ValueError, TypeError):
             pass
 
-        # ADMINGA EXCEL FAYL BILAN TO'G'RIDAN-TO'G'RI JO'NATISH
         if ADMIN_ID:
             admin_txt = (
-                f"🔔 <b>YANGI BUYURTMA KELDI!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 <b>Mijoz:</b> {name} ({uname})\n"
-                f"📞 <b>Raqam:</b> {phone} ({role})\n"
-                f"🚚 <b>Yetkazish:</b> {deliv} | 📍 {addr}\n"
+                f"🔔 <b>YANGI BUYURTMA!</b>\n━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 <b>Mijoz:</b> {h(name)} ({h(uname)})\n"
+                f"📞 <b>Raqam:</b> {h(phone)} ({h(role)})\n"
+                f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
                 f"📊 <b>Rejim:</b> {pt}\n"
-                f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(items_arr)} xil model)\n"
-                f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>\n━━━━━━━━━━━━━━━━━━━\n"
-                f"📥 <i>To'liq ro'yxatni pastdagi Excel (.csv) fayldan ko'ring 👇</i>"
+                f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean)} xil model)\n"
+                f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>{h(mismatch)}\n━━━━━━━━━━━━━━━━━━━\n"
+                f"📥 <i>To'liq ro'yxat pastdagi Excel (.csv) faylda 👇</i>"
             )
             try:
-                bot.send_document(
-                    ADMIN_ID, 
-                    document=csv_file,
-                    caption=admin_txt, 
-                    reply_markup=admin_order_kb(cid), 
-                    parse_mode="HTML"
-                )
+                bot.send_document(ADMIN_ID, document=csv_file, caption=admin_txt,
+                                  reply_markup=admin_order_kb(cid), parse_mode="HTML")
             except Exception as e:
-                bot.send_message(ADMIN_ID, f"⚠️ Fayl yuborishda xatolik yuz berdi: {e}")
-
+                log.exception("send_document")
+                notify_admin(f"⚠️ Fayl yuborishda xatolik: {e}")
     except Exception as e:
-        bot.send_message(ADMIN_ID, f"⚠️ Asosiy tizim xatosi: {e}")
+        log.exception("handle_order")
+        notify_admin(f"⚠️ Buyurtmani qayta ishlashda xato ({cid}): {e}")
+        safe_send(cid, "⚠️ Texnik xato yuz berdi. Admin bilan bog'laning, buyurtmangizni qo'lda qabul qilamiz.")
+
 
 def show_missing_menu_screen(chat_id, message_id, p, cid):
     m = InlineKeyboardMarkup(row_width=1)
     for idx, it in enumerate(p.get('items', [])):
-        oq, aq = it.get('oq', 1), it.get('aq', 1)
-        if aq == oq: st = f"✅ BOR: {it.get('n')[:22]} ({aq}/{oq} ta)"
-        elif aq == 0: st = f"❌ YO'Q: {it.get('n')[:22]} (0/{oq} ta)"
-        else: st = f"⚠️ KAM: {it.get('n')[:22]} ({aq}/{oq} ta)"
+        oq, aq, n = it.get('oq', 1), it.get('aq', 1), it.get('n', '')[:22]
+        if aq == oq: st = f"✅ BOR: {n} ({aq}/{oq} ta)"
+        elif aq == 0: st = f"❌ YO'Q: {n} (0/{oq} ta)"
+        else: st = f"⚠️ KAM: {n} ({aq}/{oq} ta)"
         m.add(InlineKeyboardButton(st, callback_data=f"ed:{cid}:{idx}"))
-    m.add(InlineKeyboardButton("📤 Mijozga xabar yuborish", callback_data=f"snd_miss:{cid}"), InlineKeyboardButton("⬅️ Orqaga", callback_data=f"back_ord:{cid}"))
-    try: bot.edit_message_text("⚠️ <b>Omborda kam yoki yo'q ekranni tanlang:</b>", chat_id, message_id, reply_markup=m, parse_mode="HTML")
-    except: pass
+    m.add(InlineKeyboardButton("📤 Mijozga xabar yuborish", callback_data=f"snd_miss:{cid}"),
+          InlineKeyboardButton("⬅️ Orqaga", callback_data=f"back_ord:{cid}"))
+    edit_text_or_caption(chat_id, message_id, "⚠️ <b>Omborda kam yoki yo'q ekranni tanlang:</b>", m)
+
+
+def edit_text_or_caption(chat_id, message_id, text, markup):
+    """Buyurtma xabari hujjat (CSV) bo'lgani uchun caption tahrirlanadi."""
+    try:
+        bot.edit_message_caption(text, chat_id, message_id, reply_markup=markup, parse_mode="HTML")
+    except Exception:
+        try: bot.edit_message_text(text, chat_id, message_id, reply_markup=markup, parse_mode="HTML")
+        except Exception: log.exception("edit message")
+
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('missing_menu:'))
+@admin_only
 def handle_missing_menu(c):
     cid = c.data.split(':')[1]
     p = get_payload(cid)
@@ -705,64 +823,80 @@ def handle_missing_menu(c):
     bot.answer_callback_query(c.id)
     show_missing_menu_screen(c.message.chat.id, c.message.message_id, p, cid)
 
+
 def show_edit_item_screen(chat_id, message_id, p, idx, cid):
     it = p['items'][idx]
     oq, aq = it.get('oq', 1), it.get('aq', 1)
-    m = InlineKeyboardMarkup().row(InlineKeyboardButton("-5", callback_data=f"st:{cid}:{idx}:-5"), InlineKeyboardButton("-1", callback_data=f"st:{cid}:{idx}:-1"), InlineKeyboardButton("+1", callback_data=f"st:{cid}:{idx}:1"), InlineKeyboardButton("+5", callback_data=f"st:{cid}:{idx}:5"))
-    m.row(InlineKeyboardButton("❌ Yo'q (0 ta)", callback_data=f"st_set:{cid}:{idx}:0"), InlineKeyboardButton(f"✅ To'liq ({oq} ta)", callback_data=f"st_set:{cid}:{idx}:{oq}"))
+    m = InlineKeyboardMarkup().row(
+        InlineKeyboardButton("-5", callback_data=f"st:{cid}:{idx}:-5"), InlineKeyboardButton("-1", callback_data=f"st:{cid}:{idx}:-1"),
+        InlineKeyboardButton("+1", callback_data=f"st:{cid}:{idx}:1"), InlineKeyboardButton("+5", callback_data=f"st:{cid}:{idx}:5"))
+    m.row(InlineKeyboardButton("❌ Yo'q (0 ta)", callback_data=f"st_set:{cid}:{idx}:0"),
+          InlineKeyboardButton(f"✅ To'liq ({oq} ta)", callback_data=f"st_set:{cid}:{idx}:{oq}"))
     m.row(InlineKeyboardButton("⬅️ Ro'yxatga qaytish", callback_data=f"back_list:{cid}"))
-    txt = f"🛠 <b>MODEL: {it.get('n')}</b>\n📦 Buyurtma: <b>{oq} dona</b>\n✅ Mavjud: <b>{aq} dona</b>\n❌ Kam: <b>{oq-aq} dona</b>"
-    try: bot.edit_message_text(txt, chat_id, message_id, reply_markup=m, parse_mode="HTML")
-    except: pass
+    txt = f"🛠 <b>MODEL: {h(it.get('n'))}</b>\n📦 Buyurtma: <b>{oq} dona</b>\n✅ Mavjud: <b>{aq} dona</b>\n❌ Kam: <b>{oq-aq} dona</b>"
+    edit_text_or_caption(chat_id, message_id, txt, m)
+
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('ed:'))
+@admin_only
 def handle_edit_item(c):
-    cid, idx = c.data.split(':')[1], int(c.data.split(':')[2])
+    _, cid, idx = c.data.split(':')
+    idx = int(idx)
     p = get_payload(cid)
-    if not p or idx >= len(p.get('items', [])): return
+    if not p or idx >= len(p.get('items', [])): return bot.answer_callback_query(c.id, "Topilmadi")
     bot.answer_callback_query(c.id)
     show_edit_item_screen(c.message.chat.id, c.message.message_id, p, idx, cid)
 
+
 @bot.callback_query_handler(func=lambda c: c.data.startswith('st:') or c.data.startswith('st_set:'))
+@admin_only
 def handle_change_qty(c):
-    parts = c.data.split(':')
-    action, cid, idx, val = parts[0], parts[1], int(parts[2]), int(parts[3])
+    action, cid, idx, val = c.data.split(':')
+    idx, val = int(idx), int(val)
     p = get_payload(cid)
     if not p or idx >= len(p.get('items', [])): return bot.answer_callback_query(c.id, "Xato!")
-    oq, current_aq = p['items'][idx].get('oq', 1), p['items'][idx].get('aq', 1)
-    new_aq = max(0, min(oq, current_aq + val)) if action == 'st' else max(0, min(oq, val))
-    p['items'][idx]['aq'] = new_aq
+    item = p['items'][idx]
+    oq, cur = item.get('oq', 1), item.get('aq', 1)
+    item['aq'] = max(0, min(oq, cur + val)) if action == 'st' else max(0, min(oq, val))
     save_order(cid, p)
-    bot.answer_callback_query(c.id, f"Mavjud: {new_aq} ta")
+    bot.answer_callback_query(c.id, f"Mavjud: {item['aq']} ta")
     show_edit_item_screen(c.message.chat.id, c.message.message_id, p, idx, cid)
 
+
 @bot.callback_query_handler(func=lambda c: c.data.startswith('back_list:'))
+@admin_only
 def handle_back_list(c):
     bot.answer_callback_query(c.id)
     cid = c.data.split(':')[1]
     p = get_payload(cid)
     if p: show_missing_menu_screen(c.message.chat.id, c.message.message_id, p, cid)
 
+
+def order_summary(p):
+    s_tot = sum(it.get('aq', it.get('oq', 1)) * it.get('p', 0) for it in p.get('items', []))
+    q_tot = sum(it.get('aq', it.get('oq', 1)) for it in p.get('items', []))
+    return s_tot, q_tot
+
+
 @bot.callback_query_handler(func=lambda c: c.data.startswith('back_ord:'))
+@admin_only
 def handle_back_ord(c):
     bot.answer_callback_query(c.id)
     cid = c.data.split(':')[1]
     p = get_payload(cid)
     if not p: return
-    s_tot = sum(it.get('aq', it.get('oq', 1)) * it.get('p', 0) for it in p.get('items', []))
-    q_tot = sum(it.get('aq', it.get('oq', 1)) for it in p.get('items', []))
-    txt = (
-        f"🔔 <b>BUYURTMA: {p.get('name')}</b>\n━━━━━━━━━━━━━━━━━━━\n"
-        f"📞 <b>Raqam:</b> {p.get('phone')}\n"
-        f"🚚 <b>Yetkazish:</b> {p.get('deliv')} | 📍 {p.get('addr')}\n"
-        f"📊 <b>Rejim:</b> {p.get('pt')}\n"
-        f"📦 <b>Jami soni:</b> {q_tot} dona\n"
-        f"💰 <b>Qayta hisoblangan summa:</b> <b>{s_tot:,} so'm</b>"
-    )
-    try: bot.edit_message_text(txt, c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML")
-    except: pass
+    s_tot, q_tot = order_summary(p)
+    txt = (f"🔔 <b>BUYURTMA: {h(p.get('name'))}</b>\n━━━━━━━━━━━━━━━━━━━\n"
+           f"📞 <b>Raqam:</b> {h(p.get('phone'))}\n"
+           f"🚚 <b>Yetkazish:</b> {h(p.get('deliv'))} | 📍 {h(p.get('addr'))}\n"
+           f"📊 <b>Rejim:</b> {h(p.get('pt'))}\n"
+           f"📦 <b>Jami soni:</b> {q_tot} dona\n"
+           f"💰 <b>Qayta hisoblangan summa:</b> <b>{s_tot:,} so'm</b>")
+    edit_text_or_caption(c.message.chat.id, c.message.message_id, txt, admin_order_kb(cid))
+
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('snd_miss:'))
+@admin_only
 def handle_snd_miss(c):
     cid = c.data.split(':')[1]
     p = get_payload(cid)
@@ -770,53 +904,78 @@ def handle_snd_miss(c):
     items = p.get('items', [])
     if not any(it.get('aq', it.get('oq')) < it.get('oq') for it in items):
         return bot.answer_callback_query(c.id, "Hamma tovar yetarli!", show_alert=True)
-    miss_t, part_t, av_t, n_sum, n_qty = "", "", "", 0, 0
+    miss_t = part_t = av_t = ""
     for it in items:
-        oq, aq, pr = it.get('oq', 1), it.get('aq', 1), it.get('p', 0)
-        sub = aq * pr
-        n_sum += sub
-        n_qty += aq
-        if aq == 0: miss_t += f"❌ <b>{it.get('n')}</b> — (Umuman yo'q)\n"
-        elif aq < oq: part_t += f"⚠️ <b>{it.get('n')}</b> — {oq} ta so'ralgan, <b>{aq} ta bor</b>\n"
-        else: av_t += f"✅ <b>{it.get('n')}</b> — {aq} dona ({sub:,} so'm)\n"
-
-    msg = (
-        f"⚠️ <b>DIQQAT: AYRIM MODELLAR OMBORDA KAM YOKI YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-        f"{miss_t}{part_t}━━━━━━━━━━━━━━━━━━━\n"
-        f"📦 <b>Bor tovarlar:</b>\n{av_t if av_t else 'Qolmadi'}\n━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n"
-        f"💳 Karta: <code>{CARD_NUMBER}</code> ({CARD_NAME})\n\n{WARRANTY_TEXT}"
-    )
-    try: bot.send_message(int(cid), msg, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}")), parse_mode="HTML")
-    except: pass
-    try:
-        bot.edit_message_text(f"✅ <b>Mijozga xabar ketdi!</b>\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)", c.message.chat.id, c.message.message_id, reply_markup=admin_order_kb(cid), parse_mode="HTML")
-    except: pass
+        oq, aq, pr, n = it.get('oq', 1), it.get('aq', 1), it.get('p', 0), h(it.get('n'))
+        if aq == 0: miss_t += f"❌ <b>{n}</b> — umuman yo'q\n"
+        elif aq < oq: part_t += f"⚠️ <b>{n}</b> — {oq} ta so'ralgan, <b>{aq} ta bor</b>\n"
+        else: av_t += f"✅ <b>{n}</b> — {aq} dona ({aq * pr:,} so'm)\n"
+    n_sum, n_qty = order_summary(p)
+    msg = (f"⚠️ <b>DIQQAT: AYRIM MODELLAR OMBORDA KAM YOKI YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
+           f"{miss_t}{part_t}━━━━━━━━━━━━━━━━━━━\n"
+           f"📦 <b>Bor tovarlar:</b>\n{av_t or 'Qolmadi'}\n━━━━━━━━━━━━━━━━━━━\n"
+           f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n"
+           f"💳 Karta: <code>{h(CARD_NUMBER)}</code> ({h(CARD_NAME)})\n\n{WARRANTY_TEXT}")
+    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
+    safe_send(cid, msg, reply_markup=kb, parse_mode="HTML")
+    edit_text_or_caption(c.message.chat.id, c.message.message_id,
+                         f"✅ <b>Mijozga xabar ketdi!</b>\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)", admin_order_kb(cid))
     bot.answer_callback_query(c.id, "Mijozga yuborildi!")
+
 
 @bot.message_handler(content_types=['photo'])
 def handle_receipt(m):
     cid = str(m.chat.id)
-    phone = load_data(USERS_FILE).get(cid, {}).get('phone', "Noma'lum") if isinstance(load_data(USERS_FILE).get(cid, {}), dict) else "Noma'lum"
+    if is_admin(cid):
+        return
+    phone = get_user(cid).get('phone', "Noma'lum")
     kb = InlineKeyboardMarkup(row_width=2)
-    kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{cid}:today"), InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"), InlineKeyboardButton("❌ Soxta chek", callback_data=f"pay:{cid}:fake"))
-    bot.send_photo(ADMIN_ID, m.photo[-1].file_id, caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b>\n👤 {m.from_user.first_name}\n📞 {phone}\n🆔 <code>{cid}</code>", reply_markup=kb, parse_mode="HTML")
-    bot.reply_to(m, "✅ Chekingiz qabul qilindi!")
+    kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
+           InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
+           InlineKeyboardButton("❌ Soxta chek", callback_data=f"pay:{cid}:fake"))
+    try:
+        bot.send_photo(ADMIN_ID, m.photo[-1].file_id,
+                       caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b>\n👤 {h(m.from_user.first_name)}\n📞 {h(phone)}\n🆔 <code>{cid}</code>",
+                       reply_markup=kb, parse_mode="HTML")
+        bot.reply_to(m, "✅ Chekingiz qabul qilindi! Admin tekshirib, tez orada javob beradi.")
+    except Exception:
+        log.exception("receipt forward")
+        bot.reply_to(m, "⚠️ Chekni yuborib bo'lmadi, birozdan keyin qayta yuboring.")
+
+
+PAY_TEXTS = {
+    "today": "🎉 Tasdiqlandi! BUGUN yetkaziladi.",
+    "tomorrow": "🎉 Tasdiqlandi! ERTAGA yetkaziladi.",
+    "cash": "🤝 Tasdiqlandi! To'lov naqd olinadi.",
+    "fake": "⚠️ To'lov tushmadi. Chekni tekshirib, qayta yuboring.",
+    "cancel": "❌ Buyurtma bekor qilindi.",
+}
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('pay:'))
+@admin_only
 def process_pay(c):
     _, cid, act = c.data.split(':')
-    res = {"today": "🎉 Tasdiqlandi! BUGUN yetkaziladi.", "tomorrow": "🎉 Tasdiqlandi! ERTAGA yetkaziladi.", "cash": "🤝 Tasdiqlandi! To'lov naqd olinadi.", "fake": "⚠️ Pul tushmadi! Tekshiring.", "cancel": "❌ Bekor qilindi."}
-    bot.send_message(int(cid), f"🔔 {res.get(act, '')}")
+    if act not in PAY_TEXTS:
+        return bot.answer_callback_query(c.id)
+    safe_send(cid, f"🔔 {PAY_TEXTS[act]}")
     bot.answer_callback_query(c.id, "Xabar ketdi!")
     try: bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=None)
-    except: pass
+    except Exception: pass
 
+
+# ===================== WEBHOOK =====================
 @app.route('/', defaults={'path': ''}, methods=['POST', 'GET'])
 @app.route('/<path:path>', methods=['POST', 'GET'])
 def webhook(path):
-    if request.method == 'GET': return "✅ Ekranchi Bot faol! Webhook ulash uchun sayt_nomi/ulash sahifasiga kiring.", 200
-    if request.headers.get('content-type') == 'application/json':
+    if request.method == 'GET':
+        return "✅ Ekranchi bot ishlayapti.", 200
+    token = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
+    if not WEBHOOK_SECRET or not hmac.compare_digest(token, WEBHOOK_SECRET):
+        return "Forbidden", 403
+    if not (request.headers.get('content-type') or '').startswith('application/json'):
+        return "Bad request", 400
+    try:
         bot.process_new_updates([telebot.types.Update.de_json(request.get_data().decode('utf-8'))])
-        return jsonify({"status": "ok"}), 200
-    return "Forbidden", 403
+    except Exception:
+        log.exception("process update")
+    return jsonify({"status": "ok"}), 200
