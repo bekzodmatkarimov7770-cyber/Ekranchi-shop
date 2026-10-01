@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from html import escape
-import json, os, io, csv, hmac, logging, requests
+import json, os, io, csv, hmac, hashlib, time, logging, requests
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ekranchi")
@@ -25,6 +25,8 @@ WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v3")
 CARD_NUMBER = os.environ.get("CARD_NUMBER", "9860 1266 0304 4796")
 CARD_NAME = os.environ.get("CARD_NAME", "Bekzod M. (Humo / Uzcard)")
+
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://ekranchi-shop.vercel.app").rstrip("/")
 
 WHOLESALE_MIN = 50          # shuncha va undan ko'p dona bo'lsa optom narx
 MAX_QTY_PER_ITEM = 9999
@@ -514,7 +516,8 @@ def _redis(*cmd):
     r.raise_for_status()
     return r.json().get("result")
 
-_TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json"}
+_TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json", "orders2": "/tmp/orders2.json",
+        "last_order": "/tmp/last_order.json", "meta": "/tmp/meta.json"}
 
 def _file_load(name):
     try:
@@ -562,8 +565,74 @@ def get_user(uid):
     u = store_get("users", uid)
     return u if isinstance(u, dict) else {}
 
-def save_order(cid, payload): store_set("orders", cid, payload)
-def get_payload(cid): return store_get("orders", cid)
+# ---- Buyurtmalar: har biri alohida ID bilan saqlanadi (tarix yo'qolmaydi) ----
+STATUSES = {
+    "yangi": "Yangi",
+    "chek": "Chek keldi",
+    "tasdiqlandi": "Tasdiqlandi",
+    "yuborildi": "Yuborildi",
+    "yetkazildi": "Yetkazildi",
+    "bekor": "Bekor qilindi",
+}
+STATUS_CUSTOMER_MSG = {
+    "tasdiqlandi": "✅ Buyurtmangiz <b>#{id}</b> tasdiqlandi, tayyorlanmoqda.",
+    "yuborildi": "📦 Buyurtmangiz <b>#{id}</b> yuborildi! Tez orada yetib boradi.",
+    "yetkazildi": "🎉 Buyurtmangiz <b>#{id}</b> yetkazildi. Xaridingiz uchun rahmat!",
+    "bekor": "❌ Buyurtmangiz <b>#{id}</b> bekor qilindi. Savollar bo'lsa, adminga yozing.",
+}
+
+def now_ms():
+    return int(time.time() * 1000)
+
+def next_order_id():
+    try:
+        if REDIS_URL:
+            n = int(_redis("INCR", "order_seq"))
+        else:
+            meta = _file_load("meta")
+            n = int(meta.get("order_seq", 0)) + 1
+            meta["order_seq"] = n
+            _file_save("meta", meta)
+    except Exception:
+        log.exception("order_seq")
+        n = int(time.time()) % 1000000
+    return f"E{1000 + n}"
+
+def get_order(oid):
+    o = store_get("orders2", oid)
+    return o if isinstance(o, dict) else None
+
+def get_payload(key):
+    """key: buyurtma ID (E1001) yoki mijoz chat ID (oxirgi buyurtmasi)."""
+    key = str(key)
+    if key.startswith("E"):
+        return get_order(key)
+    oid = store_get("last_order", key)
+    if oid:
+        o = get_order(oid)
+        if o:
+            return o
+    return store_get("orders", key)  # eski formatdagi buyurtma
+
+def save_order(key, p):
+    if p.get("id"):
+        p["updated"] = now_ms()
+        store_set("orders2", p["id"], p)
+        store_set("last_order", p.get("cid", key), p["id"])
+    else:
+        store_set("orders", key, p)
+
+def order_cid(key, p):
+    return str((p or {}).get("cid") or key)
+
+def set_status(p, status, note=None, by="bot"):
+    if not p or not p.get("id") or status not in STATUSES:
+        return p
+    if p.get("status") != status or note:
+        p["status"] = status
+        p.setdefault("history", []).append({"t": now_ms(), "s": status, "by": by, **({"note": note} if note else {})})
+        save_order(p["cid"], p)
+    return p
 
 
 # ===================== BOT =====================
@@ -673,6 +742,8 @@ def handle_stat(m):
            f"📱 Raqam tasdiqlaganlar: <b>{len(users)} ta</b>\n"
            f"🤝 Optomchilar: <b>{optom} ta</b>\n"
            f"👤 Chakanachilar: <b>{retail} ta</b>")
+    orders = [o for o in store_all("orders2").values() if isinstance(o, dict)]
+    txt += f"\n🧾 Buyurtmalar: <b>{len(orders)} ta</b>\n\n📊 To'liq ma'lumot: /panel"
     if not REDIS_URL:
         txt += "\n\n⚠️ Doimiy baza ulanmagan: ma'lumotlar /tmp da, vaqti-vaqti bilan o'chib ketadi."
     bot.send_message(m.chat.id, txt, parse_mode="HTML")
@@ -692,7 +763,7 @@ def handle_contact(m):
     if p and not p.get("phone"):
         p["phone"] = phone
         save_order(m.chat.id, p)
-        notify_admin(f"📞 <b>Buyurtma raqami keldi</b>\n{contact_line(m.chat.id, m.from_user.first_name, m.from_user.username, phone)}"
+        notify_admin(f"📞 <b>Buyurtma #{h(p.get('id', ''))} raqami keldi</b>\n{contact_line(m.chat.id, m.from_user.first_name, m.from_user.username, phone)}"
                      f"\n📍 {h(p.get('deliv'))} | {h(p.get('addr'))}")
         bot.send_message(m.chat.id, "✅ Rahmat! Raqamingiz buyurtmaga qo'shildi, admin tez orada bog'lanadi.",
                          reply_markup=main_kb())
@@ -774,13 +845,18 @@ def handle_order(m):
         writer.writerow([])
         writer.writerow(["", "JAMI", t_qty, "", t_sum])
 
-        save_order(cid, {"name": name, "tg_name": tg_name, "username": m.from_user.username, "phone": phone, "deliv": deliv, "addr": addr, "pt": pt, "items": payload_items})
+        oid = next_order_id()
+        save_order(cid, {"id": oid, "cid": cid, "created": now_ms(), "status": "yangi",
+                         "history": [{"t": now_ms(), "s": "yangi", "by": "mijoz"}],
+                         "name": name, "tg_name": tg_name, "username": m.from_user.username, "phone": phone,
+                         "role": user.get('role'), "deliv": deliv, "addr": addr, "pt": pt,
+                         "qty": t_qty, "total": t_sum, "items": payload_items, "note": ""})
 
         csv_file = io.BytesIO(csv_buffer.getvalue().encode('utf-8-sig'))
-        csv_file.name = f"Buyurtma_{cid}.csv"
+        csv_file.name = f"Buyurtma_{oid}.csv"
 
         client_txt = (
-            f"🛒 <b>Buyurtmangiz qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
+            f"🛒 <b>Buyurtmangiz #{oid} qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
             f"👤 <b>Mijoz:</b> {h(name)}\n📞 <b>Telefon:</b> {h(phone or 'yuborilmagan')}\n"
             f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
             f"📦 <b>Tarkibi:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
@@ -806,7 +882,7 @@ def handle_order(m):
 
         if ADMIN_ID:
             admin_txt = (
-                f"🔔 <b>YANGI BUYURTMA!</b>\n━━━━━━━━━━━━━━━━━━━\n"
+                f"🔔 <b>YANGI BUYURTMA #{oid}</b>\n━━━━━━━━━━━━━━━━━━━\n"
                 f"✍️ <b>Ism (formada):</b> {h(name)} ({h(role)})\n"
                 f"{contact_line(cid, tg_name or name, m.from_user.username, phone)}\n"
                 f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
@@ -817,7 +893,7 @@ def handle_order(m):
             )
             try:
                 bot.send_document(ADMIN_ID, document=csv_file, caption=admin_txt,
-                                  reply_markup=admin_order_kb(cid), parse_mode="HTML")
+                                  reply_markup=admin_order_kb(oid), parse_mode="HTML")
             except Exception as e:
                 log.exception("send_document")
                 notify_admin(f"⚠️ Fayl yuborishda xatolik: {h(e)}")
@@ -921,7 +997,7 @@ def handle_back_ord(c):
     p = get_payload(cid)
     if not p: return
     s_tot, q_tot = order_summary(p)
-    txt = (f"🔔 <b>BUYURTMA: {h(p.get('name'))}</b>\n━━━━━━━━━━━━━━━━━━━\n"
+    txt = (f"🔔 <b>BUYURTMA #{h(p.get('id', ''))}: {h(p.get('name'))}</b>\n━━━━━━━━━━━━━━━━━━━\n"
            f"{contact_line(cid, p.get('tg_name') or p.get('name'), p.get('username'), p.get('phone'))}\n"
            f"🚚 <b>Yetkazish:</b> {h(p.get('deliv'))} | 📍 {h(p.get('addr'))}\n"
            f"📊 <b>Rejim:</b> {h(p.get('pt'))}\n"
@@ -946,13 +1022,18 @@ def handle_snd_miss(c):
         elif aq < oq: part_t += f"⚠️ <b>{n}</b> — {oq} ta so'ralgan, <b>{aq} ta bor</b>\n"
         else: av_t += f"✅ <b>{n}</b> — {aq} dona ({aq * pr:,} so'm)\n"
     n_sum, n_qty = order_summary(p)
+    if p.get("id"):
+        p["total"], p["qty"] = n_sum, n_qty
+        p.setdefault("history", []).append({"t": now_ms(), "s": p.get("status", "yangi"), "by": "admin",
+                                            "note": f"Tarkib o'zgardi: {n_qty} ta, {n_sum:,} so'm"})
+        save_order(p["cid"], p)
     msg = (f"⚠️ <b>DIQQAT: AYRIM MODELLAR OMBORDA KAM YOKI YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
            f"{miss_t}{part_t}━━━━━━━━━━━━━━━━━━━\n"
            f"📦 <b>Bor tovarlar:</b>\n{av_t or 'Qolmadi'}\n━━━━━━━━━━━━━━━━━━━\n"
            f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n"
            f"💳 Karta: <code>{h(CARD_NUMBER)}</code> ({h(CARD_NAME)})\n\n{WARRANTY_TEXT}")
     kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
-    safe_send(cid, msg, reply_markup=kb, parse_mode="HTML")
+    safe_send(order_cid(cid, p), msg, reply_markup=kb, parse_mode="HTML")
     edit_text_or_caption(c.message.chat.id, c.message.message_id,
                          f"✅ <b>Mijozga xabar ketdi!</b>\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)", admin_order_kb(cid))
     bot.answer_callback_query(c.id, "Mijozga yuborildi!")
@@ -970,8 +1051,9 @@ def handle_receipt(m):
            InlineKeyboardButton("❌ Soxta chek", callback_data=f"pay:{cid}:fake"))
     try:
         bot.send_photo(ADMIN_ID, m.photo[-1].file_id,
-                       caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b>\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
+                       caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b> {('#' + h(get_payload(cid).get('id', ''))) if get_payload(cid) else ''}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
                        reply_markup=kb, parse_mode="HTML")
+        set_status(get_payload(cid), "chek", by="mijoz")
         bot.reply_to(m, "✅ Chekingiz qabul qilindi! Admin tekshirib, tez orada javob beradi.")
     except Exception:
         log.exception("receipt forward")
@@ -992,16 +1074,83 @@ def process_pay(c):
     _, cid, act = c.data.split(':')
     if act not in PAY_TEXTS:
         return bot.answer_callback_query(c.id)
-    safe_send(cid, f"🔔 {PAY_TEXTS[act]}")
+    p = get_payload(cid)
+    if p and p.get("id"):
+        st = {"today": "tasdiqlandi", "tomorrow": "tasdiqlandi", "cash": "tasdiqlandi",
+              "cancel": "bekor", "fake": "yangi"}[act]
+        set_status(p, st, note=PAY_TEXTS[act], by="admin")
+    safe_send(order_cid(cid, p), f"🔔 {PAY_TEXTS[act]}")
     bot.answer_callback_query(c.id, "Xabar ketdi!")
     try: bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=None)
     except Exception: pass
+
+
+# ===================== ADMIN PANEL =====================
+def _panel_key():
+    return (WEBHOOK_SECRET or BOT_TOKEN).encode()
+
+def make_admin_token(days=30):
+    exp = int(time.time()) + days * 86400
+    sig = hmac.new(_panel_key(), f"admin:{exp}".encode(), hashlib.sha256).hexdigest()[:40]
+    return f"{exp}.{sig}"
+
+def check_admin_token(tok):
+    try:
+        exp, sig = tok.split(".", 1)
+        good = hmac.new(_panel_key(), f"admin:{int(exp)}".encode(), hashlib.sha256).hexdigest()[:40]
+        return int(exp) > time.time() and hmac.compare_digest(sig, good)
+    except Exception:
+        return False
+
+@bot.message_handler(commands=['panel'])
+def handle_panel(m):
+    if not is_admin(m.chat.id):
+        return
+    url = f"{PUBLIC_URL}/admin?k={make_admin_token()}"
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("📊 Admin panelni ochish", web_app=WebAppInfo(url=url)))
+    bot.send_message(m.chat.id,
+        "📊 <b>Admin panel</b>\nTugma orqali Telegram ichida oching.\n\n"
+        f"Kompyuterda ochish uchun havola (30 kun amal qiladi, hech kimga bermang):\n<code>{h(url)}</code>",
+        reply_markup=kb, parse_mode="HTML")
+
+def admin_api():
+    tok = request.headers.get("X-Admin-Token", "")
+    if not check_admin_token(tok):
+        return jsonify({"error": "Kirish muddati tugagan. Botga /panel yozib, yangi havola oling."}), 401
+    action = request.args.get("admin")
+    if action == "data" and request.method == "GET":
+        orders = [o for o in store_all("orders2").values() if isinstance(o, dict) and o.get("id")]
+        orders.sort(key=lambda o: o.get("created", 0), reverse=True)
+        users = store_all("users")
+        customers = [{"cid": str(k), **v} for k, v in users.items() if isinstance(v, dict)]
+        return jsonify({"orders": orders, "customers": customers, "statuses": STATUSES, "now": now_ms(),
+                        "persistent": bool(REDIS_URL)})
+    if action == "update" and request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        p = get_order(str(body.get("id", "")))
+        if not p:
+            return jsonify({"error": "Buyurtma topilmadi"}), 404
+        if "note" in body:
+            p["note"] = str(body["note"])[:500]
+            save_order(p["cid"], p)
+        st = body.get("status")
+        if st and st != p.get("status"):
+            if st not in STATUSES:
+                return jsonify({"error": "Noto'g'ri holat"}), 400
+            set_status(p, st, by="panel")
+            if body.get("notify") and st in STATUS_CUSTOMER_MSG:
+                safe_send(p["cid"], STATUS_CUSTOMER_MSG[st].format(id=h(p["id"])), parse_mode="HTML")
+        return jsonify({"ok": True, "order": p})
+    return jsonify({"error": "Noma'lum so'rov"}), 400
 
 
 # ===================== WEBHOOK =====================
 @app.route('/', defaults={'path': ''}, methods=['POST', 'GET'])
 @app.route('/<path:path>', methods=['POST', 'GET'])
 def webhook(path):
+    if "admin" in request.args:
+        return admin_api()
     if request.method == 'GET':
         if "ulash" in request.args or path.rstrip("/").endswith("ulash"):
             return do_ulash()
