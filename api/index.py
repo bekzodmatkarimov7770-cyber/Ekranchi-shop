@@ -570,6 +570,19 @@ def get_payload(cid): return store_get("orders", cid)
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 
+def user_link(uid, name):
+    """Mijoz profiliga havola: username bo'lmasa ham ID orqali ochiladi."""
+    return f'<a href="tg://user?id={int(uid)}">{h(name or "Mijoz")}</a>'
+
+def contact_line(uid, name, username, phone):
+    parts = [f"👤 <b>Mijoz:</b> {user_link(uid, name)}"]
+    if username:
+        parts.append(f"🔗 @{h(username)}")
+    parts.append(f"🆔 <code>{int(uid)}</code>")
+    line = " | ".join(parts)
+    line += f"\n📞 <b>Raqam:</b> {h(phone)}" if phone else "\n📞 <b>Raqam:</b> ⏳ <i>mijozdan so'raldi</i>"
+    return line
+
 def is_admin(uid):
     return ADMIN_ID != 0 and int(uid) == ADMIN_ID
 
@@ -592,7 +605,7 @@ def safe_send(chat_id, text, **kw):
 
 def notify_admin(text):
     if ADMIN_ID:
-        safe_send(ADMIN_ID, text)
+        safe_send(ADMIN_ID, text, parse_mode="HTML")
 
 
 def do_ulash():
@@ -672,7 +685,19 @@ def handle_contact(m):
         return
     num = m.contact.phone_number
     phone = num if num.startswith('+') else '+' + num
-    store_set("users", m.chat.id, {"phone": phone, "role": None, "name": m.from_user.first_name})
+    old = get_user(m.chat.id)
+    store_set("users", m.chat.id, {"phone": phone, "role": old.get("role"), "name": m.from_user.first_name,
+                                   "username": m.from_user.username})
+    p = get_payload(m.chat.id)
+    if p and not p.get("phone"):
+        p["phone"] = phone
+        save_order(m.chat.id, p)
+        notify_admin(f"📞 <b>Buyurtma raqami keldi</b>\n{contact_line(m.chat.id, m.from_user.first_name, m.from_user.username, phone)}"
+                     f"\n📍 {h(p.get('deliv'))} | {h(p.get('addr'))}")
+        bot.send_message(m.chat.id, "✅ Rahmat! Raqamingiz buyurtmaga qo'shildi, admin tez orada bog'lanadi.",
+                         reply_markup=main_kb())
+        if old.get("role"):
+            return
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(InlineKeyboardButton("🤝 Optom (Do'kon / Usta)", callback_data="set_role:Optom"),
            InlineKeyboardButton("👤 Chakana (Dona)", callback_data="set_role:Chakana"))
@@ -705,13 +730,13 @@ def handle_order(m):
         return
     try:
         user = get_user(cid)
-        phone = user.get('phone', "Noma'lum")
-        role = user.get('role') or "Noma'lum"
+        phone = user.get('phone')
+        role = user.get('role') or "—"
 
         name = str(data.get('n', 'Mijoz'))[:30].strip() or 'Mijoz'
         deliv = data.get('d') if data.get('d') in ALLOWED_DELIVERY else 'BTS'
         addr = str(data.get('a', ''))[:80].strip()
-        uname = f"@{m.from_user.username}" if m.from_user.username else "-"
+        tg_name = " ".join(x for x in [m.from_user.first_name, m.from_user.last_name] if x)
 
         # 1) Tovarlarni tekshirish: faqat katalogdagi ID lar, musbat butun son
         clean = {}
@@ -749,14 +774,14 @@ def handle_order(m):
         writer.writerow([])
         writer.writerow(["", "JAMI", t_qty, "", t_sum])
 
-        save_order(cid, {"name": name, "phone": phone, "deliv": deliv, "addr": addr, "pt": pt, "items": payload_items})
+        save_order(cid, {"name": name, "tg_name": tg_name, "username": m.from_user.username, "phone": phone, "deliv": deliv, "addr": addr, "pt": pt, "items": payload_items})
 
         csv_file = io.BytesIO(csv_buffer.getvalue().encode('utf-8-sig'))
         csv_file.name = f"Buyurtma_{cid}.csv"
 
         client_txt = (
             f"🛒 <b>Buyurtmangiz qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>Mijoz:</b> {h(name)}\n📞 <b>Telefon:</b> {h(phone)}\n"
+            f"👤 <b>Mijoz:</b> {h(name)}\n📞 <b>Telefon:</b> {h(phone or 'yuborilmagan')}\n"
             f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
             f"📦 <b>Tarkibi:</b>\n{items_txt}━━━━━━━━━━━━━━━━━━━\n"
             f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({pt} narxda, {t_qty} dona)\n\n"
@@ -764,6 +789,12 @@ def handle_order(m):
             f"📸 To'lov qilgach, chek rasmini shu chatga yuboring.\n\n{WARRANTY_TEXT}"
         )
         safe_send(cid, client_txt, parse_mode="HTML")
+
+        if not phone:
+            bot.send_message(m.chat.id,
+                "📞 Buyurtmangizni tasdiqlashimiz uchun telefon raqamingiz kerak. "
+                "Pastdagi <b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing 👇",
+                reply_markup=contact_kb(), parse_mode="HTML")
 
         client_ts = data.get('ts')
         mismatch = ""
@@ -776,8 +807,8 @@ def handle_order(m):
         if ADMIN_ID:
             admin_txt = (
                 f"🔔 <b>YANGI BUYURTMA!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 <b>Mijoz:</b> {h(name)} ({h(uname)})\n"
-                f"📞 <b>Raqam:</b> {h(phone)} ({h(role)})\n"
+                f"✍️ <b>Ism (formada):</b> {h(name)} ({h(role)})\n"
+                f"{contact_line(cid, tg_name or name, m.from_user.username, phone)}\n"
                 f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
                 f"📊 <b>Rejim:</b> {pt}\n"
                 f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean)} xil model)\n"
@@ -789,10 +820,10 @@ def handle_order(m):
                                   reply_markup=admin_order_kb(cid), parse_mode="HTML")
             except Exception as e:
                 log.exception("send_document")
-                notify_admin(f"⚠️ Fayl yuborishda xatolik: {e}")
+                notify_admin(f"⚠️ Fayl yuborishda xatolik: {h(e)}")
     except Exception as e:
         log.exception("handle_order")
-        notify_admin(f"⚠️ Buyurtmani qayta ishlashda xato ({cid}): {e}")
+        notify_admin(f"⚠️ Buyurtmani qayta ishlashda xato ({cid}): {h(e)}")
         safe_send(cid, "⚠️ Texnik xato yuz berdi. Admin bilan bog'laning, buyurtmangizni qo'lda qabul qilamiz.")
 
 
@@ -891,7 +922,7 @@ def handle_back_ord(c):
     if not p: return
     s_tot, q_tot = order_summary(p)
     txt = (f"🔔 <b>BUYURTMA: {h(p.get('name'))}</b>\n━━━━━━━━━━━━━━━━━━━\n"
-           f"📞 <b>Raqam:</b> {h(p.get('phone'))}\n"
+           f"{contact_line(cid, p.get('tg_name') or p.get('name'), p.get('username'), p.get('phone'))}\n"
            f"🚚 <b>Yetkazish:</b> {h(p.get('deliv'))} | 📍 {h(p.get('addr'))}\n"
            f"📊 <b>Rejim:</b> {h(p.get('pt'))}\n"
            f"📦 <b>Jami soni:</b> {q_tot} dona\n"
@@ -932,14 +963,14 @@ def handle_receipt(m):
     cid = str(m.chat.id)
     if is_admin(cid):
         return
-    phone = get_user(cid).get('phone', "Noma'lum")
+    phone = get_user(cid).get('phone')
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
            InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
            InlineKeyboardButton("❌ Soxta chek", callback_data=f"pay:{cid}:fake"))
     try:
         bot.send_photo(ADMIN_ID, m.photo[-1].file_id,
-                       caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b>\n👤 {h(m.from_user.first_name)}\n📞 {h(phone)}\n🆔 <code>{cid}</code>",
+                       caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b>\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
                        reply_markup=kb, parse_mode="HTML")
         bot.reply_to(m, "✅ Chekingiz qabul qilindi! Admin tekshirib, tez orada javob beradi.")
     except Exception:
