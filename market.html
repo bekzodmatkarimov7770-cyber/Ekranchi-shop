@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Ekranchi_Bola — displeylar ombori</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="data.js?v=wow_v3"></script>
+  <script src="data.js?v=wow_v4"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -178,8 +178,12 @@
     .type-tag { padding: 1px 6px; border-radius: 5px; background: var(--paper); color: var(--ink); font-weight: 600; font-size: 10.5px; white-space: nowrap; }
     .type-tag.servis { background: #FDF0DA; color: #8A5608; }
     .type-tag.oled { background: #16181D; color: #fff; }
-    .name { font-weight: 600; font-size: 14.5px; line-height: 1.3; margin: 3px 0 5px; word-break: break-word;
-      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .name { font-weight: 700; font-size: 16px; line-height: 1.25; margin: 4px 0 4px; word-break: break-word; letter-spacing: -.005em; }
+    .alts { font-size: 12.5px; color: var(--muted); line-height: 1.35; margin: -2px 0 6px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+    .alts.open { -webkit-line-clamp: unset; display: block; }
+    .alts b { font-weight: 600; color: #3E4B48; }
+    .type-tag.frame { background: #FFF6E6; color: #8A5608; }
     .price { display: flex; align-items: baseline; column-gap: 8px; flex-wrap: wrap; }
     .price b { font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
     .price s { font-size: 12px; color: var(--muted); }
@@ -400,7 +404,70 @@
     return;
   }
 
-  const products = productsData.map(p => ({ ...p, _key: norm(p.brand + ' ' + p.name) }));
+// Model nomlarini chiroyli ko'rinishga keltirish (faqat ko'rinish uchun; ID va narxlar o'zgarmaydi)
+  function prettyModel(raw, brand) {
+    let s = String(raw)
+      .replace(/[／]/g, '/').replace(/[（]/g, '(').replace(/[）]/g, ')').replace(/[＋]/g, '+')
+      .replace(/\((yin du|neidan)\)/gi, '').replace(/[\u3400-\u9fff]+/g, '')
+        .replace(/\biq(oo|00)\s*/gi, 'iQOO ')
+      .replace(/\s+/g, ' ').trim();
+    const tags = new Set();
+    // WF = ramkali (with frame)
+    if (/(^|[\s\-\/])?WF\b|\dWF\b|[A-Z]WF\b/i.test(s)) { tags.add('Ramkali'); s = s.replace(/[\s\-]*WF\b/gi, ''); }
+    // iPhone sifat kodlari
+    if (/^iphone$/i.test(brand)) {
+      const q = s.match(/-?F-?\((Q[^)]*)\)|-FHD\b/i);
+      if (q) { tags.add(/FHD/i.test(q[0]) ? 'FHD' : 'F(' + q[1].toUpperCase() + ')'); s = s.replace(/-?F-?\(Q[^)]*\)|-FHD\b/gi, ''); }
+      s = s.replace(/^(\d)(G|P)(W|B)\b/i, (m, n, gp, c) => `${n}${gp.toUpperCase() === 'P' ? ' Plus' : ''} ${c.toUpperCase() === 'W' ? '(oq)' : '(qora)'}`);
+    }
+    const WORDS = { NOTE:'Note', PRO:'Pro', MAX:'Max', PROMAX:'Pro Max', PLUS:'Plus', LITE:'Lite', MINI:'Mini', ULTRA:'Ultra', PRIME:'Prime', POWER:'Power',
+      CORE:'Core', SPARK:'Spark', HOT:'Hot', CAMON:'Camon', POVA:'Pova', POP:'Pop', SMART:'Smart', NOVA:'Nova', PSMART:'P smart', NARZO:'Narzo', REALME:'Realme',
+      REAIME:'Realme', REARLME:'Realme', RENO:'Reno', ZERO:'Zero', MAGIC:'Magic', PLAY:'Play', VISION:'Vision', VISON:'Vision', VOSON:'Vision', MI:'Mi', NEO:'Neo', AIR:'Air',
+      POCO:'POCO', GO:'Go', VIP:'VIP', NFC:'NFC', INDIA:'India', NEW:'New', REDMI:'Redmi', SHARK:'Shark', NFC:'NFC', BIG:'Big', SE:'SE', GT:'GT', VIVO:'Vivo', OPPO:'OPPO', TECNO:'Tecno', ONEPLUS:'OnePlus',
+      NORD:'Nord', FIND:'Find', MASTER:'Master', IQOO:'iQOO', IQ00:'iQOO', HD:'HD', FHD:'FHD', LTE:'LTE', OVERSEAS:'Global', VERSION:'', XM:'', RY:'', HOTE:'Hot' };
+    const word = (w) => {
+      const u = w.toUpperCase();
+      if (u in WORDS) return WORDS[u];
+      if (/^\d+G$/i.test(w)) return u;                        // 4G, 5G
+      return u;                                               // model kodlari: A02S, KF6, BD4 ...
+    };
+    const fixOne = (part) => {
+      let p = part.trim();
+      if (!p) return '';
+      p = p.replace(/^(RY|XM)\s*/i, '');
+      if (/redmi/i.test(brand)) p = p.replace(/^HM\s*/i, 'Redmi ');                       // RY = Honor, XM = Xiaomi
+      // so'z va raqam orasiga bo'sh joy: NOTE8 -> NOTE 8, 13PROMAX -> 13 PROMAX, HOT12PLAY -> HOT 12 PLAY
+      p = p.replace(/\b(NOTE|HOT|SPARK|CAMON|POVA|POP|SMART|NOVA|NARZO|REALME|REAIME|RENO|ZERO|MAGIC|MI|POCO|VISION|VISON|PLAY|GT|GO)(?=\d)/gi, '$1 ')
+           .replace(/(\d[A-Z]?)(PROMAX|PRO|MAX|PLUS|LITE|MINI|PRIME|POWER|PLAY|NEO|AIR|SE|VIP|CORE|INDIA|NEW)/gi, '$1 $2')
+           .replace(/(PLAY)(NFC)\b/gi, '$1 $2').replace(/\b(POCO)(?=[A-Z]\d)/gi, '$1 ').replace(/\b(SPARK)(GO)/gi, '$1 $2')
+           .replace(/\b(PRO)(MAX|PLUS)\b/gi, '$1 $2')
+           .replace(/\b(realme|narzo|reno)(?=[a-z])/gi, '$1 ')
+           .replace(/\b(POVA|NOVA)(NEO|\d)/gi, '$1 $2')
+           .replace(/\b(\d+[A-Z]?)(\d)G\b/g, '$1 $2G');
+      p = p.split(/(\s+|[-()+.])/).map(t => /^[A-Za-z]+\d*[A-Za-z]*$/.test(t) && /[A-Za-z]{2,}/.test(t) && !/\d/.test(t) ? word(t) : (/[a-z]/.test(t) && /\d/.test(t) ? t.toUpperCase() : t)).join('');
+      // Samsung: A02S -> A02s
+      if (/samsung/i.test(brand)) p = p.replace(/\b([AM]\d{2})S\b/g, '$1s');
+      p = p.replace(/(\d)I\b/g, '$1i').replace(/\(QORA\)/g, '(qora)').replace(/\(OQ\)/g, '(oq)');
+      p = p.replace(/\s{2,}/g, ' ').replace(/\s+([)\]])/g, '$1').replace(/-\s*$/,'').trim();
+      if (/huawei/i.test(brand) && /^RY\b/i.test(part.trim())) p = 'Honor ' + p;
+      return p;
+    };
+    const seen = new Set(); const parts = [];
+    s.split('/').map(fixOne).forEach(p => {
+      if (!p) return;
+      if (/^\d+G$/.test(p) && parts.length) p = parts[parts.length - 1].replace(/\b\d+G\b/, p);   // "Mi 11 Lite 4G / 5G"
+      if (!seen.has(p.toLowerCase())) { seen.add(p.toLowerCase()); parts.push(p); }
+    });
+    // Asosiy nom sifatida ichki kod emas, tanish model nomini tanlaymiz
+    const isCode = (p) => /samsung/i.test(brand) ? /^[AMJFS]\d{3}[A-Z]{0,2}$/.test(p)
+      : /tecno/i.test(brand) ? /^([A-Z]{2}\d{1,3}[A-Z]{0,2}|S\d{3}[A-Z]{0,2}|\d{4}[A-Z]?)$/.test(p) : false;
+    const mi = Math.max(0, parts.findIndex(p => !isCode(p)));
+    const main = parts[mi] || String(raw);
+    return { main, alts: parts.filter((_, i) => i !== mi), tags: [...tags] };
+  }
+  
+  const products = productsData.map(p => { const pm = prettyModel(p.name, p.brand);
+    return { ...p, _pm: pm, _key: norm([p.brand, p.name, pm.main, ...pm.alts].join(' ')) }; });
   const byId = new Map(products.map(p => [String(p.id), p]));
   $('modelCount').textContent = products.length;
 
@@ -465,12 +532,16 @@
       <div class="info">
         <div class="meta"><span class="br"></span><span class="type-tag ${tc}"></span></div>
         <div class="name"></div>
+        <div class="alts" hidden></div>
         <div class="price"></div>
       </div>
       <div class="act"></div>`;
     el.querySelector('.br').textContent = p.brand;
     el.querySelector('.type-tag').textContent = p.type;
-    el.querySelector('.name').textContent = p.name;
+    el.querySelector('.name').textContent = p._pm.main;
+    p._pm.tags.forEach(t => { const tag = document.createElement('span'); tag.className = 'type-tag' + (t === 'Ramkali' ? ' frame' : ''); tag.textContent = t; el.querySelector('.meta').appendChild(tag); });
+    if (p._pm.alts.length) { const a = el.querySelector('.alts'); a.hidden = false;
+      a.innerHTML = '<b>Mos keladi:</b> '; a.appendChild(document.createTextNode(p._pm.alts.join(', '))); a.title = 'Toʻliq roʻyxat'; }
     rows.set(String(p.id), { el, p, out, priceEl: el.querySelector('.price'), actEl: el.querySelector('.act') });
     frag.appendChild(el);
   });
@@ -527,6 +598,7 @@
   }
 
   document.addEventListener('click', (e) => {
+    const alts = e.target.closest('.alts'); if (alts) { alts.classList.toggle('open'); return; }
     const add = e.target.closest('[data-add]');
     if (add) { haptic(); setQty(add.dataset.add, 1); bumpDock(); return; }
     const d = e.target.closest('[data-d]');
@@ -595,7 +667,7 @@
       const p = byId.get(id), q = cart[id], pr = priceOf(p, w);
       const line = document.createElement('div'); line.className = 'line';
       line.innerHTML = `<div><div class="nm"></div><div class="sub">${q} × ${fmtN(pr)} = <b>${fmt(pr * q)}</b></div></div>${stepperHTML(id, q)}`;
-      line.querySelector('.nm').textContent = `${p.brand} ${p.name}`;
+      line.querySelector('.nm').textContent = `${p.brand} ${p._pm.main}` + (p._pm.alts.length ? ` (+${p._pm.alts.length} mos model)` : '') + (p._pm.tags.includes('Ramkali') ? ', ramkali' : '');
       box.appendChild(line);
     });
     const diff = cartSum(false) - cartSum(true);
