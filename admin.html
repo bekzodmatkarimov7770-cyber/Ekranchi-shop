@@ -138,6 +138,41 @@
     .legend { display: flex; justify-content: space-between; font-size: 13px; }
     .exports { display: flex; gap: 8px; flex-wrap: wrap; }
 
+
+    /* ---------- Tovarlar ---------- */
+    .prod { background: var(--card); border: 1px solid var(--hair); border-radius: 12px; padding: 10px 12px; border-left: 4px solid transparent; }
+    .prod.dirty { border-left-color: var(--kapton); background: #FFFBF3; }
+    .prod.hidden-p { opacity: .6; }
+    .p-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .p-meta { font-size: 12px; color: var(--muted); }
+    .p-name { font-weight: 600; font-size: 14px; line-height: 1.3; margin-top: 2px; word-break: break-word; }
+    .p-fields { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 8px; margin-top: 10px; }
+    .p-fields label { font-size: 11.5px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 3px; }
+    .p-fields input { width: 100%; height: 40px; border: 1.5px solid var(--hair); border-radius: 9px; padding: 0 8px; font-size: 15px; font-weight: 600; background: #fff; font-variant-numeric: tabular-nums; }
+    .p-fields input:focus { outline: 0; border-color: var(--mat); }
+    .p-fields input.bad { border-color: var(--danger); }
+    .qty { display: flex; height: 40px; border: 1.5px solid var(--hair); border-radius: 9px; overflow: hidden; background: #fff; }
+    .qty button { width: 32px; border: 0; background: var(--paper); font-size: 18px; font-weight: 600; }
+    .qty input { border: 0 !important; border-radius: 0 !important; text-align: center; padding: 0 2px !important; min-width: 0; }
+    .stock-0 .qty { border-color: var(--danger); }
+    .stock-low .qty { border-color: var(--kapton); }
+    .eye { border: 1px solid var(--hair); background: var(--paper); border-radius: 9px; height: 32px; padding: 0 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .savebar { position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 40; max-width: 760px; margin: 0 auto;
+      background: var(--mat-deep); color: #fff; border-radius: 16px; padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 16px 36px -14px rgba(12,46,41,.7); }
+    .savebar span { flex: 1; font-size: 14px; }
+    .savebar .btn { height: 42px; color: var(--ink); }
+    .savebar .save { background: var(--kapton); border-color: var(--kapton); color: #2B1A00; }
+    .bulk { background: var(--card); border: 1px solid var(--hair); border-radius: 12px; padding: 12px; display: grid; gap: 10px; margin-bottom: 12px; }
+    .bulk .row2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .bulk input, .bulk select { height: 40px; border: 1.5px solid var(--hair); border-radius: 9px; padding: 0 10px; background: #fff; font-size: 15px; }
+    .bulk input { width: 110px; }
+    .newform { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .newform .full { grid-column: 1 / -1; }
+    .newform input, .newform select { width: 100%; }
+    .more { width: 100%; margin-top: 8px; }
+    .hint { font-size: 12.5px; color: var(--muted); }
+
     .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
     .empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
     .notice { background: #FDF0DA; color: #6B4306; border-radius: 12px; padding: 10px 14px; font-size: 13.5px; margin-bottom: 12px; }
@@ -183,6 +218,7 @@
       <div class="wrap">
         <button class="tab" role="tab" data-tab="orders" aria-selected="true">Buyurtmalar<i id="tOrders"></i></button>
         <button class="tab" role="tab" data-tab="customers" aria-selected="false">Mijozlar<i id="tCust"></i></button>
+        <button class="tab" role="tab" data-tab="products" aria-selected="false">Tovarlar<i id="tProd"></i></button>
         <button class="tab" role="tab" data-tab="report" aria-selected="false">Hisobot</button>
       </div>
     </nav>
@@ -210,6 +246,48 @@
         <div class="list" id="customers"></div>
       </section>
 
+
+      <section id="productsView" hidden>
+        <div class="tools">
+          <label class="search"><input id="pq" type="search" placeholder="Model nomi yoki ID" aria-label="Tovar qidirish"></label>
+          <div class="chips" id="pFilter">
+            <button class="chip" type="button" data-pf="all" aria-pressed="true">Hammasi<i id="pfAll"></i></button>
+            <button class="chip" type="button" data-pf="low" aria-pressed="false"><span class="dot" style="background:var(--kapton)"></span>Kam qolgan<i id="pfLow"></i></button>
+            <button class="chip" type="button" data-pf="out" aria-pressed="false"><span class="dot" style="background:var(--danger)"></span>Tugagan<i id="pfOut"></i></button>
+            <button class="chip" type="button" data-pf="hidden" aria-pressed="false">Yashirilgan<i id="pfHid"></i></button>
+            <button class="chip" type="button" data-pf="dirty" aria-pressed="false">Oʻzgartirilgan<i id="pfDirty"></i></button>
+          </div>
+          <div class="chips" id="pBrands"></div>
+        </div>
+        <div class="chips" style="margin-bottom:12px">
+          <button class="chip" type="button" id="openBulk">± Narxlarni foizda oʻzgartirish</button>
+          <button class="chip" type="button" id="openNew">+ Yangi model</button>
+        </div>
+        <div class="bulk" id="bulkBox" hidden>
+          <div class="hint">Hozir roʻyxatda koʻrinib turgan <b id="bulkCount">0</b> ta modelga qoʻllanadi. Saqlashdan oldin tekshirib chiqasiz.</div>
+          <div class="row2">
+            <input id="bulkPct" type="number" inputmode="decimal" placeholder="masalan 5 yoki -3" aria-label="Foiz">
+            <select id="bulkWhich" aria-label="Qaysi narx"><option value="both">Ikkala narx</option><option value="retail">Faqat chakana</option><option value="wholesale">Faqat optom</option></select>
+            <button class="btn primary" type="button" id="bulkApply">Qoʻllash</button>
+          </div>
+          <div class="hint">Narxlar 1000 soʻmgacha yaxlitlanadi.</div>
+        </div>
+        <div class="bulk" id="newBox" hidden>
+          <div class="newform">
+            <input id="nBrand" list="brandList" placeholder="Brend (Samsung, Redmi…)" aria-label="Brend">
+            <input id="nType" list="typeList" placeholder="Turi (IPS LCD, OLED…)" aria-label="Turi">
+            <input class="full" id="nName" placeholder="Model nomi, masalan A15 / M15" aria-label="Model nomi">
+            <input id="nRetail" type="number" inputmode="numeric" placeholder="Chakana narx" aria-label="Chakana narx">
+            <input id="nWhole" type="number" inputmode="numeric" placeholder="Optom narx" aria-label="Optom narx">
+            <input id="nStock" type="number" inputmode="numeric" placeholder="Qoldiq (dona)" aria-label="Qoldiq">
+            <button class="btn primary" type="button" id="nAdd">Modelni qoʻshish</button>
+          </div>
+          <datalist id="brandList"></datalist><datalist id="typeList"></datalist>
+        </div>
+        <div class="list" id="products"></div>
+        <button class="btn more" type="button" id="pMore" hidden>Yana koʻrsatish</button>
+        <div style="height:80px"></div>
+      </section>
       <section id="reportView" hidden>
         <div class="tools"><div class="chips" id="periods">
           <button class="chip" type="button" data-days="7" aria-pressed="false">7 kun</button>
@@ -238,6 +316,8 @@
       </section>
     </main>
   </div>
+  <div class="savebar" id="saveBar" hidden><span id="saveTxt">0 ta oʻzgarish</span>
+    <button class="btn" type="button" id="discard">Bekor</button><button class="btn save" type="button" id="saveAll">Saqlash</button></div>
   <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -505,13 +585,141 @@
   $('expCust').onclick = () => download('mijozlar.csv', [['Ism', 'Username', 'Telefon', 'Rejim', 'Buyurtmalar', 'Jami xarid', 'Oxirgi buyurtma'],
     ...custStats().map(c => [c.name, c.username ? '@' + c.username : '', c.phone, c.role, c.n, c.sum, d8(c.last)])]);
 
+
+  /* ===================== TOVARLAR: narx va qoldiq ===================== */
+  let catalog = null, edits = new Map(), pf = 'all', pBrand = 'Hammasi', pq = '', pLimit = 60;
+  const LOW = 5;
+  const val = (p, k) => (edits.has(p.id) && k in edits.get(p.id)) ? edits.get(p.id)[k] : p[k];
+  async function loadCatalog() {
+    $('products').innerHTML = '<div class="empty"><strong>Yuklanmoqda…</strong></div>';
+    try { const d = await api('catalog'); catalog = d.products || []; renderBrands(); renderProducts(); updateProdBadges(); }
+    catch (e) { if (e.message !== 'auth') $('products').innerHTML = `<div class="empty"><strong>Yuklab boʻlmadi</strong>${esc(e.message)}</div>`; }
+  }
+  function updateProdBadges() {
+    if (!catalog) return;
+    const out = catalog.filter(p => p.active !== false && +val(p, 'stock') <= 0).length;
+    const low = catalog.filter(p => p.active !== false && +val(p, 'stock') > 0 && +val(p, 'stock') <= LOW).length;
+    $('tProd').textContent = out || ''; $('tProd').style.color = out ? 'var(--danger)' : '';
+    $('pfAll').textContent = catalog.length; $('pfLow').textContent = low; $('pfOut').textContent = out;
+    $('pfHid').textContent = catalog.filter(p => val(p, 'active') === false).length; $('pfDirty').textContent = edits.size || '';
+  }
+  function renderBrands() {
+    const brands = [...new Set(catalog.map(p => p.brand))];
+    $('pBrands').innerHTML = ['Hammasi', ...brands].map(b => `<button class="chip" type="button" data-pb="${esc(b)}" aria-pressed="${b === pBrand}">${esc(b)}</button>`).join('');
+    $('brandList').innerHTML = brands.map(b => `<option value="${esc(b)}">`).join('');
+    $('typeList').innerHTML = [...new Set(catalog.map(p => p.type))].map(t => `<option value="${esc(t)}">`).join('');
+  }
+  function filteredProducts() {
+    const q = pq.trim().toLowerCase().replace(/[\s/]+/g, '');
+    return catalog.filter(p => {
+      const st = +val(p, 'stock'), hid = val(p, 'active') === false;
+      if (pf === 'low' && !(st > 0 && st <= LOW)) return false;
+      if (pf === 'out' && st > 0) return false;
+      if (pf === 'hidden' && !hid) return false;
+      if (pf === 'dirty' && !edits.has(p.id)) return false;
+      if (pBrand !== 'Hammasi' && p.brand !== pBrand) return false;
+      return !q || (p.id + ' ' + val(p, 'name')).toLowerCase().replace(/[\s/]+/g, '').includes(q);
+    });
+  }
+  function prodHTML(p) {
+    const st = +val(p, 'stock'), hid = val(p, 'active') === false;
+    return `<article class="prod${edits.has(p.id) ? ' dirty' : ''}${hid ? ' hidden-p' : ''} ${st <= 0 ? 'stock-0' : st <= LOW ? 'stock-low' : ''}" data-pid="${esc(p.id)}">
+      <div class="p-top"><div><div class="p-meta">${esc(p.brand)}, ${esc(p.type)}, ID ${esc(p.id)}${hid ? ', <b>yashirilgan</b>' : ''}</div>
+        <div class="p-name">${esc(val(p, 'name'))}</div></div>
+        <button class="eye" type="button" data-hide="${esc(p.id)}">${hid ? 'Koʻrsatish' : 'Yashirish'}</button></div>
+      <div class="p-fields">
+        <div><label>Chakana</label><input type="number" inputmode="numeric" data-f="retail" value="${val(p, 'retail')}"></div>
+        <div><label>Optom</label><input type="number" inputmode="numeric" data-f="wholesale" value="${val(p, 'wholesale')}"></div>
+        <div><label>Qoldiq${st <= 0 ? ' (tugagan)' : ''}</label><div class="qty"><button type="button" data-step="-1" aria-label="Kamaytirish">−</button>
+          <input type="number" inputmode="numeric" data-f="stock" value="${st}" aria-label="Qoldiq"><button type="button" data-step="1" aria-label="Koʻpaytirish">+</button></div></div>
+      </div></article>`;
+  }
+  function renderProducts() {
+    if (!catalog) return;
+    const list = filteredProducts();
+    $('products').innerHTML = list.length ? list.slice(0, pLimit).map(prodHTML).join('')
+      : `<div class="empty"><strong>Model topilmadi</strong>Filtr yoki qidiruvni oʻzgartiring.</div>`;
+    $('pMore').hidden = list.length <= pLimit; $('pMore').textContent = `Yana koʻrsatish (${list.length - pLimit} ta)`;
+    $('bulkCount').textContent = list.length;
+  }
+  function setEdit(pid, k, v) {
+    const p = catalog.find(x => x.id === pid); if (!p) return;
+    const e = { ...(edits.get(pid) || {}) };
+    if (String(p[k]) === String(v)) delete e[k]; else e[k] = v;
+    Object.keys(e).length ? edits.set(pid, e) : edits.delete(pid);
+    const el = document.querySelector(`.prod[data-pid="${CSS.escape(pid)}"]`);
+    if (el) { el.classList.toggle('dirty', edits.has(pid)); const st = +val(p, 'stock');
+      el.classList.toggle('stock-0', st <= 0); el.classList.toggle('stock-low', st > 0 && st <= LOW); }
+    updateSaveBar(); updateProdBadges();
+  }
+  function updateSaveBar() {
+    const show = edits.size > 0 && !$('productsView').hidden;
+    $('saveBar').hidden = !show; $('saveTxt').textContent = `${edits.size} ta modelda oʻzgarish`;
+  }
+  $('products').addEventListener('input', e => {
+    const f = e.target.dataset.f; if (!f) return;
+    const pid = e.target.closest('.prod').dataset.pid;
+    const n = e.target.value === '' ? NaN : Math.round(+e.target.value);
+    e.target.classList.toggle('bad', !(n >= 0));
+    if (n >= 0) setEdit(pid, f, n);
+  });
+  $('products').addEventListener('click', e => {
+    const s = e.target.closest('[data-step]');
+    if (s) { const box = s.closest('.prod'), inp = box.querySelector('[data-f="stock"]');
+      const n = Math.max(0, (+inp.value || 0) + +s.dataset.step); inp.value = n; setEdit(box.dataset.pid, 'stock', n); return; }
+    const h = e.target.closest('[data-hide]');
+    if (h) { const p = catalog.find(x => x.id === h.dataset.hide); setEdit(p.id, 'active', val(p, 'active') === false);
+      const el = h.closest('.prod'); el.outerHTML = prodHTML(p); }
+  });
+  $('pq').addEventListener('input', e => { pq = e.target.value; pLimit = 60; renderProducts(); });
+  $('pFilter').addEventListener('click', e => { const b = e.target.closest('[data-pf]'); if (!b) return; pf = b.dataset.pf; pLimit = 60;
+    $('pFilter').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderProducts(); });
+  $('pBrands').addEventListener('click', e => { const b = e.target.closest('[data-pb]'); if (!b) return; pBrand = b.dataset.pb; pLimit = 60;
+    $('pBrands').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderProducts(); });
+  $('pMore').onclick = () => { pLimit += 100; renderProducts(); };
+  $('openBulk').onclick = () => { $('bulkBox').hidden = !$('bulkBox').hidden; $('newBox').hidden = true; };
+  $('openNew').onclick = () => { $('newBox').hidden = !$('newBox').hidden; $('bulkBox').hidden = true; };
+  $('bulkApply').onclick = () => {
+    const pct = parseFloat(String($('bulkPct').value).replace(',', '.'));
+    if (!pct || Math.abs(pct) > 90) { toast('Foizni kiriting, masalan 5 yoki -3'); return; }
+    const which = $('bulkWhich').value, list = filteredProducts();
+    const r = (v) => Math.max(0, Math.round(v * (1 + pct / 100) / 1000) * 1000);
+    list.forEach(p => { if (which !== 'wholesale') setEdit(p.id, 'retail', r(+val(p, 'retail'))); if (which !== 'retail') setEdit(p.id, 'wholesale', r(+val(p, 'wholesale'))); });
+    renderProducts(); toast(`${list.length} ta modelga ${pct > 0 ? '+' : ''}${pct}% qoʻllandi. Tekshirib, Saqlash ni bosing`);
+  };
+  $('nAdd').onclick = async () => {
+    const ch = { id: 'new', brand: $('nBrand').value.trim(), type: $('nType').value.trim(), name: $('nName').value.trim(),
+      retail: +$('nRetail').value, wholesale: +$('nWhole').value, stock: +$('nStock').value || 0, active: true };
+    if (!ch.brand || !ch.name || !ch.retail || !ch.wholesale) { toast('Brend, nom va ikkala narxni kiriting'); return; }
+    $('nAdd').disabled = true;
+    try { const d = await api('catalog_save', { changes: [ch] }); catalog = d.products.sort((a, b) => +a.id - +b.id);
+      ['nName', 'nRetail', 'nWhole', 'nStock'].forEach(id => $(id).value = ''); renderBrands(); renderProducts(); updateProdBadges(); toast('Model qoʻshildi, doʻkonda koʻrinadi'); }
+    catch (e) { if (e.message !== 'auth') toast(e.message); }
+    $('nAdd').disabled = false;
+  };
+  $('discard').onclick = () => { edits.clear(); renderProducts(); updateSaveBar(); updateProdBadges(); toast('Oʻzgarishlar bekor qilindi'); };
+  $('saveAll').onclick = async () => {
+    const changes = [...edits.entries()].map(([id, e]) => ({ id, ...e }));
+    const bad = changes.find(c => { const p = catalog.find(x => x.id === c.id); return +val(p, 'wholesale') > +val(p, 'retail'); });
+    if (bad) { toast('Optom narx chakanadan qimmat boʻlishi mumkin emas: ' + catalog.find(x => x.id === bad.id).name.slice(0, 30)); return; }
+    $('saveAll').disabled = true;
+    try { const d = await api('catalog_save', { changes }); catalog = d.products.sort((a, b) => +a.id - +b.id); edits.clear();
+      renderProducts(); updateSaveBar(); updateProdBadges(); toast(`${d.saved} ta model saqlandi. Doʻkonda darhol yangilanadi`); }
+    catch (e) { if (e.message !== 'auth') toast(e.message); }
+    $('saveAll').disabled = false;
+  };
+  window.addEventListener('beforeunload', e => { if (edits.size) { e.preventDefault(); e.returnValue = ''; } });
+
   /* ---- tablar ---- */
   document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
     document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x === t)));
     $('ordersView').hidden = t.dataset.tab !== 'orders'; $('customersView').hidden = t.dataset.tab !== 'customers'; $('reportView').hidden = t.dataset.tab !== 'report';
+    $('productsView').hidden = t.dataset.tab !== 'products';
+    if (t.dataset.tab === 'products' && !catalog) loadCatalog();
+    updateSaveBar();
   });
   $('refresh').onclick = () => load();
-  setInterval(() => { if (!document.hidden && !document.activeElement.matches('textarea, select')) load(true); }, 60000);
+  setInterval(() => { if (!document.hidden && !document.activeElement.matches('textarea, select, input')) load(true); }, 60000);
   load();
 })();
 </script>

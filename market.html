@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Ekranchi_Bola — displeylar ombori</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="data.js?v=wow_v4"></script>
+  <script src="data.js?v=wow_v5"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -190,6 +190,7 @@
     .price small { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
     .price small em { font-style: normal; color: var(--ink); font-weight: 600; }
     .wholesale .price b { color: #0F6B5A; }
+    .low { flex-basis: 100%; font-size: 12px; font-weight: 600; color: var(--kapton-deep); }
     .out-label { font-size: 12px; color: var(--danger); font-weight: 600; }
 
     .add {
@@ -381,7 +382,22 @@
   <div class="toast" id="toast" role="status"></div>
 
 <script>
-(() => {
+/* Narx va qoldiq admin paneldan boshqariladi: avval bazadan olamiz, bo'lmasa data.js ishlatiladi */
+const CATALOG_URL = 'https://ekranchi-shop.vercel.app/api/index?catalog=1';
+(function loadCatalog() {
+  const list = document.getElementById('list');
+  if (list) list.innerHTML = '<div class="empty" style="padding:56px 24px"><strong>Narxlar yangilanmoqda…</strong></div>';
+  let done = false;
+  const go = () => { if (done) return; done = true; if (list) list.innerHTML = ''; startShop(); };
+  const timer = setTimeout(go, 5000);
+  fetch(CATALOG_URL, { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => { if (d && Array.isArray(d.products) && d.products.length) window.__catalog = d.products; })
+    .catch(() => {})
+    .finally(() => { clearTimeout(timer); go(); });
+})();
+
+function startShop() {
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
   if (tg) {
     tg.ready(); tg.expand();
@@ -399,7 +415,8 @@
   // Klaviatura tugmasidan ochilganda initData bo'sh bo'ladi, shuning uchun platformaga qaraymiz
   const inTelegram = () => !!(tg && tg.platform && tg.platform !== 'unknown');
 
-  if (typeof productsData === 'undefined' || !productsData.length) {
+  const SOURCE = (window.__catalog && window.__catalog.length) ? window.__catalog : (typeof productsData !== 'undefined' ? productsData : []);
+  if (!SOURCE.length) {
     $('list').innerHTML = '<div class="empty"><strong>Katalog yuklanmadi</strong>Sahifani yopib, qayta oching.</div>';
     return;
   }
@@ -466,7 +483,7 @@
     return { main, alts: parts.filter((_, i) => i !== mi), tags: [...tags] };
   }
   
-  const products = productsData.map(p => { const pm = prettyModel(p.name, p.brand);
+  const products = SOURCE.map(p => { const pm = prettyModel(p.name, p.brand);
     return { ...p, _pm: pm, _key: norm([p.brand, p.name, pm.main, ...pm.alts].join(' ')) }; });
   const byId = new Map(products.map(p => [String(p.id), p]));
   $('modelCount').textContent = products.length;
@@ -558,6 +575,7 @@
     r.priceEl.innerHTML = w
       ? `<b>${fmt(p.wholesale)}</b><s>${fmtN(p.retail)}</s>`
       : `<b>${fmt(p.retail)}</b><small>optom <em>${fmtN(p.wholesale)}</em></small>`;
+    if (typeof p.stock === 'number' && p.stock > 0 && p.stock <= 5) r.priceEl.insertAdjacentHTML('beforeend', `<span class="low">Faqat ${p.stock} ta qoldi</span>`);
   }
   function renderAct(r) {
     const id = String(r.p.id), q = cart[id] || 0;
@@ -727,7 +745,7 @@
   /* ---- start ---- */
   rows.forEach(renderAct);
   refreshAll(); applyFilter();
-})();
+}
 </script>
 </body>
 </html>
