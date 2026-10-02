@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/nakladnoy.py": { "includeFiles": "api/shablon/**" }
+  },
   "rewrites": [
     { "source": "/ulash", "destination": "/api/index?ulash=1" },
     { "source": "/admin", "destination": "/admin.html" }
