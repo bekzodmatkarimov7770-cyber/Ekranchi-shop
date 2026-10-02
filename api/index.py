@@ -6,6 +6,7 @@ Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
   WEBHOOK_SECRET   - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   WEB_APP_URL      - (ixtiyoriy) market.html manzili
   ADMIN_USERNAME   - (ixtiyoriy) admin @username, mijozlar to'lov haqida shunga yozadi
+  SUPPLY_BUYER     - (ixtiyoriy) Xitoy nakladnoyidagi xaridor nomi
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN - doimiy baza (Vercel Marketplace > Upstash)
 
 Webhookni ulash: https://<sayt>/api/index?ulash=1&key=<WEBHOOK_SECRET>
@@ -519,7 +520,8 @@ def _redis(*cmd):
 
 _TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json", "orders2": "/tmp/orders2.json",
         "last_order": "/tmp/last_order.json", "meta": "/tmp/meta.json",
-        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json", "watch": "/tmp/watch.json"}
+        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json", "watch": "/tmp/watch.json",
+        "supply": "/tmp/supply.json", "supply_price": "/tmp/supply_price.json"}
 
 def _file_load(name):
     try:
@@ -1343,7 +1345,8 @@ def handle_panel(m):
     kb.add(InlineKeyboardButton("📊 Admin panelni ochish", web_app=WebAppInfo(url=url)))
     bot.send_message(m.chat.id,
         "📊 <b>Admin panel</b>\nTugma orqali Telegram ichida oching.\n\n"
-        f"Kompyuterda ochish uchun havola (30 kun amal qiladi, hech kimga bermang):\n<code>{h(url)}</code>",
+        f"Kompyuterda ochish uchun havola (30 kun amal qiladi, hech kimga bermang):\n<code>{h(url)}</code>\n\n"
+        "🇨🇳 Xitoy hamkorlariga nakladnoy: /nakladnoy",
         reply_markup=kb, parse_mode="HTML")
 
 def public_catalog():
@@ -1368,6 +1371,8 @@ def admin_api():
     if not check_admin_token(tok):
         return jsonify({"error": "Kirish muddati tugagan. Botga /panel yozib, yangi havola oling."}), 401
     action = request.args.get("admin")
+    if action and action.startswith("supply_"):
+        return supply_api(action)
     if action == "data" and request.method == "GET":
         orders = [o for o in store_all("orders2").values() if isinstance(o, dict) and o.get("id")]
         orders.sort(key=lambda o: o.get("created", 0), reverse=True)
@@ -1446,6 +1451,306 @@ def admin_api():
                 safe_send(p["cid"], STATUS_CUSTOMER_MSG[st].format(id=h(p["id"])), parse_mode="HTML")
         return jsonify({"ok": True, "order": p})
     return jsonify({"error": "Noma'lum so'rov"}), 400
+
+
+# ===================== XITOY NAKLADNOY (hamkorlarga zakaz) =====================
+# Mijozlar uchun emas: admin Xitoydagi hamkorlarga qaysi ekrandan nechta kerakligini
+# yozadi, bot xitoycha/inglizcha Excel nakladnoy tayyorlab adminga yuboradi
+# (WeChat'ga uzatish uchun), tovar kelganda esa soni omborga qo'shiladi.
+SUPPLY_STATUSES = {"draft": "Qoralama", "sent": "Yuborildi", "received": "Keldi", "cancel": "Bekor"}
+SUPPLY_CURRENCIES = {"CNY": "¥", "USD": "$"}
+SUPPLY_MAX_ITEMS = 500
+SUPPLY_LOW_STOCK = 10     # shundan kam qolgan model "kam qolgan" hisoblanadi
+BRAND_CN = {"Samsung": "三星", "Redmi": "红米", "Xiaomi": "小米", "Vivo": "维沃", "Oppo": "OPPO",
+            "Honor": "荣耀", "Huawei": "华为", "iPhone": "苹果", "Tecno & Infinix": "传音", "Realme": "真我"}
+TYPE_CN = {"IPS LCD": "IPS LCD", "Incell HD+": "Incell", "OLED": "OLED", "TFT": "TFT", "Servis": "原装 Service"}
+BUYER_NAME = os.environ.get("SUPPLY_BUYER", "Ekranchi_Bola (Uzbekistan)")
+
+def brand_label(brand):
+    cn = BRAND_CN.get(brand, "")
+    return brand if not cn or cn.lower() == brand.lower() else f"{cn} {brand}"
+
+def next_supply_id():
+    try:
+        if REDIS_URL:
+            n = int(_redis("INCR", "supply_seq"))
+        else:
+            meta = _file_load("meta")
+            n = int(meta.get("supply_seq", 0)) + 1
+            meta["supply_seq"] = n
+            _file_save("meta", meta)
+    except Exception:
+        log.exception("supply_seq")
+        n = int(time.time()) % 1000000
+    return f"CN{1000 + n}"
+
+def _price_or_none(v):
+    try:
+        f = round(float(v), 2)
+    except (TypeError, ValueError):
+        return None
+    return f if f >= 0 else None
+
+def supply_total(inv):
+    return round(sum((it.get("price") or 0) * it.get("qty", 0) for it in inv.get("items", [])), 2)
+
+def supply_history(inv, status, by="panel", note=None):
+    inv["status"] = status
+    inv.setdefault("history", []).append({"t": now_ms(), "s": status, "by": by, **({"note": note} if note else {})})
+
+def supply_xlsx(inv):
+    """Hamkor uchun Excel nakladnoy: sarlavhalar xitoycha + inglizcha."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    cur = inv.get("currency", "CNY")
+    sym = SUPPLY_CURRENCIES.get(cur, "")
+    with_price = any(it.get("price") for it in inv["items"])
+    wb = Workbook()
+    ws = wb.active
+    ws.title = inv["id"]
+    thin = Side(style="thin", color="999999")
+    box = Border(left=thin, right=thin, top=thin, bottom=thin)
+    head_fill = PatternFill("solid", fgColor="123F38")
+    cols = ["序号\nNo.", "品牌\nBrand", "型号\nModel", "类型\nType", "数量\nQty (pcs)",
+            f"单价\nUnit price ({sym})", f"金额\nAmount ({sym})"]
+    last_col = "G"
+    ws.merge_cells(f"A1:{last_col}1")
+    ws["A1"] = "采购订单  PURCHASE ORDER"
+    ws["A1"].font = Font(bold=True, size=16)
+    ws["A1"].alignment = Alignment(horizontal="center")
+    date = time.strftime("%Y-%m-%d", time.gmtime(inv["created"] / 1000 + 5 * 3600))
+    meta = [("订单号 Order No.", inv["id"]), ("日期 Date", date), ("买方 Buyer", BUYER_NAME),
+            ("供应商 Supplier", inv.get("partner") or "—")]
+    if inv.get("contact"):
+        meta.append(("联系方式 Contact", inv["contact"]))
+    for i, (k, v) in enumerate(meta, start=3):
+        ws.cell(i, 1, k).font = Font(bold=True)
+        ws.merge_cells(start_row=i, start_column=2, end_row=i, end_column=4)
+        ws.cell(i, 2, v)
+    r0 = 3 + len(meta) + 1
+    for j, c in enumerate(cols, start=1):
+        cell = ws.cell(r0, j, c)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = head_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = box
+    ws.row_dimensions[r0].height = 32
+    r = r0
+    for n, it in enumerate(inv["items"], start=1):
+        r += 1
+        price = it.get("price")
+        row = [n, brand_label(it.get("brand", "")), it.get("name", ""),
+               TYPE_CN.get(it.get("type", ""), it.get("type", "")), it["qty"],
+               price if price else None, None]
+        for j, v in enumerate(row, start=1):
+            cell = ws.cell(r, j, v)
+            cell.border = box
+            cell.alignment = Alignment(vertical="center", wrap_text=(j == 3),
+                                       horizontal="center" if j in (1, 5) else None)
+        # formulasiz: telefondagi ko'ruvchilar (WeChat) formulani hisoblamasligi mumkin
+        ws.cell(r, 7, round(price * it["qty"], 2) if price else None)
+        ws.cell(r, 6).number_format = ws.cell(r, 7).number_format = "#,##0.00"
+    r += 1
+    ws.cell(r, 4, "合计 Total").font = Font(bold=True)
+    ws.cell(r, 5, sum(it["qty"] for it in inv["items"])).font = Font(bold=True)
+    if with_price:
+        ws.cell(r, 7, supply_total(inv)).font = Font(bold=True)
+        ws.cell(r, 7).number_format = "#,##0.00"
+    for j in range(1, 8):
+        ws.cell(r, j).border = box
+    ws.cell(r, 5).alignment = Alignment(horizontal="center")
+    if inv.get("note"):
+        r += 2
+        ws.cell(r, 1, "备注 Note").font = Font(bold=True)
+        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=7)
+        ws.cell(r, 2, inv["note"]).alignment = Alignment(wrap_text=True, vertical="top")
+        ws.row_dimensions[r].height = 45
+    for col, w in zip("ABCDEFG", (7, 16, 48, 14, 12, 15, 15)):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = ws.cell(r0 + 1, 1)
+    ws.page_setup.orientation = "portrait"
+    ws.page_setup.fitToWidth = 1
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToHeight = 0
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+def supply_text(inv):
+    """WeChat'ga nusxa ko'chirish uchun oddiy matn ko'rinishi."""
+    sym = SUPPLY_CURRENCIES.get(inv.get("currency"), "")
+    lines = [f"采购订单 Order {inv['id']}"]
+    if inv.get("partner"):
+        lines.append(f"供应商 Supplier: {inv['partner']}")
+    for n, it in enumerate(inv["items"], start=1):
+        price = f"  @{sym}{it['price']:g}" if it.get("price") else ""
+        lines.append(f"{n}. {brand_label(it.get('brand', ''))} {it.get('name', '')} ({TYPE_CN.get(it.get('type', ''), it.get('type', ''))}) × {it['qty']}{price}")
+    qty = sum(it["qty"] for it in inv["items"])
+    total = supply_total(inv)
+    lines.append(f"合计 Total: {qty} pcs" + (f", {sym}{total:,.2f}" if total else ""))
+    if inv.get("note"):
+        lines.append(f"备注 Note: {inv['note']}")
+    return "\n".join(lines)
+
+def supply_send_to_admin(inv):
+    if not ADMIN_ID:
+        raise RuntimeError("ADMIN_ID sozlanmagan")
+    qty = sum(it["qty"] for it in inv["items"])
+    total = supply_total(inv)
+    sym = SUPPLY_CURRENCIES.get(inv.get("currency"), "")
+    caption = (f"🇨🇳 <b>Nakladnoy {h(inv['id'])}</b> — {h(inv.get('partner') or 'hamkor')}\n"
+               f"📦 {len(inv['items'])} model, <b>{qty} dona</b>" + (f", {sym}{total:,.2f}" if total else "") +
+               "\n\nFaylni Xitoydagi hamkorga yuboring (WeChat). Pastda nusxa olish uchun matn ham bor.")
+    bot.send_document(ADMIN_ID, io.BytesIO(supply_xlsx(inv)), caption=caption, parse_mode="HTML",
+                      visible_file_name=f"PO_{inv['id']}_{time.strftime('%Y%m%d')}.xlsx")
+    text = supply_text(inv)
+    for i in range(0, len(text), 3800):
+        safe_send(ADMIN_ID, f"<pre>{h(text[i:i + 3800])}</pre>", parse_mode="HTML")
+
+def supply_api(action):
+    if action == "supply_data" and request.method == "GET":
+        invs = [v for v in store_all("supply").values() if isinstance(v, dict) and v.get("id")]
+        invs.sort(key=lambda v: v.get("created", 0), reverse=True)
+        cat = get_catalog(include_hidden=True)
+        return jsonify({"invoices": invs, "prices": store_all("supply_price"), "statuses": SUPPLY_STATUSES, "low_stock": SUPPLY_LOW_STOCK,
+                        "products": sorted(cat.values(), key=lambda p: int(p["id"]) if str(p["id"]).isdigit() else 0),
+                        "persistent": bool(REDIS_URL)})
+    if request.method != "POST":
+        return jsonify({"error": "Noma'lum so'rov"}), 400
+    body = request.get_json(silent=True) or {}
+    inv = None
+    if body.get("id"):
+        inv = store_get("supply", str(body["id"]))
+        if not isinstance(inv, dict):
+            return jsonify({"error": "Nakladnoy topilmadi"}), 404
+
+    if action == "supply_save":
+        if inv and inv.get("status") in ("received", "cancel"):
+            return jsonify({"error": "Kelgan yoki bekor qilingan nakladnoyni o'zgartirib bo'lmaydi"}), 400
+        cur = body.get("currency") if body.get("currency") in SUPPLY_CURRENCIES else "CNY"
+        cat = get_catalog(include_hidden=True)
+        items, seen, errors = [], set(), []
+        for raw in (body.get("items") or [])[:SUPPLY_MAX_ITEMS]:
+            pid = str(raw.get("id", "")).strip()
+            p = cat.get(pid)
+            qty = _int_or_none(raw.get("qty"))
+            if not p or pid in seen:
+                continue
+            if qty is None or qty <= 0 or qty > 100000:
+                errors.append(f"{p['name'][:30]}: soni noto'g'ri"); continue
+            price = _price_or_none(raw.get("price")) if raw.get("price") not in (None, "") else None
+            if raw.get("price") not in (None, "") and price is None:
+                errors.append(f"{p['name'][:30]}: narx noto'g'ri"); continue
+            seen.add(pid)
+            items.append({"id": pid, "brand": p.get("brand", ""), "type": p.get("type", ""),
+                          "name": p.get("name", ""), "qty": qty, "price": price})
+        if errors:
+            return jsonify({"error": "Saqlanmadi: " + "; ".join(errors[:5])}), 400
+        if not items:
+            return jsonify({"error": "Kamida bitta model va sonini kiriting"}), 400
+        if not inv:
+            inv = {"id": next_supply_id(), "created": now_ms(), "history": []}
+            supply_history(inv, "draft")
+        inv.update({"partner": str(body.get("partner") or "").strip()[:100],
+                    "contact": str(body.get("contact") or "").strip()[:100],
+                    "note": str(body.get("note") or "").strip()[:1000],
+                    "currency": cur, "items": items, "updated": now_ms()})
+        store_set("supply", inv["id"], inv)
+        prices = {it["id"]: {**(store_get("supply_price", it["id"]) or {}), cur: it["price"]}
+                  for it in items if it["price"]}
+        _set_many("supply_price", prices)
+        sent = False
+        if body.get("send"):
+            try:
+                supply_send_to_admin(inv)
+                sent = True
+                if inv["status"] == "draft":
+                    supply_history(inv, "sent")
+                    store_set("supply", inv["id"], inv)
+            except Exception as e:
+                log.exception("supply send")
+                return jsonify({"ok": True, "invoice": inv, "sent": False,
+                                "error": f"Saqlandi, lekin botga yuborilmadi: {e}"}), 200
+        return jsonify({"ok": True, "invoice": inv, "sent": sent})
+
+    if not inv:
+        return jsonify({"error": "Nakladnoy ID kerak"}), 400
+
+    if action == "supply_send":
+        try:
+            supply_send_to_admin(inv)
+        except Exception as e:
+            log.exception("supply send")
+            return jsonify({"error": f"Botga yuborilmadi: {e}"}), 500
+        if inv.get("status") == "draft":
+            supply_history(inv, "sent")
+            inv["updated"] = now_ms()
+            store_set("supply", inv["id"], inv)
+        return jsonify({"ok": True, "invoice": inv})
+
+    if action == "supply_receive":
+        if inv.get("status") == "cancel":
+            return jsonify({"error": "Bekor qilingan nakladnoy"}), 400
+        got = {str(x.get("id")): _int_or_none(x.get("qty")) for x in (body.get("items") or [])}
+        if any(v is None or v < 0 or v > 100000 for v in got.values()):
+            return jsonify({"error": "Kelgan son noto'g'ri"}), 400
+        cat = get_catalog(include_hidden=True)
+        restocked, added = [], 0
+        for it in inv["items"]:
+            if it["id"] not in got:
+                continue
+            delta = got[it["id"]] - int(it.get("recv") or 0)
+            if delta == 0:
+                continue
+            before = int((cat.get(it["id"]) or {}).get("stock", 0) or 0)
+            left = stock_add(it["id"], delta)
+            if left is None:
+                return jsonify({"error": "Omborni yangilab bo'lmadi, qayta urinib ko'ring"}), 500
+            it["recv"] = got[it["id"]]
+            added += delta
+            if before <= 0 < left:
+                restocked.append(it["id"])
+        if inv.get("status") != "received":
+            supply_history(inv, "received", note=f"Omborga +{added} dona")
+        elif added:
+            inv["history"].append({"t": now_ms(), "s": "received", "by": "panel", "note": f"Tuzatish: {added:+d} dona"})
+        inv["updated"] = now_ms()
+        store_set("supply", inv["id"], inv)
+        if restocked:
+            try:
+                notify_restock(restocked)
+            except Exception:
+                log.exception("notify_restock")
+        return jsonify({"ok": True, "invoice": inv, "added": added})
+
+    if action == "supply_cancel":
+        if inv.get("status") == "received":
+            return jsonify({"error": "Omborga qo'shilgan nakladnoyni bekor qilib bo'lmaydi"}), 400
+        supply_history(inv, "cancel")
+        inv["updated"] = now_ms()
+        store_set("supply", inv["id"], inv)
+        return jsonify({"ok": True, "invoice": inv})
+
+    return jsonify({"error": "Noma'lum so'rov"}), 400
+
+
+@bot.message_handler(commands=['nakladnoy', 'xitoy'])
+def handle_supply(m):
+    if not is_admin(m.chat.id):
+        return
+    url = f"{PUBLIC_URL}/nakladnoy?k={make_admin_token()}"
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("🇨🇳 Nakladnoy tuzish", web_app=WebAppInfo(url=url)))
+    low = sorted((p for p in get_catalog().values() if int(p.get("stock", 0) or 0) <= SUPPLY_LOW_STOCK),
+                 key=lambda p: int(p.get("stock", 0) or 0))
+    txt = ("🇨🇳 <b>Xitoy hamkorlari uchun nakladnoy</b>\n"
+           "Modellar va sonini tanlang — bot xitoycha/inglizcha Excel fayl tayyorlab beradi. "
+           "Tovar kelganda shu yerdan omborga qo'shasiz.\n")
+    if low:
+        txt += f"\n⚠️ Kam qolgan modellar (≤{SUPPLY_LOW_STOCK} dona): <b>{len(low)} ta</b>\n"
+        txt += "".join(f"• {h(p['brand'])} {h(str(p['name'])[:40].rstrip(' /'))} — {int(p.get('stock') or 0)}\n" for p in low[:10])
+    txt += f"\nKompyuterda ochish uchun (30 kun):\n<code>{h(url)}</code>"
+    bot.send_message(m.chat.id, txt, reply_markup=kb, parse_mode="HTML")
 
 
 # ===================== WEBHOOK =====================
