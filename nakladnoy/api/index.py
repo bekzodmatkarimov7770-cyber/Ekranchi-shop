@@ -524,16 +524,26 @@ def ask_code(cid, s):
     kb = InlineKeyboardMarkup().add(InlineKeyboardButton("❌ Bekor", callback_data="nk:cancel"))
     send(cid, txt, reply_markup=kb)
 
-def finish(cid, s, code):
-    cat = get_catalog()
-    rows = merged_items(s["items"], cat)
-    tm = _tash_now()
-    data = (build_format1 if s["fmt"] == "1" else build_format2)(rows, code, tm)
+def other_kb(fmt):
+    alt = "2" if fmt == "1" else "1"
+    icon = "📊" if alt == "2" else "📄"
+    return InlineKeyboardMarkup().add(InlineKeyboardButton(f"{icon} Shuni Format{alt}'da ham", callback_data=f"nk:alt:{alt}"))
+
+def send_file(cid, rows, code, fmt, tm):
+    data = (build_format1 if fmt == "1" else build_format2)(rows, code, tm)
     fname = f"{code} {time.strftime('%d.%m.%Y', tm)}.xlsx"
     total = sum(r["p"] * r["qty"] for r in rows)
     bot.send_document(cid, io.BytesIO(data), visible_file_name=fname, parse_mode="HTML",
-                      caption=f"🧾 <b>{h(code)}</b> · Format{s['fmt']}\n{len(rows)} model, "
-                              f"{sum(r['qty'] for r in rows)} dona, {som(total)} so'm")
+                      caption=f"🧾 <b>{h(code)}</b> · Format{fmt}\n{len(rows)} model, "
+                              f"{sum(r['qty'] for r in rows)} dona, {som(total)} so'm",
+                      reply_markup=other_kb(fmt))
+
+def finish(cid, s, code):
+    rows = merged_items(s["items"], get_catalog())
+    tm = _tash_now()
+    send_file(cid, rows, code, s["fmt"], tm)
+    # oxirgi nakladnoy: boshqa formatda ham olish uchun (ro'yxatni qayta kiritmasdan)
+    kv_set(f"last:{cid}", {"rows": rows, "code": code, "tm": list(tm)[:9]})
     set_sess(cid, {})
     send(cid, "Yana nakladnoy kerak bo'lsa, formatni tanlang:", reply_markup=format_kb())
 
@@ -668,6 +678,15 @@ def on_callback(c):
         bot.answer_callback_query(c.id)
     except Exception:
         pass
+    if act == "alt" and parts[2] in ("1", "2"):
+        last = kv_get(f"last:{cid}")
+        if not last or not last.get("rows"):
+            return send(cid, "⚠️ Oxirgi nakladnoy topilmadi. Ro'yxatni qaytadan yuboring.", reply_markup=format_kb())
+        try:
+            return send_file(cid, last["rows"], last["code"], parts[2], time.struct_time(tuple(last["tm"])))
+        except Exception:
+            log.exception("alt format")
+            return send(cid, "⚠️ Fayl tayyorlashda xatolik. Qayta urinib ko'ring.")
     if act == "f" and parts[2] in ("1", "2"):
         return start_format(cid, parts[2])
     if act == "cancel":
