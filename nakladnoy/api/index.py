@@ -9,7 +9,8 @@ Vercel > Settings > Environment Variables:
   NAKLADNOY_WEBHOOK_SECRET  - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (yoki KV_REST_API_*) - doimiy baza
 
-Webhookni ulash: https://<sayt>/api/nakladnoy?ulash=1&key=<NAKLADNOY_WEBHOOK_SECRET>
+Alohida Vercel loyihasi (Root Directory: nakladnoy), do'kon botidan mustaqil.
+Webhookni ulash: https://<sayt>/api/index?ulash=1&key=<NAKLADNOY_WEBHOOK_SECRET>
 """
 from flask import Flask, request, jsonify
 import telebot
@@ -541,6 +542,7 @@ def finish(cid, s, code):
 def admin_msg(handler):
     def wrapper(m):
         if not is_admin(m.from_user.id):
+            log.info("Admin emas, yozdi: id=%s @%s", m.from_user.id, m.from_user.username)
             return send(m.chat.id, f"⛔️ Bu bot faqat admin uchun.\nSizning ID: <code>{m.from_user.id}</code>")
         return handler(m)
     wrapper.__name__ = handler.__name__
@@ -603,6 +605,8 @@ def on_document(m):
             types[TYPES.get(it["t"], it["t"])] = types.get(TYPES.get(it["t"], it["t"]), 0) + 1
         lst = ", ".join(f"{k} {v}" for k, v in sorted(types.items(), key=lambda x: -x[1]))
         txt = f"✅ <b>Baza yangilandi:</b> {len(cat['items'])} ta model\n{lst}"
+        if not REDIS_URL:
+            txt += "\n\n⚠️ Doimiy baza (Redis) ulanmagan: fayl vaqtincha saqlanadi, keyin qayta tashlash kerak bo'lishi mumkin."
         if cat["skipped"]:
             txt += f"\n⏭ Tashlab ketildi (停用 / ekran emas): {cat['skipped']} ta"
         s = get_sess(cid)
@@ -711,7 +715,7 @@ def do_ulash():
     if not WEBHOOK_SECRET or not hmac.compare_digest(key, WEBHOOK_SECRET):
         return "Forbidden: kalit noto'g'ri", 403
     try:
-        url = f"https://{request.host}/api/nakladnoy"
+        url = f"https://{request.host}/api/index"
         ok = bot.set_webhook(url=url, secret_token=WEBHOOK_SECRET, allowed_updates=["message", "callback_query"])
         me = bot.get_me()
         return (f"✅ @{h(me.username)} {h(url)} manziliga ulandi. Telegramda /start yozing.", 200) if ok \
