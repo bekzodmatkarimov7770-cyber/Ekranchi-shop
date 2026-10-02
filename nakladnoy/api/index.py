@@ -6,6 +6,9 @@ modellarni topib, Format1 yoki Format2 ko'rinishidagi Excel nakladnoy tayyorlayd
 Vercel > Settings > Environment Variables:
   NAKLADNOY_BOT_TOKEN       - @BotFather dan olingan yangi bot tokeni
   NAKLADNOY_ADMIN_IDS       - botdan foydalana oladiganlar Telegram ID lari, vergul bilan: 123,456
+  NAKLADNOY_GROUP_IDS       - (ixtiyoriy) barcha a'zolari foydalana oladigan guruh ID lari
+Guruhda: botni guruh admini qiling (yoki @BotFather > /setprivacy > Disable), aks holda
+bot faqat buyruqlar va o'ziga javob (reply) qilingan xabarlarni ko'radi.
   NAKLADNOY_WEBHOOK_SECRET  - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (yoki KV_REST_API_*) - doimiy baza
 
@@ -17,7 +20,7 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from html import escape
 from copy import copy
-import json, os, io, re, hmac, time, logging, requests
+import json, os, io, re, hmac, time, logging, threading, requests
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("nakladnoy")
@@ -25,6 +28,8 @@ log = logging.getLogger("nakladnoy")
 BOT_TOKEN = os.environ.get("NAKLADNOY_BOT_TOKEN", "")
 WEBHOOK_SECRET = os.environ.get("NAKLADNOY_WEBHOOK_SECRET", "")
 ADMIN_IDS = {int(x) for x in re.findall(r"\d+", os.environ.get("NAKLADNOY_ADMIN_IDS", "") or os.environ.get("ADMIN_ID", ""))}
+# shu guruhlarning barcha a'zolari botdan foydalana oladi (ixtiyoriy): -100123,-100456
+GROUP_IDS = {int(x) for x in re.findall(r"-?\d+", os.environ.get("NAKLADNOY_GROUP_IDS", ""))}
 REDIS_URL = (os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL") or "").rstrip("/")
 REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN") or ""
 SHABLON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shablon")
@@ -87,7 +92,7 @@ def kv_del(key):
 
 def lines_push(cid, lines):
     """Ro'yxat qatorlarini atomik qo'shadi (bir vaqtda kelgan bir nechta xabar yo'qolmasin)."""
-    key = f"lines:{cid}"
+    key = f"lines:{skey(cid)}"
     if REDIS_URL:
         n = 0
         for i in range(0, len(lines), 200):
@@ -99,7 +104,7 @@ def lines_push(cid, lines):
     return len(old)
 
 def lines_pop(cid):
-    key = f"lines:{cid}"
+    key = f"lines:{skey(cid)}"
     if REDIS_URL:
         out = _redis("LRANGE", "nk:" + key, 0, -1) or []
         _redis("DEL", "nk:" + key)
@@ -108,12 +113,20 @@ def lines_pop(cid):
     kv_del(key)
     return out
 
+_ctx = threading.local()   # joriy xabar egasi (guruhda har kimning sessiyasi alohida)
+
+def skey(cid):
+    """Shaxsiy chatda: chat ID. Guruhda: chat ID + foydalanuvchi ID."""
+    cid = int(cid)
+    uid = getattr(_ctx, "uid", None)
+    return str(cid) if cid > 0 or not uid else f"{cid}:{uid}"
+
 def get_sess(cid):
-    s = kv_get(f"sess:{cid}")
+    s = kv_get(f"sess:{skey(cid)}")
     return s if isinstance(s, dict) else {}
 
 def set_sess(cid, s):
-    kv_set(f"sess:{cid}", s)
+    kv_set(f"sess:{skey(cid)}", s)
 
 
 # ===================== BAZA: Xitoy omborining narx fayli =====================
@@ -395,8 +408,11 @@ def build_format2(rows, code, tm):
 bot = telebot.TeleBot(BOT_TOKEN or "0:token-sozlanmagan", threaded=False)  # token yo'q bo'lsa ham sayt yiqilmasin
 app = Flask(__name__)
 
-def is_admin(uid):
-    return int(uid) in ADMIN_IDS
+def is_admin(uid, chat_id=None):
+    return int(uid) in ADMIN_IDS or (chat_id is not None and int(chat_id) in GROUP_IDS)
+
+def is_group(m):
+    return m.chat.type in ("group", "supergroup")
 
 def format_kb():
     kb = InlineKeyboardMarkup(row_width=2)
@@ -543,7 +559,7 @@ def finish(cid, s, code):
     tm = _tash_now()
     send_file(cid, rows, code, s["fmt"], tm)
     # oxirgi nakladnoy: boshqa formatda ham olish uchun (ro'yxatni qayta kiritmasdan)
-    kv_set(f"last:{cid}", {"rows": rows, "code": code, "tm": list(tm)[:9]})
+    kv_set(f"last:{skey(cid)}", {"rows": rows, "code": code, "tm": list(tm)[:9]})
     set_sess(cid, {})
     send(cid, "Yana nakladnoy kerak bo'lsa, formatni tanlang:", reply_markup=format_kb())
 
@@ -551,18 +567,36 @@ def finish(cid, s, code):
 # ---------- buyruqlar ----------
 def admin_msg(handler):
     def wrapper(m):
-        if not is_admin(m.from_user.id):
-            log.info("Admin emas, yozdi: id=%s @%s", m.from_user.id, m.from_user.username)
+        _ctx.uid = m.from_user.id
+        if not is_admin(m.from_user.id, m.chat.id):
+            log.info("Admin emas, yozdi: id=%s @%s chat=%s", m.from_user.id, m.from_user.username, m.chat.id)
+            if is_group(m):
+                return            # guruhda begonalarga javob bermaymiz (spam bo'lmasin)
             return send(m.chat.id, f"⛔️ Bu bot faqat admin uchun.\nSizning ID: <code>{m.from_user.id}</code>")
         return handler(m)
     wrapper.__name__ = handler.__name__
     return wrapper
 
+def group_hint(m):
+    """Guruhda bot oddiy xabarlarni ko'ra oladimi (privacy mode)."""
+    if not is_group(m):
+        return ""
+    try:
+        me = bot.get_me()
+        st = bot.get_chat_member(m.chat.id, me.id).status
+        if me.can_read_all_group_messages or st in ("administrator", "creator"):
+            return ""
+    except Exception:
+        log.exception("group_hint")
+        return ""
+    return ("⚠️ <b>Guruhda ro'yxatni ko'rishim uchun meni guruh admini qiling</b> "
+            "(yoki ro'yxatni mening xabarimga <i>javob (reply)</i> qilib yuboring).\n\n")
+
 @bot.message_handler(commands=["start", "menu"])
 @admin_msg
 def cmd_start(m):
     set_sess(m.chat.id, {})
-    show_menu(m.chat.id)
+    show_menu(m.chat.id, group_hint(m))
 
 @bot.message_handler(commands=["format1", "format2"])
 @admin_msg
@@ -625,6 +659,8 @@ def on_document(m):
         return show_menu(cid, txt + "\n\n")
     s = get_sess(cid)
     if s.get("st") != "collect":
+        if is_group(m):
+            return
         return show_menu(cid, "ℹ️ Bu narx fayli emas. Ro'yxat bo'lsa, avval formatni tanlang.\n\n")
     add_lines(cid, rows_to_lines(rows))
 
@@ -653,7 +689,7 @@ def on_text(m):
         s["items"] += new
         return next_step(cid, s)
     if st == "pick":
-        return send(cid, "☝️ Avval yuqoridagi savolga tugma orqali javob bering (yoki /bekor).")
+        return None if is_group(m) else send(cid, "☝️ Avval yuqoridagi savolga tugma orqali javob bering (yoki /bekor).")
     if st == "code":
         code = re.sub(r"\s+", "", m.text.strip().upper())
         if not re.fullmatch(r"[A-Z]{1,5}-\d{1,5}", code):
@@ -663,14 +699,16 @@ def on_text(m):
         except Exception:
             log.exception("finish")
             return send(cid, "⚠️ Fayl tayyorlashda xatolik. Qayta urinib ko'ring.")
-    show_menu(cid)
+    if not is_group(m):     # guruhdagi oddiy suhbatga javob bermaymiz
+        show_menu(cid)
 
 
 # ---------- tugmalar ----------
 @bot.callback_query_handler(func=lambda c: (c.data or "").startswith("nk:"))
 def on_callback(c):
     cid = c.message.chat.id
-    if not is_admin(c.from_user.id):
+    _ctx.uid = c.from_user.id
+    if not is_admin(c.from_user.id, cid):
         return bot.answer_callback_query(c.id, "Faqat admin uchun.", show_alert=True)
     parts = c.data.split(":")
     act = parts[1]
@@ -679,7 +717,7 @@ def on_callback(c):
     except Exception:
         pass
     if act == "alt" and parts[2] in ("1", "2"):
-        last = kv_get(f"last:{cid}")
+        last = kv_get(f"last:{skey(cid)}")
         if not last or not last.get("rows"):
             return send(cid, "⚠️ Oxirgi nakladnoy topilmadi. Ro'yxatni qaytadan yuboring.", reply_markup=format_kb())
         try:
