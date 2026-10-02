@@ -22,7 +22,7 @@ log = logging.getLogger("ekranchi")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
-WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v5")
+WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v6")
 CARD_NUMBER = os.environ.get("CARD_NUMBER", "9860 1266 0304 4796")
 CARD_NAME = os.environ.get("CARD_NAME", "Bekzod M. (Humo / Uzcard)")
 
@@ -519,7 +519,7 @@ def _redis(*cmd):
 
 _TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json", "orders2": "/tmp/orders2.json",
         "last_order": "/tmp/last_order.json", "meta": "/tmp/meta.json",
-        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json"}
+        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json", "watch": "/tmp/watch.json"}
 
 def _file_load(name):
     try:
@@ -645,11 +645,91 @@ def release_order_stock(p, by="bot"):
     """Bekor qilingan buyurtma tovarlarini omborga qaytaradi (bir marta)."""
     if not p or p.get("stock_returned") or not p.get("stock_reserved"):
         return
+    back = []
     for it in p.get("items", []):
         q = int(it.get("rq", it.get("aq", 0)) or 0)
         if q > 0:
-            stock_add(it["id"], q)
+            left = stock_add(it["id"], q)
+            if left is not None and left - q <= 0 < left:
+                back.append(str(it["id"]))
     p["stock_returned"] = True
+    if back:
+        notify_restock(back)
+
+
+# ---- "Kelganda xabar bering": har bir mahsulotni kutayotgan mijozlar ----
+WATCH_MAX_PER_ORDER = 50
+
+def watch_add(pid, cid):
+    pid, cid = str(pid), str(cid)
+    try:
+        if REDIS_URL:
+            _redis("SADD", f"watch:{pid}", cid)
+            return
+        data = _file_load("watch")
+        lst = data.get(pid) or []
+        if cid not in lst:
+            lst.append(cid)
+        data[pid] = lst
+        _file_save("watch", data)
+    except Exception:
+        log.exception("watch_add %s", pid)
+
+def watch_pop(pid):
+    """Mahsulotni kutayotganlar ro'yxatini qaytaradi va tozalaydi."""
+    pid = str(pid)
+    try:
+        if REDIS_URL:
+            key = f"watch:{pid}"
+            members = _redis("SMEMBERS", key) or []
+            if members:
+                _redis("SREM", key, *members)
+            return [str(x) for x in members]
+        data = _file_load("watch")
+        lst = data.pop(pid, None) or []
+        if lst:
+            _file_save("watch", data)
+        return [str(x) for x in lst]
+    except Exception:
+        log.exception("watch_pop %s", pid)
+        return []
+
+def save_watch_request(cid, ids):
+    """Mijoz yuborgan ID larni tekshirib, tugagan mahsulotlarga obuna qiladi. Obuna bo'lgan nomlarni qaytaradi."""
+    catalog = get_catalog()
+    names = []
+    for raw in list(ids or [])[:WATCH_MAX_PER_ORDER]:
+        try:
+            pid = str(int(raw))
+        except (TypeError, ValueError):
+            continue
+        p = catalog.get(pid)
+        if not p or int(p.get("stock", 0) or 0) > 0 or any(pid == n[0] for n in names):
+            continue
+        watch_add(pid, cid)
+        names.append((pid, f"{p.get('brand', '')} {p.get('name', '')}".strip()))
+    return [n for _, n in names]
+
+def notify_restock(pids):
+    """Omborga qaytgan mahsulotlarni kutayotgan mijozlarga bitta xabar bilan yozadi."""
+    if not pids:
+        return
+    catalog = get_catalog()
+    per_user = {}
+    for pid in dict.fromkeys(str(x) for x in pids):
+        p = catalog.get(pid)
+        if not p or int(p.get("stock", 0) or 0) <= 0:
+            continue  # yashirilgan yoki hali ham yo'q: kutish davom etadi
+        for cid in watch_pop(pid):
+            per_user.setdefault(cid, []).append(p)
+    for cid, items in per_user.items():
+        lines = "".join(f"• <b>{h(p.get('brand', ''))} {h(str(p.get('name', ''))[:40].rstrip(' /'))}</b> — "
+                        f"{int(p.get('retail') or 0):,} so'm (optom {int(p.get('wholesale') or 0):,})\n" for p in items[:15])
+        safe_send(cid, f"🔔 <b>Siz kutgan ekran omborga keldi!</b>\n\n{lines}\n"
+                       f"Tugab qolmasidan oldin <b>«🛍 Do'konni ochish»</b> tugmasini bosing 👇",
+                  parse_mode="HTML", reply_markup=main_kb())
+    if per_user:
+        log.info("Restock xabari: %d mijoz", len(per_user))
 
 
 def get_user(uid):
@@ -892,7 +972,24 @@ def handle_order(m):
     except (ValueError, TypeError):
         bot.send_message(m.chat.id, "⚠️ Buyurtmani o'qib bo'lmadi. Do'konni qayta ochib, yana urinib ko'ring.")
         return
+    if not isinstance(data, dict):
+        bot.send_message(m.chat.id, "⚠️ Buyurtmani o'qib bo'lmadi. Do'konni qayta ochib, yana urinib ko'ring.")
+        return
+    if data.get('t') == 'nt':
+        names = save_watch_request(cid, data.get('w'))
+        if names:
+            lst = "".join(f"• {h(n[:50])}\n" for n in names[:15])
+            bot.send_message(m.chat.id, f"🔔 <b>Kuzatuvga olindi:</b>\n{lst}\nOmborga kelishi bilan sizga shu yerda xabar beramiz.",
+                             parse_mode="HTML", reply_markup=main_kb())
+        else:
+            bot.send_message(m.chat.id, "✅ Tanlagan modellaringiz allaqachon omborda bor. Do'konni ochib buyurtma bering.",
+                             reply_markup=main_kb())
+        return
     try:
+        watched = save_watch_request(cid, data.get('nt')) if data.get('nt') else []
+        if watched:
+            safe_send(cid, "🔔 <b>Kuzatuvga olindi:</b>\n" + "".join(f"• {h(n[:50])}\n" for n in watched[:15])
+                      + "Omborga kelishi bilan xabar beramiz.", parse_mode="HTML")
         user = get_user(cid)
         phone = user.get('phone')
         role = user.get('role') or "—"
@@ -1303,8 +1400,20 @@ def admin_api():
                     stock_set[pid] = v
         if errors:
             return jsonify({"error": "Saqlanmadi: " + "; ".join(errors[:5])}), 400
+        restocked = [pid for pid, v in stock_set.items()
+                     if v > 0 and int((cat.get(pid) or {}).get("stock", 0) or 0) <= 0
+                     and changed.get(pid, {}).get("active", True) is not False]
+        # yashirilgan mahsulot qayta yoqilganda ham xabar beriladi
+        restocked += [pid for pid, b in changed.items()
+                      if b.get("active") is not False and (cat.get(pid) or {}).get("active") is False
+                      and stock_set.get(pid, int((cat.get(pid) or {}).get("stock", 0) or 0)) > 0 and pid not in restocked]
         _set_many("catalog", changed)
         _set_many("stock", stock_set)
+        if restocked:
+            try:
+                notify_restock(restocked)
+            except Exception:
+                log.exception("notify_restock")
         log.info("Katalog yangilandi: %d mahsulot, %d qoldiq", len(changed), len(stock_set))
         return jsonify({"ok": True, "saved": len(changed), "products": list(get_catalog(include_hidden=True).values())})
     if action == "update" and request.method == "POST":
