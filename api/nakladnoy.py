@@ -391,7 +391,7 @@ def build_format2(rows, code, tm):
 
 
 # ===================== BOT =====================
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+bot = telebot.TeleBot(BOT_TOKEN or "0:token-sozlanmagan", threaded=False)  # token yo'q bo'lsa ham sayt yiqilmasin
 app = Flask(__name__)
 
 def is_admin(uid):
@@ -726,7 +726,7 @@ def webhook(path):
     if request.method == "GET":
         if "ulash" in request.args:
             return do_ulash()
-        return "✅ Nakladnoy bot ishlayapti.", 200
+        return ("✅ Nakladnoy bot ishlayapti." if BOT_TOKEN else "⚠️ NAKLADNOY_BOT_TOKEN sozlanmagan."), 200
     token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
     if not WEBHOOK_SECRET or not hmac.compare_digest(token, WEBHOOK_SECRET):
         return "Forbidden", 403
