@@ -5,7 +5,7 @@ Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
   ADMIN_ID         - admin Telegram ID raqami
   WEBHOOK_SECRET   - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   WEB_APP_URL      - (ixtiyoriy) market.html manzili
-  CARD_NUMBER, CARD_NAME - (ixtiyoriy) to'lov kartasi
+  ADMIN_USERNAME   - (ixtiyoriy) admin @username, mijozlar to'lov haqida shunga yozadi
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN - doimiy baza (Vercel Marketplace > Upstash)
 
 Webhookni ulash: https://<sayt>/api/index?ulash=1&key=<WEBHOOK_SECRET>
@@ -23,8 +23,8 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v6")
-CARD_NUMBER = os.environ.get("CARD_NUMBER", "9860 1266 0304 4796")
-CARD_NAME = os.environ.get("CARD_NAME", "Bekzod M. (Humo / Uzcard)")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "").lstrip("@").strip()
+PAYMENT_TEXT = "💬 <b>To'lov masalasida admin siz bilan o'zi bog'lanadi.</b> Savollar bo'lsa, pastdagi tugma orqali adminga yozing."
 
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://ekranchi-shop.vercel.app").rstrip("/")
 
@@ -739,7 +739,7 @@ def get_user(uid):
 # ---- Buyurtmalar: har biri alohida ID bilan saqlanadi (tarix yo'qolmaydi) ----
 STATUSES = {
     "yangi": "Yangi",
-    "chek": "Chek keldi",
+    "chek": "Rasm keldi",
     "tasdiqlandi": "Tasdiqlandi",
     "yuborildi": "Yuborildi",
     "yetkazildi": "Yetkazildi",
@@ -849,6 +849,20 @@ def notify_admin(text):
     if ADMIN_ID:
         safe_send(ADMIN_ID, text, parse_mode="HTML")
 
+def admin_contact_kb():
+    url = f"https://t.me/{ADMIN_USERNAME}" if ADMIN_USERNAME else (f"tg://user?id={ADMIN_ID}" if ADMIN_ID else None)
+    return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=url)) if url else None
+
+def send_with_admin_btn(chat_id, text):
+    """Admin bilan bog'lanish tugmasi bilan yuboradi; admin profili yopiq bo'lsa, tugmasiz yuboradi."""
+    kb = admin_contact_kb()
+    if kb:
+        try:
+            return bot.send_message(int(chat_id), text, parse_mode="HTML", reply_markup=kb)
+        except Exception:
+            log.warning("admin tugmasi bilan yuborilmadi, tugmasiz yuboriladi")
+    return safe_send(chat_id, text, parse_mode="HTML")
+
 
 def do_ulash():
     key = request.args.get("key", "")
@@ -881,7 +895,7 @@ def contact_kb():
 def admin_order_kb(cid):
     m = InlineKeyboardMarkup(row_width=2)
     m.add(
-        InlineKeyboardButton("💵 Naqd kelishildi", callback_data=f"pay:{cid}:cash"),
+        InlineKeyboardButton("🤝 To'lov kelishildi", callback_data=f"pay:{cid}:cash"),
         InlineKeyboardButton("⚡️ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
         InlineKeyboardButton("📦 Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
         InlineKeyboardButton("❌ Bekor qilish", callback_data=f"pay:{cid}:cancel"),
@@ -1071,11 +1085,10 @@ def handle_order(m):
             f"📦 <b>Tarkibi:</b>\n{items_txt}"
             + (f"\n⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
             f"━━━━━━━━━━━━━━━━━━━\n"
-            f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({pt} narxda, {t_qty} dona)\n\n"
-            f"💳 Karta raqami: <code>{h(CARD_NUMBER)}</code>\nQabul qiluvchi: <b>{h(CARD_NAME)}</b>\n\n"
-            f"📸 To'lov qilgach, chek rasmini shu chatga yuboring.\n\n{WARRANTY_TEXT}"
+            f"💰 <b>JAMI:</b> <b>{t_sum:,} so'm</b> ({pt} narxda, {t_qty} dona)\n\n"
+            f"{PAYMENT_TEXT}\n\n{WARRANTY_TEXT}"
         )
-        safe_send(cid, client_txt, parse_mode="HTML")
+        send_with_admin_btn(cid, client_txt)
 
         if not phone:
             bot.send_message(m.chat.id,
@@ -1100,6 +1113,7 @@ def handle_order(m):
                 f"📊 <b>Rejim:</b> {pt}\n"
                 f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean)} xil model)\n"
                 f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>{h(mismatch)}\n"
+                f"💬 <i>To'lovni mijoz bilan o'zingiz kelishasiz</i>\n"
                 + (f"⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"📥 <i>To'liq ro'yxat pastdagi Excel (.csv) faylda 👇</i>"
@@ -1249,10 +1263,9 @@ def handle_snd_miss(c):
     msg = (f"⚠️ <b>DIQQAT: AYRIM MODELLAR OMBORDA KAM YOKI YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
            f"{miss_t}{part_t}━━━━━━━━━━━━━━━━━━━\n"
            f"📦 <b>Bor tovarlar:</b>\n{av_t or 'Qolmadi'}\n━━━━━━━━━━━━━━━━━━━\n"
-           f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n"
-           f"💳 Karta: <code>{h(CARD_NUMBER)}</code> ({h(CARD_NAME)})\n\n{WARRANTY_TEXT}")
-    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
-    safe_send(order_cid(cid, p), msg, reply_markup=kb, parse_mode="HTML")
+           f"💰 <b>Qayta hisoblangan summa:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n\n"
+           f"{PAYMENT_TEXT}\n\n{WARRANTY_TEXT}")
+    send_with_admin_btn(order_cid(cid, p), msg)
     edit_text_or_caption(c.message.chat.id, c.message.message_id,
                          f"✅ <b>Mijozga xabar ketdi!</b>\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)", admin_order_kb(cid))
     bot.answer_callback_query(c.id, "Mijozga yuborildi!")
@@ -1267,23 +1280,23 @@ def handle_receipt(m):
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
            InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
-           InlineKeyboardButton("❌ Soxta chek", callback_data=f"pay:{cid}:fake"))
+           InlineKeyboardButton("❌ To'lov tushmadi", callback_data=f"pay:{cid}:fake"))
     try:
         bot.send_photo(ADMIN_ID, m.photo[-1].file_id,
-                       caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b> {('#' + h(get_payload(cid).get('id', ''))) if get_payload(cid) else ''}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
+                       caption=f"📷 <b>MIJOZDAN RASM KELDI</b> {('#' + h(get_payload(cid).get('id', ''))) if get_payload(cid) else ''}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
                        reply_markup=kb, parse_mode="HTML")
         set_status(get_payload(cid), "chek", by="mijoz")
-        bot.reply_to(m, "✅ Chekingiz qabul qilindi! Admin tekshirib, tez orada javob beradi.")
+        bot.reply_to(m, "✅ Rasm adminga yuborildi, tez orada javob beradi.")
     except Exception:
         log.exception("receipt forward")
-        bot.reply_to(m, "⚠️ Chekni yuborib bo'lmadi, birozdan keyin qayta yuboring.")
+        bot.reply_to(m, "⚠️ Rasmni yuborib bo'lmadi, birozdan keyin qayta yuboring.")
 
 
 PAY_TEXTS = {
     "today": "🎉 Tasdiqlandi! BUGUN yetkaziladi.",
     "tomorrow": "🎉 Tasdiqlandi! ERTAGA yetkaziladi.",
-    "cash": "🤝 Tasdiqlandi! To'lov naqd olinadi.",
-    "fake": "⚠️ To'lov tushmadi. Chekni tekshirib, qayta yuboring.",
+    "cash": "🤝 Tasdiqlandi! To'lov kelishilgandek olinadi.",
+    "fake": "⚠️ To'lov hali tushmadi. Iltimos, admin bilan bog'laning.",
     "cancel": "❌ Buyurtma bekor qilindi.",
 }
 

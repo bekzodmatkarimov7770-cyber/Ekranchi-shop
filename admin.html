@@ -354,7 +354,7 @@
 
   const STATUS_ORDER = ['yangi', 'chek', 'tasdiqlandi', 'yuborildi', 'yetkazildi', 'bekor'];
   const OPEN = new Set(['yangi', 'chek', 'tasdiqlandi']);
-  let STATUSES = { yangi: 'Yangi', chek: 'Chek keldi', tasdiqlandi: 'Tasdiqlandi', yuborildi: 'Yuborildi', yetkazildi: 'Yetkazildi', bekor: 'Bekor qilindi' };
+  let STATUSES = { yangi: 'Yangi', chek: 'Rasm keldi', tasdiqlandi: 'Tasdiqlandi', yuborildi: 'Yuborildi', yetkazildi: 'Yetkazildi', bekor: 'Bekor qilindi' };
   const sc = (s) => `var(--s-${STATUS_ORDER.includes(s) ? s : 'yangi'})`;
 
   let orders = [], customers = [], custById = new Map();
