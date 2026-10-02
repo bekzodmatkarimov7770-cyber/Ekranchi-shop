@@ -5,7 +5,7 @@ Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
   ADMIN_ID         - admin Telegram ID raqami
   WEBHOOK_SECRET   - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   WEB_APP_URL      - (ixtiyoriy) market.html manzili
-  CARD_NUMBER, CARD_NAME - (ixtiyoriy) to'lov kartasi
+  ADMIN_USERNAME   - (ixtiyoriy) admin @username, mijozlar to'lov haqida shunga yozadi
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN - doimiy baza (Vercel Marketplace > Upstash)
 
 Webhookni ulash: https://<sayt>/api/index?ulash=1&key=<WEBHOOK_SECRET>
@@ -22,9 +22,9 @@ log = logging.getLogger("ekranchi")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
-WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v5")
-CARD_NUMBER = os.environ.get("CARD_NUMBER", "9860 1266 0304 4796")
-CARD_NAME = os.environ.get("CARD_NAME", "Bekzod M. (Humo / Uzcard)")
+WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v6")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "").lstrip("@").strip()
+PAYMENT_TEXT = "💬 <b>To'lov masalasida admin siz bilan o'zi bog'lanadi.</b> Savollar bo'lsa, pastdagi tugma orqali adminga yozing."
 
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://ekranchi-shop.vercel.app").rstrip("/")
 
@@ -519,7 +519,7 @@ def _redis(*cmd):
 
 _TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json", "orders2": "/tmp/orders2.json",
         "last_order": "/tmp/last_order.json", "meta": "/tmp/meta.json",
-        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json"}
+        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json", "watch": "/tmp/watch.json"}
 
 def _file_load(name):
     try:
@@ -645,11 +645,91 @@ def release_order_stock(p, by="bot"):
     """Bekor qilingan buyurtma tovarlarini omborga qaytaradi (bir marta)."""
     if not p or p.get("stock_returned") or not p.get("stock_reserved"):
         return
+    back = []
     for it in p.get("items", []):
         q = int(it.get("rq", it.get("aq", 0)) or 0)
         if q > 0:
-            stock_add(it["id"], q)
+            left = stock_add(it["id"], q)
+            if left is not None and left - q <= 0 < left:
+                back.append(str(it["id"]))
     p["stock_returned"] = True
+    if back:
+        notify_restock(back)
+
+
+# ---- "Kelganda xabar bering": har bir mahsulotni kutayotgan mijozlar ----
+WATCH_MAX_PER_ORDER = 50
+
+def watch_add(pid, cid):
+    pid, cid = str(pid), str(cid)
+    try:
+        if REDIS_URL:
+            _redis("SADD", f"watch:{pid}", cid)
+            return
+        data = _file_load("watch")
+        lst = data.get(pid) or []
+        if cid not in lst:
+            lst.append(cid)
+        data[pid] = lst
+        _file_save("watch", data)
+    except Exception:
+        log.exception("watch_add %s", pid)
+
+def watch_pop(pid):
+    """Mahsulotni kutayotganlar ro'yxatini qaytaradi va tozalaydi."""
+    pid = str(pid)
+    try:
+        if REDIS_URL:
+            key = f"watch:{pid}"
+            members = _redis("SMEMBERS", key) or []
+            if members:
+                _redis("SREM", key, *members)
+            return [str(x) for x in members]
+        data = _file_load("watch")
+        lst = data.pop(pid, None) or []
+        if lst:
+            _file_save("watch", data)
+        return [str(x) for x in lst]
+    except Exception:
+        log.exception("watch_pop %s", pid)
+        return []
+
+def save_watch_request(cid, ids):
+    """Mijoz yuborgan ID larni tekshirib, tugagan mahsulotlarga obuna qiladi. Obuna bo'lgan nomlarni qaytaradi."""
+    catalog = get_catalog()
+    names = []
+    for raw in list(ids or [])[:WATCH_MAX_PER_ORDER]:
+        try:
+            pid = str(int(raw))
+        except (TypeError, ValueError):
+            continue
+        p = catalog.get(pid)
+        if not p or int(p.get("stock", 0) or 0) > 0 or any(pid == n[0] for n in names):
+            continue
+        watch_add(pid, cid)
+        names.append((pid, f"{p.get('brand', '')} {p.get('name', '')}".strip()))
+    return [n for _, n in names]
+
+def notify_restock(pids):
+    """Omborga qaytgan mahsulotlarni kutayotgan mijozlarga bitta xabar bilan yozadi."""
+    if not pids:
+        return
+    catalog = get_catalog()
+    per_user = {}
+    for pid in dict.fromkeys(str(x) for x in pids):
+        p = catalog.get(pid)
+        if not p or int(p.get("stock", 0) or 0) <= 0:
+            continue  # yashirilgan yoki hali ham yo'q: kutish davom etadi
+        for cid in watch_pop(pid):
+            per_user.setdefault(cid, []).append(p)
+    for cid, items in per_user.items():
+        lines = "".join(f"• <b>{h(p.get('brand', ''))} {h(str(p.get('name', ''))[:40].rstrip(' /'))}</b> — "
+                        f"{int(p.get('retail') or 0):,} so'm (optom {int(p.get('wholesale') or 0):,})\n" for p in items[:15])
+        safe_send(cid, f"🔔 <b>Siz kutgan ekran omborga keldi!</b>\n\n{lines}\n"
+                       f"Tugab qolmasidan oldin <b>«🛍 Do'konni ochish»</b> tugmasini bosing 👇",
+                  parse_mode="HTML", reply_markup=main_kb())
+    if per_user:
+        log.info("Restock xabari: %d mijoz", len(per_user))
 
 
 def get_user(uid):
@@ -659,7 +739,7 @@ def get_user(uid):
 # ---- Buyurtmalar: har biri alohida ID bilan saqlanadi (tarix yo'qolmaydi) ----
 STATUSES = {
     "yangi": "Yangi",
-    "chek": "Chek keldi",
+    "chek": "Rasm keldi",
     "tasdiqlandi": "Tasdiqlandi",
     "yuborildi": "Yuborildi",
     "yetkazildi": "Yetkazildi",
@@ -769,6 +849,20 @@ def notify_admin(text):
     if ADMIN_ID:
         safe_send(ADMIN_ID, text, parse_mode="HTML")
 
+def admin_contact_kb():
+    url = f"https://t.me/{ADMIN_USERNAME}" if ADMIN_USERNAME else (f"tg://user?id={ADMIN_ID}" if ADMIN_ID else None)
+    return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=url)) if url else None
+
+def send_with_admin_btn(chat_id, text):
+    """Admin bilan bog'lanish tugmasi bilan yuboradi; admin profili yopiq bo'lsa, tugmasiz yuboradi."""
+    kb = admin_contact_kb()
+    if kb:
+        try:
+            return bot.send_message(int(chat_id), text, parse_mode="HTML", reply_markup=kb)
+        except Exception:
+            log.warning("admin tugmasi bilan yuborilmadi, tugmasiz yuboriladi")
+    return safe_send(chat_id, text, parse_mode="HTML")
+
 
 def do_ulash():
     key = request.args.get("key", "")
@@ -801,7 +895,7 @@ def contact_kb():
 def admin_order_kb(cid):
     m = InlineKeyboardMarkup(row_width=2)
     m.add(
-        InlineKeyboardButton("💵 Naqd kelishildi", callback_data=f"pay:{cid}:cash"),
+        InlineKeyboardButton("🤝 To'lov kelishildi", callback_data=f"pay:{cid}:cash"),
         InlineKeyboardButton("⚡️ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
         InlineKeyboardButton("📦 Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
         InlineKeyboardButton("❌ Bekor qilish", callback_data=f"pay:{cid}:cancel"),
@@ -892,7 +986,24 @@ def handle_order(m):
     except (ValueError, TypeError):
         bot.send_message(m.chat.id, "⚠️ Buyurtmani o'qib bo'lmadi. Do'konni qayta ochib, yana urinib ko'ring.")
         return
+    if not isinstance(data, dict):
+        bot.send_message(m.chat.id, "⚠️ Buyurtmani o'qib bo'lmadi. Do'konni qayta ochib, yana urinib ko'ring.")
+        return
+    if data.get('t') == 'nt':
+        names = save_watch_request(cid, data.get('w'))
+        if names:
+            lst = "".join(f"• {h(n[:50])}\n" for n in names[:15])
+            bot.send_message(m.chat.id, f"🔔 <b>Kuzatuvga olindi:</b>\n{lst}\nOmborga kelishi bilan sizga shu yerda xabar beramiz.",
+                             parse_mode="HTML", reply_markup=main_kb())
+        else:
+            bot.send_message(m.chat.id, "✅ Tanlagan modellaringiz allaqachon omborda bor. Do'konni ochib buyurtma bering.",
+                             reply_markup=main_kb())
+        return
     try:
+        watched = save_watch_request(cid, data.get('nt')) if data.get('nt') else []
+        if watched:
+            safe_send(cid, "🔔 <b>Kuzatuvga olindi:</b>\n" + "".join(f"• {h(n[:50])}\n" for n in watched[:15])
+                      + "Omborga kelishi bilan xabar beramiz.", parse_mode="HTML")
         user = get_user(cid)
         phone = user.get('phone')
         role = user.get('role') or "—"
@@ -974,11 +1085,10 @@ def handle_order(m):
             f"📦 <b>Tarkibi:</b>\n{items_txt}"
             + (f"\n⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
             f"━━━━━━━━━━━━━━━━━━━\n"
-            f"💰 <b>JAMI TO'LOV:</b> <b>{t_sum:,} so'm</b> ({pt} narxda, {t_qty} dona)\n\n"
-            f"💳 Karta raqami: <code>{h(CARD_NUMBER)}</code>\nQabul qiluvchi: <b>{h(CARD_NAME)}</b>\n\n"
-            f"📸 To'lov qilgach, chek rasmini shu chatga yuboring.\n\n{WARRANTY_TEXT}"
+            f"💰 <b>JAMI:</b> <b>{t_sum:,} so'm</b> ({pt} narxda, {t_qty} dona)\n\n"
+            f"{PAYMENT_TEXT}\n\n{WARRANTY_TEXT}"
         )
-        safe_send(cid, client_txt, parse_mode="HTML")
+        send_with_admin_btn(cid, client_txt)
 
         if not phone:
             bot.send_message(m.chat.id,
@@ -1003,6 +1113,7 @@ def handle_order(m):
                 f"📊 <b>Rejim:</b> {pt}\n"
                 f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean)} xil model)\n"
                 f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>{h(mismatch)}\n"
+                f"💬 <i>To'lovni mijoz bilan o'zingiz kelishasiz</i>\n"
                 + (f"⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"📥 <i>To'liq ro'yxat pastdagi Excel (.csv) faylda 👇</i>"
@@ -1152,10 +1263,9 @@ def handle_snd_miss(c):
     msg = (f"⚠️ <b>DIQQAT: AYRIM MODELLAR OMBORDA KAM YOKI YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
            f"{miss_t}{part_t}━━━━━━━━━━━━━━━━━━━\n"
            f"📦 <b>Bor tovarlar:</b>\n{av_t or 'Qolmadi'}\n━━━━━━━━━━━━━━━━━━━\n"
-           f"💰 <b>Qayta hisoblangan to'lov:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n"
-           f"💳 Karta: <code>{h(CARD_NUMBER)}</code> ({h(CARD_NAME)})\n\n{WARRANTY_TEXT}")
-    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}"))
-    safe_send(order_cid(cid, p), msg, reply_markup=kb, parse_mode="HTML")
+           f"💰 <b>Qayta hisoblangan summa:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n\n"
+           f"{PAYMENT_TEXT}\n\n{WARRANTY_TEXT}")
+    send_with_admin_btn(order_cid(cid, p), msg)
     edit_text_or_caption(c.message.chat.id, c.message.message_id,
                          f"✅ <b>Mijozga xabar ketdi!</b>\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)", admin_order_kb(cid))
     bot.answer_callback_query(c.id, "Mijozga yuborildi!")
@@ -1170,23 +1280,23 @@ def handle_receipt(m):
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
            InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
-           InlineKeyboardButton("❌ Soxta chek", callback_data=f"pay:{cid}:fake"))
+           InlineKeyboardButton("❌ To'lov tushmadi", callback_data=f"pay:{cid}:fake"))
     try:
         bot.send_photo(ADMIN_ID, m.photo[-1].file_id,
-                       caption=f"🧾 <b>TO'LOV CHEKI KELDI!</b> {('#' + h(get_payload(cid).get('id', ''))) if get_payload(cid) else ''}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
+                       caption=f"📷 <b>MIJOZDAN RASM KELDI</b> {('#' + h(get_payload(cid).get('id', ''))) if get_payload(cid) else ''}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
                        reply_markup=kb, parse_mode="HTML")
         set_status(get_payload(cid), "chek", by="mijoz")
-        bot.reply_to(m, "✅ Chekingiz qabul qilindi! Admin tekshirib, tez orada javob beradi.")
+        bot.reply_to(m, "✅ Rasm adminga yuborildi, tez orada javob beradi.")
     except Exception:
         log.exception("receipt forward")
-        bot.reply_to(m, "⚠️ Chekni yuborib bo'lmadi, birozdan keyin qayta yuboring.")
+        bot.reply_to(m, "⚠️ Rasmni yuborib bo'lmadi, birozdan keyin qayta yuboring.")
 
 
 PAY_TEXTS = {
     "today": "🎉 Tasdiqlandi! BUGUN yetkaziladi.",
     "tomorrow": "🎉 Tasdiqlandi! ERTAGA yetkaziladi.",
-    "cash": "🤝 Tasdiqlandi! To'lov naqd olinadi.",
-    "fake": "⚠️ To'lov tushmadi. Chekni tekshirib, qayta yuboring.",
+    "cash": "🤝 Tasdiqlandi! To'lov kelishilgandek olinadi.",
+    "fake": "⚠️ To'lov hali tushmadi. Iltimos, admin bilan bog'laning.",
     "cancel": "❌ Buyurtma bekor qilindi.",
 }
 
@@ -1303,8 +1413,20 @@ def admin_api():
                     stock_set[pid] = v
         if errors:
             return jsonify({"error": "Saqlanmadi: " + "; ".join(errors[:5])}), 400
+        restocked = [pid for pid, v in stock_set.items()
+                     if v > 0 and int((cat.get(pid) or {}).get("stock", 0) or 0) <= 0
+                     and changed.get(pid, {}).get("active", True) is not False]
+        # yashirilgan mahsulot qayta yoqilganda ham xabar beriladi
+        restocked += [pid for pid, b in changed.items()
+                      if b.get("active") is not False and (cat.get(pid) or {}).get("active") is False
+                      and stock_set.get(pid, int((cat.get(pid) or {}).get("stock", 0) or 0)) > 0 and pid not in restocked]
         _set_many("catalog", changed)
         _set_many("stock", stock_set)
+        if restocked:
+            try:
+                notify_restock(restocked)
+            except Exception:
+                log.exception("notify_restock")
         log.info("Katalog yangilandi: %d mahsulot, %d qoldiq", len(changed), len(stock_set))
         return jsonify({"ok": True, "saved": len(changed), "products": list(get_catalog(include_hidden=True).values())})
     if action == "update" and request.method == "POST":

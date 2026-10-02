@@ -163,7 +163,6 @@
       content-visibility: auto; contain-intrinsic-size: auto 88px;
     }
     .row.in-cart { border-color: var(--kapton); box-shadow: inset 3px 0 0 var(--kapton); }
-    .row.out { opacity: .55; }
 
     .glyph { width: 44px; height: 70px; border-radius: 9px; background: #1B2422; position: relative; align-self: start; }
     .glyph::before { content: ""; position: absolute; inset: 3px; border-radius: 6px; }
@@ -204,6 +203,22 @@
     .stepper button { width: 34px; height: 100%; border: 0; background: transparent; font-size: 20px; font-weight: 500; color: #7A4B06; }
     .stepper input { width: 40px; height: 100%; border: 0; background: transparent; text-align: center; font-weight: 700; font-size: 15px; outline: 0; -moz-appearance: textfield; }
     .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .add.watch { background: #FFF6E6; color: #7A4B06; border: 1.5px solid var(--kapton); height: 40px; }
+    .add.watch.on { background: var(--kapton); color: #2B1A00; }
+    .row.out .add.watch { opacity: 1; }
+    .row.out { opacity: 1; }
+    .row.out .glyph, .row.out .info { opacity: .55; }
+
+    .notes { padding: 0 12px 8px; display: flex; flex-direction: column; gap: 8px; }
+    .note-card { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: var(--r-md);
+      background: var(--card); border: 1px solid var(--hair); }
+    .note-card[hidden] { display: none; }
+    .note-card .tx { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); line-height: 1.35; }
+    .note-card .tx b { display: block; color: var(--ink); font-size: 14px; }
+    .note-card button { border: 0; height: 38px; padding: 0 14px; border-radius: 12px; background: var(--mat); color: #fff; font-weight: 600; font-size: 13px; white-space: nowrap; flex: none; }
+    .note-card.repeat { border-color: var(--kapton); background: #FFFBF3; }
+    .note-card.watching button { background: var(--kapton); color: #2B1A00; }
 
     .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
     .empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 6px; }
@@ -321,6 +336,16 @@
     <div class="chips" id="chips" role="toolbar" aria-label="Brendlar"></div>
   </div>
 
+  <div class="notes">
+    <div class="note-card repeat" id="repeatCard" hidden>
+      <div class="tx"><b>Oldingi buyurtmangiz</b><span id="repeatInfo"></span></div>
+      <button type="button" id="repeatBtn">Takrorlash</button>
+    </div>
+    <div class="note-card watching" id="watchCard" hidden>
+      <div class="tx"><b id="watchTitle">Kuzatuvda</b><span id="watchInfo"></span></div>
+      <button type="button" id="watchBtn">Tasdiqlash</button>
+    </div>
+  </div>
   <div class="result-meta" id="resultMeta"></div>
   <main class="list" id="list"></main>
 
@@ -490,10 +515,31 @@ function startShop() {
 
   const typeClass = (t) => /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /incell/i.test(t) ? 'incell' : 'ips';
 
-  let cart = {};
-  try { cart = JSON.parse(sessionStorage.getItem('ekranchi_cart') || '{}'); } catch (e) { cart = {}; }
-  for (const id in cart) if (!byId.has(id)) delete cart[id];
-  const saveCart = () => { try { sessionStorage.setItem('ekranchi_cart', JSON.stringify(cart)); } catch (e) {} };
+  /* ---- saqlash: localStorage (shu qurilma) + Telegram CloudStorage (hamma qurilmada) ---- */
+  const cloud = tg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9') ? tg.CloudStorage : null;
+  const readLocal = (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } };
+  const store = (k, v) => {
+    const raw = JSON.stringify(v);
+    try { localStorage.setItem(k, raw); } catch (e) {}
+    try { if (cloud) raw.length < 4000 ? cloud.setItem(k, raw, () => {}) : cloud.removeItem(k, () => {}); } catch (e) {}
+  };
+  const readCloud = (keys, cb) => {
+    if (!cloud) return;
+    try { cloud.getItems(keys, (err, vals) => { if (!err && vals) cb(vals); }); } catch (e) {}
+  };
+  const cleanCart = (c) => {
+    const out = {};
+    if (c && typeof c === 'object') for (const id in c) { const q = parseInt(c[id], 10); if (byId.has(String(id)) && q > 0) out[String(id)] = q; }
+    return out;
+  };
+
+  let cart = cleanCart(readLocal('ek_cart', null) || (() => { try { return JSON.parse(sessionStorage.getItem('ekranchi_cart') || '{}'); } catch (e) { return {}; } })());
+  const saveCart = () => store('ek_cart', cart);
+  // Oxirgi buyurtma: {i: [[id, q], ...], t: vaqt}
+  let lastOrder = readLocal('ek_last', null);
+  // Kutilayotgan (tugagan) modellar: {id: 1 - botga yuborilgan, 0 - hali yuborilmagan}
+  let watch = readLocal('ek_watch', {}) || {};
+  const saveWatch = () => store('ek_watch', watch);
 
   let brand = 'Barchasi', query = '', delivery = 'BTS';
   const totalQty = () => Object.values(cart).reduce((a, b) => a + b, 0);
@@ -580,7 +626,11 @@ function startShop() {
   function renderAct(r) {
     const id = String(r.p.id), q = cart[id] || 0;
     r.el.classList.toggle('in-cart', q > 0);
-    if (r.out) { r.actEl.innerHTML = '<button class="add" type="button" disabled>Tugagan</button>'; return; }
+    if (r.out) {
+      const on = id in watch;
+      r.actEl.innerHTML = `<button class="add watch${on ? ' on' : ''}" type="button" data-watch="${id}" aria-pressed="${on}">${on ? '🔔 Kutilmoqda' : '🔔 Xabar bering'}</button>`;
+      return;
+    }
     if (!q) { r.actEl.innerHTML = `<button class="add" type="button" data-add="${id}">Qoʻshish</button>`; return; }
     const inp = r.actEl.querySelector('input[data-set]');
     if (inp) { if (document.activeElement !== inp || +inp.value !== q) inp.value = q; return; }
@@ -604,6 +654,8 @@ function startShop() {
       lastW = w;
     }
     updateTape(); updateDock(); saveCart();
+    updateRepeat();
+    if ($('watchCard') && !$('watchCard').hidden) updateWatch();
   }
 
   function setQty(id, q) {
@@ -617,6 +669,8 @@ function startShop() {
 
   document.addEventListener('click', (e) => {
     const alts = e.target.closest('.alts'); if (alts) { alts.classList.toggle('open'); return; }
+    const wb = e.target.closest('[data-watch]');
+    if (wb) { haptic(); toggleWatch(wb.dataset.watch); return; }
     const add = e.target.closest('[data-add]');
     if (add) { haptic(); setQty(add.dataset.add, 1); bumpDock(); return; }
     const d = e.target.closest('[data-d]');
@@ -705,6 +759,12 @@ function startShop() {
   /* ---- rasmiylashtirish ---- */
   const nameIn = $('custName'), addrIn = $('custAddress');
   try { const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user; if (u && u.first_name) nameIn.value = u.first_name.slice(0, 30); } catch (e) {}
+  const applyInfo = (inf) => {
+    if (!inf || typeof inf !== 'object') return;
+    if (inf.n && !nameIn.value) nameIn.value = String(inf.n).slice(0, 30);
+    if (inf.a && !addrIn.value) addrIn.value = String(inf.a).slice(0, 80);
+    if (inf.d && inf.d !== delivery) { const b = $('deliv').querySelector(`button[data-v="${inf.d}"]`); if (b) b.click(); }
+  };
   $('deliv').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
     haptic(); delivery = b.dataset.v;
@@ -729,12 +789,17 @@ function startShop() {
     if (!name || !addr) { haptic('medium'); return; }
     const w = isWholesale();
     // Server narx va jami summani o'zi qayta hisoblaydi; bu yerdagi summa faqat ma'lumot uchun.
+    const items = Object.entries(cart).map(([id, q]) => [parseInt(id, 10), q]);
     const payload = {
-      n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80),
-      i: Object.entries(cart).map(([id, q]) => [parseInt(id, 10), q]),
+      n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80), i: items,
       tq: totalQty(), ts: cartSum(w), pt: w ? 'Optom' : 'Chakana'
     };
+    const nt = unsentWatch();
+    if (nt.length) payload.nt = nt;
     if (inTelegram() && tg.sendData) {
+      store('ek_last', { i: items, t: Date.now() });
+      store('ek_info', { n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80) });
+      cart = {}; saveCart(); markWatchSent();
       try { sessionStorage.removeItem('ekranchi_cart'); } catch (e) {}
       tg.sendData(JSON.stringify(payload));
     } else {
@@ -742,9 +807,91 @@ function startShop() {
     }
   };
 
+  /* ---- oldingi buyurtmani takrorlash ---- */
+  const lastItems = () => (lastOrder && Array.isArray(lastOrder.i) ? lastOrder.i : [])
+    .map(([id, q]) => [String(id), parseInt(q, 10) || 0]).filter(([id, q]) => byId.has(id) && q > 0);
+  function updateRepeat() {
+    const its = lastItems();
+    const show = its.length > 0 && totalQty() === 0;
+    $('repeatCard').hidden = !show;
+    if (!show) return;
+    const qty = its.reduce((a, [, q]) => a + q, 0);
+    const d = lastOrder.t ? new Date(lastOrder.t) : null;
+    const when = d ? ` · ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}` : '';
+    $('repeatInfo').textContent = `${its.length} xil model, ${qty} ta ekran${when}`;
+  }
+  $('repeatBtn').onclick = () => {
+    haptic('medium');
+    let added = 0, missing = 0, cut = 0;
+    lastItems().forEach(([id, q]) => {
+      const r = rows.get(id);
+      if (!r || r.out) { missing++; return; }
+      let want = q;
+      if (typeof r.p.stock === 'number' && r.p.stock > 0 && want > r.p.stock) { want = r.p.stock; cut++; }
+      cart[id] = want; renderAct(r); added++;
+    });
+    refreshAll();
+    if (!added) { toast('Oldingi buyurtmadagi modellar hozir omborda yoʻq'); return; }
+    let msg = `${added} xil model savatga qoʻshildi`;
+    if (missing) msg += `, ${missing} tasi tugagan`;
+    if (cut) msg += `, ${cut} tasi omborda kamroq`;
+    toast(msg); bumpDock(); openCart();
+  };
+
+  /* ---- tugagan model kelganda xabar berish ---- */
+  const unsentWatch = () => Object.keys(watch).filter(id => !watch[id] && rows.has(id)).map(id => parseInt(id, 10));
+  const markWatchSent = () => { for (const id in watch) watch[id] = 1; saveWatch(); };
+  function toggleWatch(id) {
+    if (id in watch) { delete watch[id]; toast('Kuzatuvdan olib tashlandi'); }
+    else { watch[id] = 0; toast('Roʻyxat tepasidagi «Tasdiqlash»ni bosing, kelganda bot yozadi'); }
+    saveWatch(); renderAct(rows.get(id)); updateWatch();
+  }
+  function updateWatch() {
+    // Omborga kelgan modellar ro'yxatdan o'chadi
+    let changed = false;
+    for (const id in watch) { const r = rows.get(id); if (!r || !r.out) { delete watch[id]; changed = true; } }
+    if (changed) saveWatch();
+    const all = Object.keys(watch).length, unsent = unsentWatch().length;
+    $('watchCard').hidden = !all;
+    if (!all) return;
+    $('watchTitle').textContent = `🔔 ${all} ta model kutilmoqda`;
+    $('watchInfo').textContent = unsent
+      ? (totalQty() ? 'Buyurtma bilan birga yuboriladi yoki hozir tasdiqlang' : 'Tasdiqlang, omborga kelishi bilan bot yozadi')
+      : 'Omborga kelishi bilan bot sizga yozadi';
+    $('watchBtn').hidden = !unsent;
+  }
+  $('watchBtn').onclick = () => {
+    const ids = unsentWatch(); if (!ids.length) return;
+    haptic('medium');
+    if (inTelegram() && tg.sendData) { markWatchSent(); tg.sendData(JSON.stringify({ t: 'nt', w: ids })); }
+    else toast('Faqat Telegram ichida ishlaydi. Botdagi “Doʻkonni ochish” tugmasidan kiring.');
+  };
+
   /* ---- start ---- */
   rows.forEach(renderAct);
-  refreshAll(); applyFilter();
+  refreshAll(); applyFilter(); updateWatch();
+  applyInfo(readLocal('ek_info', null));
+
+  // Boshqa qurilmada saqlangan savat / buyurtma / kuzatuv
+  readCloud(['ek_cart', 'ek_last', 'ek_watch', 'ek_info'], (v) => {
+    const parse = (x) => { try { return x ? JSON.parse(x) : null; } catch (e) { return null; } };
+    const cc = cleanCart(parse(v.ek_cart));
+    if (!totalQty() && Object.keys(cc).length) {
+      cart = cc; rows.forEach(renderAct); refreshAll(); toast('Savatingiz tiklandi');
+    }
+    const cl = parse(v.ek_last);
+    if (cl && Array.isArray(cl.i) && (!lastOrder || (cl.t || 0) > (lastOrder.t || 0))) {
+      lastOrder = cl; try { localStorage.setItem('ek_last', JSON.stringify(cl)); } catch (e) {}
+    }
+    const cw = parse(v.ek_watch);
+    if (cw && typeof cw === 'object') {
+      for (const id in cw) if (!(id in watch)) watch[id] = cw[id] ? 1 : 0;
+      rows.forEach(r => { if (r.out) renderAct(r); });
+      updateWatch();
+    }
+    applyInfo(parse(v.ek_info));
+    updateRepeat();
+  });
 }
 </script>
 </body>
