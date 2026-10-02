@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/index.py": { "includeFiles": "api/shablon/**" }
+  },
+  "rewrites": [
+    { "source": "/", "destination": "/api/index" }
+  ]
+}
