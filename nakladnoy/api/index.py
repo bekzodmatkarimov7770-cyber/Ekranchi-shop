@@ -305,6 +305,25 @@ def lookup(text, cat, idx, codes=None):
             rest.append(c)
     if not rest:
         return []
+    if "/" in text:                     # to'liq model ro'yxati: "A02S / A03S / A03 ..." — ko'p mos kelgani g'olib
+        votes = {}
+        for part in text.split("/"):
+            for c in set(lookup(part, cat, idx)):
+                votes[c] = votes.get(c, 0) + 1
+        if votes:
+            best = max(votes.values())
+            found = [cat[c] for c, v in votes.items() if v == best]
+            nparts = len([x for x in text.split("/") if x.strip()])
+            exact = [it for it in found if len(it["n"].split("/")) == nparts]
+            found = exact or found            # aynan shu ro'yxatli tovar afzal
+            for keep in (lambda it: it["n"][:3].upper() in prefixes if prefixes else True,
+                         lambda it: it["b"] in brands if brands else True,
+                         lambda it: it["t"] in types if types else True):
+                narrowed = [it for it in found if keep(it)]
+                if narrowed:
+                    found = narrowed
+            found.sort(key=lambda it: ("IGTOJRF".find(it["t"]), it["p"]))
+            return [it["c"] for it in found]
     codes = set()
     for c in rest:                      # to'g'ridan-to'g'ri kod yozilgan bo'lsa (A20106)
         if c in cat:
