@@ -279,6 +279,8 @@ def code_hits(text, codes):
         k = norm_code(t)
         if len(k) >= 4 and not (k.isdigit() and len(k) < 5) and k in codes:
             hits += [c for c in codes[k] if c not in hits]
+        elif k.isdigit() and len(k) >= 5 and "#" + k in codes:
+            hits += [c for c in codes["#" + k] if c not in hits]
     return hits
 
 def lookup(text, cat, idx, codes=None):
@@ -330,6 +332,10 @@ def resolve_lines(lines, catalog):
         k = norm_code(it.get("x"))
         if k and it["c"].upper() not in codes.setdefault(k, []):
             codes[k].append(it["c"].upper())
+    for it in all_items(catalog):                        # harfsiz seriya: 21376 -> A21376
+        d = re.sub(r"^[A-Z]+", "", norm_code(it["c"]))
+        if len(d) >= 4 and d.isdigit() and d not in codes:
+            codes.setdefault("#" + d, []).append(it["c"].upper())
     idx = build_index(catalog["items"])
     out = []
     for raw in lines:
@@ -792,6 +798,10 @@ def on_callback(c):
         ok = sum(1 for x in items if x["st"] == "ok")
         ask = sum(1 for x in items if x["st"] == "ask")
         miss = sum(1 for x in items if x["st"] == "miss")
+        log.info("ro'yxat: %s qator, ok=%s ask=%s miss=%s, baza=%s+%s, yangilangan=%s", len(items), ok, ask, miss,
+                 len(cat.get("items", [])), len(cat.get("extra", [])), cat.get("updated"))
+        for x in [x for x in items if x["st"] == "miss"][:30]:
+            log.info("topilmadi: %r", x["q"])
         send(cid, f"📋 <b>{len(items)} qator:</b> ✅ {ok} topildi · ❓ {ask} tanlash kerak · ❌ {miss} topilmadi")
         return next_step(cid, s)
     if act == "p" and s.get("st") == "pick" and len(parts) == 4:
