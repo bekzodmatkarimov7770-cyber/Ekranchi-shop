@@ -283,11 +283,17 @@ def code_hits(text, codes):
             hits += [c for c in codes["#" + k] if c not in hits]
     return hits
 
+SERIA_RE = re.compile(r"^[A-ZА-Я]{1,2}\d{4,}$|^\d{5,}$", re.I)
+
 def lookup(text, cat, idx, codes=None):
     if codes:
         hits = code_hits(text, codes)
         if hits:
             return hits[:1] if len(hits) == 1 else hits
+        # seriya topilmadi: seriyaga o'xshash so'zlarni olib tashlab, model nomi bo'yicha qidiramiz
+        plain = " ".join(t for t in text.split() if not SERIA_RE.match(t.strip(",;")))
+        if plain.strip() and plain.strip() != text.strip():
+            return lookup(plain, cat, idx)
     ch = chunks(text)
     brands, types, prefixes, rest = set(), set(), set(), []
     for c in ch:
