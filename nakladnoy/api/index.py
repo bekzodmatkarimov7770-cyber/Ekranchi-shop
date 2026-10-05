@@ -150,6 +150,23 @@ def _num(v):
     except ValueError:
         return 0
 
+def _cell(v):
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    return str(v if v is not None else "").strip()
+
+CODE_CYR = str.maketrans("АВСЕНКМОРТХУавсенкмортху", "ABCEHKMOPTXYABCEHKMOPTXY")
+
+def norm_code(v):
+    """Seriya (kod)ni solishtirish uchun: katta harf, kirill->lotin, faqat harf va raqam, oxiridagi .0 siz."""
+    t = _cell(v).upper().translate(CODE_CYR)
+    t = re.sub(r"\.0+$", "", t)
+    return re.sub(r"[^0-9A-Z]", "", t)
+
+def all_items(catalog):
+    """Ekranlar + faqat seriya bo'yicha topiladigan boshqa tovarlar."""
+    return (catalog or {}).get("items", []) + (catalog or {}).get("extra", [])
+
 def parse_catalog(rows):
     """Narx faylini o'qiydi. Bu narx fayli bo'lmasa None qaytaradi."""
     for hi, row in enumerate(rows[:15]):
@@ -162,21 +179,24 @@ def parse_catalog(rows):
         c_stock = next((i for i, c in enumerate(cells) if "现存量" in c or "库存" in c), None)
         if c_price is None:
             return None
-        items, skipped = [], 0
+        items, extra, skipped = [], [], 0
         for row in rows[hi + 1:]:
             row = list(row) + [None] * 20
-            code, nm = str(row[c_code] or "").strip(), str(row[c_name] or "").strip()
+            code, nm = _cell(row[c_code]), _cell(row[c_name])
             if not code or not nm:
                 continue
             m = re.match(r"^([A-Za-z]{3})\s*-", nm)
             if "停用" in nm or not m:   # to'xtatilgan modellar, quloqchinlar va h.k.
-                skipped += 1
+                skipped += 1           # nom bo'yicha qidirilmaydi, lekin seriya yozilsa topiladi
+                extra.append({"c": code, "n": nm, "p": _num(row[c_price]),
+                              "s": _num(row[c_stock]) if c_stock is not None else None,
+                              "b": "?", "t": "?"})
                 continue
             pre = m.group(1).upper()
             items.append({"c": code, "n": nm, "p": _num(row[c_price]),
                           "s": _num(row[c_stock]) if c_stock is not None else None,
                           "b": pre[1], "t": pre[2]})
-        return {"items": items, "skipped": skipped, "updated": int(time.time())}
+        return {"items": items, "extra": extra, "skipped": skipped, "updated": int(time.time())}
     return None
 
 def get_catalog():
@@ -248,7 +268,22 @@ def interpretations(line):
     out.append((s, None))
     return out
 
-def lookup(text, cat, idx):
+def code_hits(text, codes):
+    """Matndagi seriya(lar)ni topadi: butun matn, bo'sh joy bilan ajratilgan so'zlar va ularning juftligi."""
+    hits = []
+    toks = [t for t in re.split(r"[\s,;]+", text.strip()) if t]
+    cands = [text] + toks + [a + b for a, b in zip(toks, toks[1:])] + chunks(text)
+    for t in cands:
+        k = norm_code(t)
+        if len(k) >= 4 and not (k.isdigit() and len(k) < 5) and k in codes and codes[k] not in hits:
+            hits.append(codes[k])
+    return hits
+
+def lookup(text, cat, idx, codes=None):
+    if codes:
+        hits = code_hits(text, codes)
+        if hits:
+            return hits[:1] if len(hits) == 1 else hits
     ch = chunks(text)
     brands, types, prefixes, rest = set(), set(), set(), []
     for c in ch:
@@ -285,7 +320,10 @@ def lookup(text, cat, idx):
     return [it["c"] for it in found]
 
 def resolve_lines(lines, catalog):
-    cat = {it["c"].upper(): it for it in catalog["items"]}
+    cat = {it["c"].upper(): it for it in all_items(catalog)}
+    codes = {}
+    for it in all_items(catalog):
+        codes.setdefault(norm_code(it["c"]), it["c"].upper())
     idx = build_index(catalog["items"])
     out = []
     for raw in lines:
@@ -294,11 +332,15 @@ def resolve_lines(lines, catalog):
             continue
         item = {"q": line[:120], "qty": 1, "guess": True, "cands": [], "st": "miss"}
         for text, qty in interpretations(line):
-            cands = lookup(text, cat, idx)
+            cands = lookup(text, cat, idx, codes)
             if cands:
                 item.update(cands=cands[:MAX_BUTTONS], qty=qty or 1, guess=qty is None,
                             st="ok" if len(cands) == 1 else "ask", code=cands[0] if len(cands) == 1 else None)
                 break
+        orig = {c.upper(): c for c in (x["c"] for x in all_items(catalog))}
+        item["cands"] = [orig.get(c, c) for c in item["cands"]]
+        if item.get("code"):
+            item["code"] = orig.get(item["code"], item["code"])
         out.append(item)
     return out
 
@@ -321,7 +363,7 @@ def rows_to_lines(rows):
             if isinstance(v, float) and v.is_integer():
                 v = int(v)
             cells.append(str(v).strip())
-        if len(cells) >= 3 and cells[0].isdigit():   # birinchi ustun tartib raqami (№)
+        if len(cells) >= 3 and cells[0].isdigit() and len(cells[0]) <= 4:   # birinchi ustun tartib raqami (№), uzun son esa seriya
             cells = cells[1:]
         if cells:
             lines.append(" ".join(cells))
@@ -343,7 +385,7 @@ def _put_style(ws, r, style):
         ws.row_dimensions[r].height = height
 
 def merged_items(items, catalog):
-    cat = {it["c"]: it for it in catalog["items"]}
+    cat = {it["c"]: it for it in all_items(catalog)}
     out = {}
     for it in items:
         if it.get("st") == "ok" and it.get("code") in cat:
@@ -479,7 +521,7 @@ def ask_text(s, i, cat):
         p = cat.get(c)
         if not p:
             continue
-        tp = TYPES.get(p["t"], p["t"])
+        tp = TYPES.get(p["t"], "boshqa")
         stock = f" · qoldiq {p['s']}" if p.get("s") is not None else ""
         txt += f"\n<b>{k}.</b> {h(p['n'])}\n     {tp} · <b>{som(p['p'])}</b> so'm{stock}\n"
         kb.add(InlineKeyboardButton(f"{k} · {tp} · {som(p['p'])}", callback_data=f"nk:p:{i}:{c}"))
@@ -488,7 +530,7 @@ def ask_text(s, i, cat):
 
 def next_step(cid, s, mid=None):
     """Navbatdagi ishni bajaradi: tanlash -> topilmaganlar -> kod so'rash."""
-    cat = {it["c"]: it for it in get_catalog()["items"]}
+    cat = {it["c"]: it for it in all_items(get_catalog())}
     items = s["items"]
     ask = next((k for k, x in enumerate(items) if x["st"] == "ask"), None)
     if ask is not None and not mid:
