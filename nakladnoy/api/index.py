@@ -348,6 +348,24 @@ def lookup(text, cat, idx, codes=None):
     found.sort(key=lambda it: ("IGTOJRF".find(it["t"]), it["p"]))
     return [it["c"] for it in found]
 
+def alternatives(code, catalog):
+    """Topilgan tovarga o'xshash boshqa tovarlar (shu modellar, boshqa sifat/prefiks)."""
+    allit = all_items(catalog)
+    cat = {it["c"].upper(): it for it in allit}
+    me = cat.get(code.upper())
+    if not me:
+        return []
+    idx = build_index(catalog["items"])
+    body = me["n"].split("-", 1)[1] if "-" in me["n"] else me["n"]
+    votes = {}
+    for part in body.replace("停用", "").split("/"):
+        for c in set(lookup(part, cat, idx)):
+            votes[c] = votes.get(c, 0) + 1
+    orig = {it["c"].upper(): it["c"] for it in allit}
+    alt = sorted((c for c in votes if c != code.upper()),
+                 key=lambda c: (-votes[c], "IGTOJRF".find(cat[c]["t"]), cat[c]["p"]))
+    return [orig[c] for c in alt][:MAX_BUTTONS - 1]
+
 def resolve_lines(lines, catalog):
     cat = {it["c"].upper(): it for it in all_items(catalog)}
     codes = {}
@@ -562,7 +580,28 @@ def ask_text(s, i, cat):
         stock = f" · qoldiq {p['s']}" if p.get("s") is not None else ""
         txt += f"\n<b>{k}.</b> {h(p['n'])}\n     {tp} · <b>{som(p['p'])}</b> so'm{stock}\n"
         kb.add(InlineKeyboardButton(f"{k} · {tp} · {som(p['p'])}", callback_data=f"nk:p:{i}:{c}"))
-    kb.add(InlineKeyboardButton("⏭ O'tkazib yuborish", callback_data=f"nk:p:{i}:-"))
+    kb.add(InlineKeyboardButton("✍️ O'zim yozaman", callback_data=f"nk:w:{i}"),
+           InlineKeyboardButton("⏭ O'tkazib yuborish", callback_data=f"nk:p:{i}:-"))
+    return txt, kb
+
+def confirm_text(s, i, cat):
+    it = s["items"][i]
+    total = s.get("cf_total") or 1
+    left = sum(1 for x in s["items"] if x["st"] == "ok" and not x.get("cf"))
+    pos = max(1, total - left + 1)
+    p = cat.get(it["code"]) or {}
+    tp = TYPES.get(p.get("t"), "boshqa")
+    stock = f" · qoldiq {p['s']}" if p.get("s") is not None else ""
+    txt = (f"🔎 <b>Tekshiring ({pos}/{total})</b>\n\nMijoz yozgan: <code>{h(it['q'])}</code>\n"
+           f"Soni: <b>{it['qty']}</b>" + (" <i>(yozilmagan, 1 deb olindi)</i>" if it.get("guess") else "") +
+           f"\n\nBot topdi:\n<b>{h(p.get('c', ''))}</b> · {h(p.get('n', '?'))}\n"
+           f"{tp} · <b>{som(p.get('p', 0))}</b> so'm{stock}")
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(InlineKeyboardButton("✅ To'g'ri", callback_data=f"nk:y:{i}"),
+           InlineKeyboardButton("🔄 Boshqasi", callback_data=f"nk:o:{i}"))
+    kb.add(InlineKeyboardButton("⏭ O'tkazib yuborish", callback_data=f"nk:y:{i}:-"))
+    if left > 1:
+        kb.add(InlineKeyboardButton(f"✅✅ Qolgan {left} tasi ham to'g'ri", callback_data="nk:yall"))
     return txt, kb
 
 def next_step(cid, s, mid=None):
@@ -579,8 +618,18 @@ def next_step(cid, s, mid=None):
         if not (mid and edit(cid, mid, txt, kb)):
             send(cid, txt, reply_markup=kb)
         return
+    cf = next((k for k, x in enumerate(items) if x["st"] == "ok" and not x.get("cf")), None)
+    if cf is not None:
+        if not s.get("cf_total"):
+            s["cf_total"] = sum(1 for x in items if x["st"] == "ok" and not x.get("cf"))
+        s["st"] = "confirm"
+        set_sess(cid, s)
+        txt, kb = confirm_text(s, cf, cat)
+        if not (mid and edit(cid, mid, txt, kb)):
+            send(cid, txt, reply_markup=kb)
+        return
     if mid:
-        edit(cid, mid, "✅ Hamma modellar tanlandi.")
+        edit(cid, mid, "✅ Hamma modellar tasdiqlandi.")
     miss = [x for x in items if x["st"] == "miss"]
     if miss:
         s["st"] = "fix"
@@ -766,8 +815,26 @@ def on_text(m):
             if x["st"] == "miss":
                 x["st"] = "skip"
         s["items"] += new
+        s["cf_total"] = 0
         return next_step(cid, s)
-    if st == "pick":
+    if st == "write":
+        i = s.get("wi", -1)
+        if not (0 <= i < len(s["items"])):
+            s["st"] = "confirm"
+            return next_step(cid, s)
+        x = s["items"][i]
+        res = resolve_lines([m.text.strip().splitlines()[0] + " 1"], get_catalog())
+        if not res or res[0]["st"] == "miss":
+            return send(cid, "⚠️ Bu model ham topilmadi. Boshqacha yozing (seriya, masalan <code>A20101</code>):")
+        r = res[0]
+        if r["st"] == "ok":
+            x.update(st="ok", code=r["code"], cf=True)
+        else:
+            x.update(st="ask", cands=r["cands"], code=None)
+            s["ask_total"] = 1
+        s["st"] = "confirm"
+        return next_step(cid, s)
+    if st in ("pick", "confirm"):
         return None if is_group(m) else send(cid, "☝️ Avval yuqoridagi savolga tugma orqali javob bering (yoki /bekor).")
     if st == "code":
         code = re.sub(r"\s+", "", m.text.strip().upper())
@@ -820,6 +887,7 @@ def on_callback(c):
         cat = get_catalog()
         items = resolve_lines(lines, cat)
         s["items"] = items
+        s["cf_total"] = 0
         ok = sum(1 for x in items if x["st"] == "ok")
         ask = sum(1 for x in items if x["st"] == "ask")
         miss = sum(1 for x in items if x["st"] == "miss")
@@ -836,7 +904,55 @@ def on_callback(c):
         if parts[3] == "-":
             s["items"][i]["st"] = "skip"
         elif parts[3] in s["items"][i]["cands"]:
-            s["items"][i].update(st="ok", code=parts[3])
+            s["items"][i].update(st="ok", code=parts[3], cf=True)
+        return next_step(cid, s, mid=c.message.message_id)
+    if act == "y" and s.get("st") == "confirm" and len(parts) >= 3:      # ✅ To'g'ri / ⏭
+        i = int(parts[2])
+        if i < len(s["items"]) and s["items"][i]["st"] == "ok":
+            if len(parts) == 4 and parts[3] == "-":
+                s["items"][i]["st"] = "skip"
+            else:
+                s["items"][i]["cf"] = True
+        return next_step(cid, s, mid=c.message.message_id)
+    if act == "yall" and s.get("st") == "confirm":
+        for x in s["items"]:
+            if x["st"] == "ok":
+                x["cf"] = True
+        return next_step(cid, s, mid=c.message.message_id)
+    if act == "o" and s.get("st") == "confirm" and len(parts) == 3:      # 🔄 Boshqasi
+        i = int(parts[2])
+        if i >= len(s["items"]) or s["items"][i]["st"] != "ok":
+            return
+        x = s["items"][i]
+        alts = alternatives(x["code"], get_catalog())
+        x.update(st="ask", cands=[x["code"]] + alts, code=None)
+        s["st"] = "pick"
+        s["ask_total"] = 1
+        set_sess(cid, s)
+        txt, kb = ask_text(s, i, {it["c"]: it for it in all_items(get_catalog())})
+        if not alts:
+            txt = ("ℹ️ <b>Bazada boshqa o'xshash tovar yo'q.</b> To'g'risini «✍️ O'zim yozaman» orqali "
+                   "kiriting yoki shu tovarni tanlang.\n\n" + txt)
+        if not edit(cid, c.message.message_id, txt, kb):
+            send(cid, txt, reply_markup=kb)
+        return
+    if act == "w" and s.get("st") in ("pick", "confirm") and len(parts) == 3:   # ✍️ O'zim yozaman
+        i = int(parts[2])
+        if i >= len(s["items"]):
+            return
+        s["st"], s["wi"] = "write", i
+        set_sess(cid, s)
+        kb = InlineKeyboardMarkup().add(InlineKeyboardButton("⏭ O'tkazib yuborish", callback_data=f"nk:ws:{i}"))
+        txt = (f"✍️ <code>{h(s['items'][i]['q'])}</code> uchun to'g'ri model yoki seriyani yozing\n"
+               f"(masalan <code>A20101</code> yoki <code>ASI-A02S</code>). Soni: <b>{s['items'][i]['qty']}</b>")
+        if not edit(cid, c.message.message_id, txt, kb):
+            send(cid, txt, reply_markup=kb)
+        return
+    if act == "ws" and s.get("st") == "write":
+        i = s.get("wi", -1)
+        if 0 <= i < len(s["items"]):
+            s["items"][i]["st"] = "skip"
+        s["st"] = "confirm"
         return next_step(cid, s, mid=c.message.message_id)
     if act == "cont" and s.get("st") == "fix":
         for x in s["items"]:
