@@ -177,12 +177,14 @@ def parse_catalog(rows):
         c_name = cells.index("存货") if "存货" in cells else c_code + 1
         c_price = next((i for i, c in enumerate(cells) if "单价" in c or "UZS" in c.upper()), None)
         c_stock = next((i for i, c in enumerate(cells) if "现存量" in c or "库存" in c), None)
+        c_spec = next((i for i, c in enumerate(cells) if "规格型号" in c), None)   # XW-M23
         if c_price is None:
             return None
         items, extra, skipped = [], [], 0
         for row in rows[hi + 1:]:
             row = list(row) + [None] * 20
             code, nm = _cell(row[c_code]), _cell(row[c_name])
+            xw = _cell(row[c_spec]) if c_spec is not None else ""
             if not code or not nm:
                 continue
             m = re.match(r"^([A-Za-z]{3})\s*-", nm)
@@ -190,12 +192,12 @@ def parse_catalog(rows):
                 skipped += 1           # nom bo'yicha qidirilmaydi, lekin seriya yozilsa topiladi
                 extra.append({"c": code, "n": nm, "p": _num(row[c_price]),
                               "s": _num(row[c_stock]) if c_stock is not None else None,
-                              "b": "?", "t": "?"})
+                              "b": "?", "t": "?", "x": xw})
                 continue
             pre = m.group(1).upper()
             items.append({"c": code, "n": nm, "p": _num(row[c_price]),
                           "s": _num(row[c_stock]) if c_stock is not None else None,
-                          "b": pre[1], "t": pre[2]})
+                          "b": pre[1], "t": pre[2], "x": xw})
         return {"items": items, "extra": extra, "skipped": skipped, "updated": int(time.time())}
     return None
 
@@ -275,8 +277,8 @@ def code_hits(text, codes):
     cands = [text] + toks + [a + b for a, b in zip(toks, toks[1:])] + chunks(text)
     for t in cands:
         k = norm_code(t)
-        if len(k) >= 4 and not (k.isdigit() and len(k) < 5) and k in codes and codes[k] not in hits:
-            hits.append(codes[k])
+        if len(k) >= 4 and not (k.isdigit() and len(k) < 5) and k in codes:
+            hits += [c for c in codes[k] if c not in hits]
     return hits
 
 def lookup(text, cat, idx, codes=None):
@@ -322,8 +324,12 @@ def lookup(text, cat, idx, codes=None):
 def resolve_lines(lines, catalog):
     cat = {it["c"].upper(): it for it in all_items(catalog)}
     codes = {}
-    for it in all_items(catalog):
-        codes.setdefault(norm_code(it["c"]), it["c"].upper())
+    for it in all_items(catalog):                        # seriya: A21376
+        codes.setdefault(norm_code(it["c"]), []).append(it["c"].upper())
+    for it in all_items(catalog):                        # model kodi: XW-M23 (bir nechta bo'lishi mumkin)
+        k = norm_code(it.get("x"))
+        if k and it["c"].upper() not in codes.setdefault(k, []):
+            codes[k].append(it["c"].upper())
     idx = build_index(catalog["items"])
     out = []
     for raw in lines:
