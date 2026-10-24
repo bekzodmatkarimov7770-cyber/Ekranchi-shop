@@ -683,6 +683,9 @@ def _reseed_if_new_version():
     global _catalog_version_ok
     if _catalog_version_ok:
         return
+    # Preview deploy ham shu bazaga ulangan bo'lishi mumkin: faqat production qayta yozadi
+    if os.environ.get("VERCEL_ENV", "production") != "production":
+        return
     if store_get("meta", "catalog_version") != CATALOG_VERSION:
         log.info("Yangi katalog versiyasi %s: katalog va qoldiq qaytadan yoziladi", CATALOG_VERSION)
         if REDIS_URL:
