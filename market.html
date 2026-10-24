@@ -163,6 +163,21 @@
       content-visibility: auto; contain-intrinsic-size: auto 88px;
     }
     .row.in-cart { border-color: var(--kapton); box-shadow: inset 3px 0 0 var(--kapton); }
+    .row.grp { grid-template-columns: 44px 1fr; row-gap: 10px; }
+    .row.grp .glyph { height: 56px; }
+    .vars { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
+    .var { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 10px; border-radius: 12px; border: 1px solid var(--hair); background: #FAFBFA; }
+    .var.in-cart { border-color: var(--kapton); background: #FFFAF0; }
+    .var .vinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .var .vhead { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+    .var.out .vinfo { opacity: .55; }
+    .type-tag.ips { background: #E8EEF6; color: #2D4A6B; }
+    .type-tag.incell { background: #E3F4EF; color: #145244; }
+    .type-tag.premium { background: #FFF0D6; color: #7A4A06; }
+    .type-tag.tft { background: #F1EBDD; color: #5E4A1E; }
+    .chips.types { padding-top: 6px; }
+    .chips.types .chip { height: 30px; padding: 0 12px; font-size: 12.5px; }
+    .chip .dot { width: 8px; height: 8px; border-radius: 50%; }
 
     .glyph { width: 44px; height: 70px; border-radius: 9px; background: #1B2422; position: relative; align-self: start; }
     .glyph::before { content: ""; position: absolute; inset: 3px; border-radius: 6px; }
@@ -335,6 +350,7 @@
       <button class="clear" type="button" id="clearQ" aria-label="Qidiruvni tozalash">✕</button>
     </label>
     <div class="chips" id="chips" role="toolbar" aria-label="Brendlar"></div>
+    <div class="chips types" id="typeChips" role="toolbar" aria-label="Sifat turi"></div>
   </div>
 
   <div class="notes">
@@ -519,9 +535,23 @@ function startShop() {
   const products = SOURCE.map(p => { const pm = prettyModel(p.name, p.brand);
     return { ...p, _pm: pm, _key: norm([p.brand, p.name, pm.main, ...pm.alts].join(' ')) }; });
   const byId = new Map(products.map(p => [String(p.id), p]));
-  $('modelCount').textContent = products.length;
 
-  const typeClass = (t) => /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /incell/i.test(t) ? 'incell' : 'ips';
+  const typeClass = (t) => /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'premium' : /incell/i.test(t) ? 'incell' : 'ips';
+  const TYPE_LABEL = { ips: 'IPS', incell: 'Incell', premium: 'Premium', oled: 'OLED', tft: 'TFT', servis: 'Servis' };
+  const TYPE_NOTE = { ips: 'Arzon, kundalik taʼmir', incell: 'Arzon, kundalik taʼmir', premium: 'Originalga yaqin rang', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi' };
+  const TYPE_ORDER = ['ips', 'incell', 'tft', 'premium', 'oled', 'servis'];
+
+  /* ---- bir xil model (turli sifat) bitta qatorga yig'iladi ---- */
+  const tokSet = (p) => new Set([p._pm.main, ...p._pm.alts].map(norm));
+  const similar = (a, b) => { let n = 0; a.forEach(x => { if (b.has(x)) n++; }); return n / Math.max(1, Math.min(a.size, b.size)) >= 0.5; };
+  const groups = [];
+  products.forEach(p => {
+    const k = [p.brand, norm(p._pm.main), p._pm.tags.join(',')].join('|'), ts = tokSet(p), tc = typeClass(p.type);
+    const g = groups.find(g => g.k === k && !g.vars.some(v => typeClass(v.type) === tc) && similar(g.ts, ts));
+    if (g) { g.vars.push(p); ts.forEach(x => g.ts.add(x)); g.key += ' ' + p._key; }
+    else groups.push({ k, ts, vars: [p], key: p._key, brand: p.brand });
+  });
+  groups.forEach(g => g.vars.sort((a, b) => TYPE_ORDER.indexOf(typeClass(a.type)) - TYPE_ORDER.indexOf(typeClass(b.type)) || a.retail - b.retail));
 
   /* ---- saqlash: localStorage (shu qurilma) + Telegram CloudStorage (hamma qurilmada) ---- */
   const cloud = tg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9') ? tg.CloudStorage : null;
@@ -549,7 +579,7 @@ function startShop() {
   let watch = readLocal('ek_watch', {}) || {};
   const saveWatch = () => store('ek_watch', watch);
 
-  let brand = 'Barchasi', query = '', delivery = 'BTS';
+  let brand = 'Barchasi', query = '', delivery = 'BTS', qtype = 'all';
   const totalQty = () => Object.values(cart).reduce((a, b) => a + b, 0);
   const isWholesale = () => totalQty() >= WHOLESALE_MIN;
   const priceOf = (p, w) => w ? p.wholesale : p.retail;
@@ -567,12 +597,13 @@ function startShop() {
   }
 
   /* ---- brend chiplari ---- */
-  const brandCounts = products.reduce((m, p) => (m[p.brand] = (m[p.brand] || 0) + 1, m), {});
+  $('modelCount').textContent = groups.length;
+  const brandCounts = groups.reduce((m, g) => (m[g.brand] = (m[g.brand] || 0) + 1, m), {});
   const brandOrder = ['Barchasi', 'Samsung', 'iPhone', 'Redmi', 'Xiaomi', 'Tecno & Infinix', 'Honor', 'Oppo', 'Vivo', 'Realme', 'Huawei'];
   Object.keys(brandCounts).forEach(b => { if (!brandOrder.includes(b)) brandOrder.push(b); });
   const chips = $('chips');
   brandOrder.forEach(b => {
-    const n = b === 'Barchasi' ? products.length : brandCounts[b];
+    const n = b === 'Barchasi' ? groups.length : brandCounts[b];
     if (!n) return;
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(b === brand));
@@ -589,42 +620,71 @@ function startShop() {
     chips.appendChild(el);
   });
 
+  /* ---- sifat turi chiplari ---- */
+  const typeChips = $('typeChips');
+  const DOT = { ips: '#2D4A6B', incell: '#145244', premium: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608' };
+  ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type) === t))].forEach(t => {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(t === qtype));
+    if (t !== 'all') { const d = document.createElement('span'); d.className = 'dot'; d.style.background = DOT[t]; el.appendChild(d); }
+    el.appendChild(document.createTextNode(t === 'all' ? 'Barcha sifat' : TYPE_LABEL[t]));
+    el.onclick = () => {
+      haptic(); qtype = t;
+      typeChips.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+      el.setAttribute('aria-pressed', 'true'); applyFilter();
+    };
+    typeChips.appendChild(el);
+  });
+
   /* ---- mahsulot qatorlari: bir marta chiziladi, keyin faqat o'zgargani yangilanadi ---- */
   const list = $('list');
   const rows = new Map();
   const frag = document.createDocumentFragment();
-  products.forEach(p => {
-    const tc = typeClass(p.type);
-    const out = typeof p.stock === 'number' && p.stock <= 0;
+  groups.forEach(g => {
+    const p = g.vars[0];
     const el = document.createElement('article');
-    el.className = 'row' + (out ? ' out' : '');
+    el.className = 'row grp';
     el.innerHTML = `
-      <div class="glyph t-${tc}" aria-hidden="true"></div>
+      <div class="glyph t-${typeClass(p.type)}" aria-hidden="true"></div>
       <div class="info">
-        <div class="meta"><span class="br"></span><span class="type-tag ${tc}"></span></div>
+        <div class="meta"><span class="br"></span></div>
         <div class="name"></div>
         <div class="alts" hidden></div>
-        <div class="price"></div>
       </div>
-      <div class="act"></div>`;
+      <div class="vars"></div>`;
     el.querySelector('.br').textContent = p.brand;
-    el.querySelector('.type-tag').textContent = p.type;
     el.querySelector('.name').textContent = p._pm.main;
     p._pm.tags.forEach(t => { const tag = document.createElement('span'); tag.className = 'type-tag' + (t === 'Ramkali' ? ' frame' : ''); tag.textContent = t; el.querySelector('.meta').appendChild(tag); });
-    if (p._pm.alts.length) { const a = el.querySelector('.alts'); a.hidden = false;
-      const few = p._pm.alts.slice(0, 4), more = p._pm.alts.length - few.length;
+    const alts = [...new Set(g.vars.flatMap(v => v._pm.alts))].filter(a => a !== p._pm.main);
+    if (alts.length) { const a = el.querySelector('.alts'); a.hidden = false;
+      const few = alts.slice(0, 4), more = alts.length - few.length;
       a.innerHTML = '<b>Mos keladi:</b> '; a.appendChild(document.createTextNode(few.join(', ')));
       if (more > 0) { const b = document.createElement('button'); b.type = 'button'; b.className = 'more'; b.textContent = `+${more} ta`;
-        b.onclick = (e) => { e.stopPropagation(); a.lastChild.remove(); a.lastChild.textContent = p._pm.alts.join(', '); }; a.appendChild(b); }
+        b.onclick = (e) => { e.stopPropagation(); a.lastChild.remove(); a.lastChild.textContent = alts.join(', '); }; a.appendChild(b); }
       a.title = 'Toʻliq roʻyxat'; }
-    rows.set(String(p.id), { el, p, out, priceEl: el.querySelector('.price'), actEl: el.querySelector('.act') });
+    g.el = el; g.recs = [];
+    const box = el.querySelector('.vars');
+    g.vars.forEach(v => {
+      const tc = typeClass(v.type);
+      const out = typeof v.stock === 'number' && v.stock <= 0;
+      const ve = document.createElement('div');
+      ve.className = 'var' + (out ? ' out' : '');
+      ve.innerHTML = `<div class="vinfo"><div class="vhead"><span class="type-tag ${tc}"></span><span class="vnote"></span></div><div class="price"></div></div><div class="act"></div>`;
+      ve.querySelector('.type-tag').textContent = TYPE_LABEL[tc];
+      ve.querySelector('.vnote').textContent = TYPE_NOTE[tc];
+      box.appendChild(ve);
+      const r = { el: ve, p: v, out, g, tc, priceEl: ve.querySelector('.price'), actEl: ve.querySelector('.act') };
+      g.recs.push(r); rows.set(String(v.id), r);
+    });
+    g.out = g.recs.every(r => r.out);
+    el.classList.toggle('out', g.out);
     frag.appendChild(el);
   });
   list.appendChild(frag);
   const emptyEl = document.createElement('div');
   emptyEl.className = 'empty'; emptyEl.hidden = true;
   emptyEl.innerHTML = '<strong>Bunday model topilmadi</strong>Boshqacha yozib koʻring, masalan “note8” yoki “a10”.<br><button type="button">Qidiruvni tozalash</button>';
-  emptyEl.querySelector('button').onclick = () => { $('q').value = ''; query = ''; syncSearch(); chips.firstChild.click(); };
+  emptyEl.querySelector('button').onclick = () => { $('q').value = ''; query = ''; syncSearch(); typeChips.firstChild.click(); chips.firstChild.click(); };
   list.appendChild(emptyEl);
 
   function renderPrice(r, w) {
@@ -638,6 +698,7 @@ function startShop() {
   function renderAct(r) {
     const id = String(r.p.id), q = cart[id] || 0;
     r.el.classList.toggle('in-cart', q > 0);
+    r.g.el.classList.toggle('in-cart', r.g.recs.some(x => cart[String(x.p.id)] > 0));
     if (r.out) {
       const on = id in watch;
       r.actEl.innerHTML = `<button class="add watch${on ? ' on' : ''}" type="button" data-watch="${id}" aria-pressed="${on}">${on ? '🔔 Kutilmoqda' : '🔔 Xabar bering'}</button>`;
@@ -694,12 +755,14 @@ function startShop() {
   /* ---- filtr ---- */
   function applyFilter() {
     const nq = norm(query); let shown = 0;
-    rows.forEach(r => {
-      const ok = (brand === 'Barchasi' || r.p.brand === brand) && (!nq || r.p._key.includes(nq));
-      r.el.hidden = !ok; if (ok) shown++;
+    groups.forEach(g => {
+      let vis = 0;
+      g.recs.forEach(r => { const okT = qtype === 'all' || r.tc === qtype; r.el.hidden = !okT; if (okT) vis++; });
+      const ok = vis > 0 && (brand === 'Barchasi' || g.brand === brand) && (!nq || g.key.includes(nq));
+      g.el.hidden = !ok; if (ok) shown++;
     });
     emptyEl.hidden = shown > 0;
-    $('resultMeta').textContent = shown ? `${shown} ta model` + (brand !== 'Barchasi' ? `, ${brand}` : '') : '';
+    $('resultMeta').textContent = shown ? `${shown} ta model` + (brand !== 'Barchasi' ? `, ${brand}` : '') + (qtype !== 'all' ? `, ${TYPE_LABEL[qtype]}` : '') : '';
   }
   let qt;
   const syncSearch = () => { $('searchBox').classList.toggle('has-text', !!$('q').value); };
@@ -751,7 +814,7 @@ function startShop() {
       const p = byId.get(id), q = cart[id], pr = priceOf(p, w);
       const line = document.createElement('div'); line.className = 'line';
       line.innerHTML = `<div><div class="nm"></div><div class="sub">${q} × ${fmtN(pr)} = <b>${fmt(pr * q)}</b></div></div>${stepperHTML(id, q)}`;
-      line.querySelector('.nm').textContent = `${p.brand} ${p._pm.main}` + (p._pm.alts.length ? ` (+${p._pm.alts.length} mos model)` : '') + (p._pm.tags.includes('Ramkali') ? ', ramkali' : '');
+      line.querySelector('.nm').textContent = `${p.brand} ${p._pm.main}, ${TYPE_LABEL[typeClass(p.type)]}` + (p._pm.alts.length ? ` (+${p._pm.alts.length} mos model)` : '') + (p._pm.tags.includes('Ramkali') ? ', ramkali' : '');
       box.appendChild(line);
     });
     const diff = cartSum(false) - cartSum(true);
