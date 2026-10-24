@@ -151,6 +151,12 @@
     .chip i { font-style: normal; font-size: 11px; color: var(--muted); }
     .chip[aria-pressed="true"] { background: var(--mat); border-color: var(--mat); color: #fff; }
     .chip[aria-pressed="true"] i { color: #9FC9BF; }
+    .chip .bm, .meta .br { display: inline-flex; align-items: center; gap: 5px; }
+    .chip .lg, .meta .lg { display: block; flex: none; }
+    .chip[aria-pressed="true"] .lg, .chip[aria-pressed="true"] .wm { color: #fff !important; }
+    .wm { font-weight: 800; letter-spacing: -0.01em; }
+    .meta .br .lg { color: var(--muted) !important; }
+    .meta .br .wm { color: var(--muted) !important; font-weight: 600; }
 
     .result-meta { padding: 4px 16px 8px; font-size: 12px; color: var(--muted); }
 
@@ -171,9 +177,9 @@
     .var .vinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
     .var .vhead { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
     .var.out .vinfo { opacity: .55; }
-    .type-tag.ips { background: #E8EEF6; color: #2D4A6B; }
+    .type-tag.hd { background: #E8EEF6; color: #2D4A6B; }
     .type-tag.incell { background: #E3F4EF; color: #145244; }
-    .type-tag.premium { background: #FFF0D6; color: #7A4A06; }
+    .type-tag.hdp { background: #FFF0D6; color: #7A4A06; }
     .type-tag.tft { background: #F1EBDD; color: #5E4A1E; }
     .chips.types { padding-top: 6px; }
     .chips.types .chip { height: 30px; padding: 0 12px; font-size: 12.5px; }
@@ -182,8 +188,8 @@
     .glyph { width: 44px; height: 70px; border-radius: 9px; background: #1B2422; position: relative; align-self: start; }
     .glyph::before { content: ""; position: absolute; inset: 3px; border-radius: 6px; }
     .t-oled::before   { background: radial-gradient(circle at 30% 35%, #FF4FA3 0 3px, transparent 4px), radial-gradient(circle at 68% 60%, #4FE0FF 0 3px, transparent 4px), radial-gradient(circle at 40% 78%, #B6FF4F 0 2px, transparent 3px), #000; }
-    .t-ips::before    { background: linear-gradient(160deg, #F4FDFF, #BDEBF8 60%, #8CCFE4); }
-    .t-incell::before { background: linear-gradient(160deg, #E6F1F4, #AFCFD9 65%, #87AEBB); }
+    .t-hd::before     { background: linear-gradient(160deg, #F4FDFF, #BDEBF8 60%, #8CCFE4); }
+    .t-incell::before, .t-hdp::before { background: linear-gradient(160deg, #E6F1F4, #AFCFD9 65%, #87AEBB); }
     .t-tft::before    { background: repeating-linear-gradient(180deg, #F3E9D2 0 5px, #E6D9BC 5px 10px); }
     .t-servis::before { background: linear-gradient(160deg, #2A2F3A, #0B0E14); box-shadow: inset 0 0 0 2px var(--kapton); }
 
@@ -467,7 +473,8 @@ function startShop() {
   function prettyModel(raw, brand) {
     let s = String(raw)
       .replace(/[／]/g, '/').replace(/[（]/g, '(').replace(/[）]/g, ')').replace(/[＋]/g, '+')
-      .replace(/\((yin du|neidan)\)/gi, '').replace(/[\u3400-\u9fff]+/g, '')
+      .replace(/\((yin du|neidan)\)/gi, '').replace(/\(?\s*nei\s*dan\s*\)?/gi, '').replace(/gaoshua/gi, '')
+      .replace(/-Galaxy\s+/gi, '/').replace(/\bGalaxy\s+/gi, '').replace(/[\u3400-\u9fff]+/g, '')
         .replace(/\biq(oo|00)\s*/gi, 'iQOO ')
       .replace(/\s+/g, ' ').trim();
     const tags = new Set();
@@ -475,8 +482,11 @@ function startShop() {
     if (/(^|[\s\-\/])?WF\b|\dWF\b|[A-Z]WF\b/i.test(s)) { tags.add('Ramkali'); s = s.replace(/[\s\-]*WF\b/gi, ''); }
     // iPhone sifat kodlari
     if (/^iphone$/i.test(brand)) {
-      const q = s.match(/-?F-?\((Q[^)]*)\)|-FHD\b/i);
-      if (q) { tags.add(/FHD/i.test(q[0]) ? 'FHD' : 'F(' + q[1].toUpperCase() + ')'); s = s.replace(/-?F-?\(Q[^)]*\)|-FHD\b/gi, ''); }
+      const q = s.match(/-?F-?\(([QX][^)]*)\)|-FHD\b/i);
+      if (q) { tags.add(/FHD/i.test(q[0]) ? 'FHD' : 'F(' + q[1].toUpperCase() + ')'); s = s.replace(/-?F-?\([QX][^)]*\)|-FHD\b/gi, ''); }
+      const gx = s.match(/-GX(-HARD)?\b(\(\))?/i);
+      if (gx) { tags.add(gx[1] ? 'GX Hard' : 'GX'); s = s.replace(/-GX(-HARD)?\b(\(\))?/gi, ''); }
+      s = s.replace(/XSMAX/gi, 'XS Max');
       s = s.replace(/^(\d)(G|P)(W|B)\b/i, (m, n, gp, c) => `${n}${gp.toUpperCase() === 'P' ? ' Plus' : ''} ${c.toUpperCase() === 'W' ? '(oq)' : '(qora)'}`);
     }
     const WORDS = { NOTE:'Note', PRO:'Pro', MAX:'Max', PROMAX:'Pro Max', PLUS:'Plus', LITE:'Lite', MINI:'Mini', ULTRA:'Ultra', PRIME:'Prime', POWER:'Power',
@@ -509,8 +519,20 @@ function startShop() {
       p = p.split(/(\s+|[-()+.])/).map(t => /^[A-Za-z]+\d*[A-Za-z]*$/.test(t) && /[A-Za-z]{2,}/.test(t) && !/\d/.test(t) ? word(t) : (/[a-z]/.test(t) && /\d/.test(t) ? t.toUpperCase() : t)).join('');
       // Samsung: A02S -> A02s
       if (/samsung/i.test(brand)) p = p.replace(/\b([AM]\d{2})S\b/g, '$1s');
+      // qisqartmalarni to'liq yozish: S23U -> S23 Ultra, NEO2 -> Neo 2, GO2023 -> Go 2023, 1+ -> OnePlus
+      p = p.replace(/\bS(\d{2})U\b/g, 'S$1 Ultra').replace(/(\d)ULTRA\b/gi, '$1 Ultra')
+           .replace(/\bNEO(\d)/gi, 'Neo $1').replace(/\bGO(\d{1,4})\b/gi, 'Go $1').replace(/(\d)GO\b/gi, '$1 Go')
+           .replace(/\bSMARK(?=\d)/gi, 'Smart ').replace(/\bSMARTHD\b/gi, 'Smart HD').replace(/(\d)HD\b/g, '$1 HD').replace(/(\d)LTE\b/g, '$1 LTE')
+           .replace(/\bHOTE(?=\d)/gi, 'Hot ').replace(/\bPRO(\d)G\b/gi, 'Pro $1G').replace(/\bPOUVOIR(\d)/gi, 'Pouvoir $1')
+           .replace(/\bSPARKPOWER(\d)/gi, 'Spark Power $1').replace(/\bZEROX\b/gi, 'Zero X').replace(/\bVOSON(\d)/gi, 'Vision $1')
+           .replace(/\bMAIMANG(\d+)/gi, 'Maimang $1').replace(/^1\+\s*/, 'OnePlus ').replace(/^RM\s*/, 'Realme ')
+           .replace(/-(\d{4})\b/g, ' $1').replace(/-(\d)G\b/g, ' $1G').replace(/^(\w+)-(\d)G\b/, '$1 $2G');
+      if (/samsung|vivo/i.test(brand)) p = p.replace(/\b([A-Z]\d{1,3})\s?[Ee]\b/g, '$1e');
+      if (/vivo/i.test(brand)) p = p.replace(/^Vivo\s+/i, '');
+      if (/realme/i.test(brand)) p = p.replace(/^Realme\s+(?=\S)/i, '');
       p = p.replace(/(\d)I\b/g, '$1i').replace(/\(QORA\)/g, '(qora)').replace(/\(OQ\)/g, '(oq)');
-      p = p.replace(/\s{2,}/g, ' ').replace(/\s+([)\]])/g, '$1').replace(/-\s*$/,'').trim();
+      p = p.replace(/\s{2,}/g, ' ').replace(/\s+([)\]])/g, '$1').replace(/-\s*$/,'').trim()
+      p = p.replace(/(\S)\((EU|USA)\)/g, '$1 ($2)');
       if (/huawei/i.test(brand) && /^RY\b/i.test(part.trim())) p = 'Honor ' + p;
       return p;
     };
@@ -527,31 +549,48 @@ function startShop() {
       : /tecno/i.test(brand) ? /^(([A-Z]{1,2}\d{1,4}[A-Za-z]{0,3})+|\d{4}[A-Z]?)$/.test(p)
       : /vivo/i.test(brand) ? /^V\d{4}[A-Z]{0,2}$/.test(p) : false);
     const shown = parts.filter(p => !isCode(p));
-    const vis = shown.length ? shown : parts.slice(0, 1);
+    let vis = shown.length ? shown : parts.slice(0, 1);
+    if (/samsung/i.test(brand)) vis = [...new Set(vis.map(p => p.replace(/^[AMF]\d{3}\s+(?=[AMF]\d)/, '').replace(/^([AMF]\d{2})\d\b/, '$1')))];
     const main = vis[0] || String(raw);
     return { main, alts: vis.slice(1), tags: [...tags] };
   }
   
+  const LOGOS = {"Samsung":["-0.15 10.02 24.3 3.97","M19.8166 10.2808l.0459 2.6934h-.023l-.7793-2.6934h-1.2837v3.3925h.8481l-.0458-2.785h.023l.8366 2.785h1.2264v-3.3925zm-16.149 0l-.6418 3.427h.9284l.4699-3.1175h.0229l.4585 3.1174h.9169l-.6304-3.4269zm5.1805 0l-.424 2.6132h-.023l-.424-2.6132H6.5788l-.0688 3.427h.8596l.023-3.0832h.0114l.573 3.0831h.8711l.5731-3.083h.023l.0228 3.083h.8596l-.0802-3.4269zm-7.2664 2.4527c.0343.0802.0229.1949.0114.2522-.0229.1146-.1031.2292-.3324.2292-.2177 0-.3438-.126-.3438-.3095v-.3323H0v.2636c0 .7679.6074.9971 1.2493.9971.6189 0 1.1346-.2178 1.2149-.7794.0458-.298.0114-.4928 0-.5616-.1605-.722-1.467-.9283-1.5588-1.3295-.0114-.0688-.0114-.1375 0-.1834.023-.1146.1032-.2292.3095-.2292.2063 0 .321.126.321.3095v.2063h.8595v-.2407c0-.745-.6762-.8596-1.1576-.8596-.6074 0-1.1117.2063-1.2034.7564-.023.149-.0344.2866.0114.4585.1376.7106 1.364.9169 1.5358 1.3524m11.152 0c.0343.0803.0228.1834.0114.2522-.023.1146-.1032.2292-.3324.2292-.2178 0-.3438-.126-.3438-.3095v-.3323h-.917v.2636c0 .7564.596.9857 1.2379.9857.6189 0 1.1232-.2063 1.2034-.7794.0459-.298.0115-.4814 0-.5616-.1375-.7106-1.4327-.9284-1.5243-1.318-.0115-.0688-.0115-.1376 0-.1835.0229-.1146.1031-.2292.3094-.2292.1948 0 .321.126.321.3095v.2063h.848v-.2407c0-.745-.6647-.8596-1.146-.8596-.6075 0-1.1004.1948-1.192.7564-.023.149-.023.2866.0114.4585.1376.7106 1.341.9054 1.513 1.3524m2.8882.4585c.2407 0 .3094-.1605.3323-.2522.0115-.0343.0115-.0917.0115-.126v-2.533h.871v2.4642c0 .0688 0 .1948-.0114.2292-.0573.6419-.5616.8482-1.192.8482-.6303 0-1.1346-.2063-1.192-.8482 0-.0344-.0114-.1604-.0114-.2292v-2.4642h.871v2.533c0 .0458 0 .0916.0115.126 0 .0917.0688.2522.3095.2522m7.1518-.0344c.2522 0 .3324-.1605.3553-.2522.0115-.0343.0115-.0917.0115-.126v-.4929h-.3553v-.5043H24v.917c0 .0687 0 .1145-.0115.2292-.0573.6303-.596.8481-1.2034.8481-.6075 0-1.1461-.2178-1.2034-.8481-.0115-.1147-.0115-.1605-.0115-.2293v-1.444c0-.0574.0115-.172.0115-.2293.0802-.6419.596-.8482 1.2034-.8482s1.1347.2063 1.2034.8482c.0115.1031.0115.2292.0115.2292v.1146h-.8596v-.1948s0-.0803-.0115-.1261c-.0114-.0802-.0802-.2521-.3438-.2521-.2521 0-.321.1604-.3438.2521-.0115.0458-.0115.1032-.0115.1605v1.5702c0 .0458 0 .0916.0115.126 0 .0917.0917.2522.3323.2522","#1428A0",1],"iPhone":["2.08 -0.15 19.85 24.3","M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701","#000000",0],"Xiaomi":["-0.15 -0.15 24.3 24.3","M12 0C8.016 0 4.756.255 2.493 2.516.23 4.776 0 8.033 0 12.012c0 3.98.23 7.235 2.494 9.497C4.757 23.77 8.017 24 12 24c3.983 0 7.243-.23 9.506-2.491C23.77 19.247 24 15.99 24 12.012c0-3.984-.233-7.243-2.502-9.504C19.234.252 15.978 0 12 0zM4.906 7.405h5.624c1.47 0 3.007.068 3.764.827.746.746.827 2.233.83 3.676v4.54a.15.15 0 0 1-.152.147h-1.947a.15.15 0 0 1-.152-.148V11.83c-.002-.806-.048-1.634-.464-2.051-.358-.36-1.026-.441-1.72-.458H7.158a.15.15 0 0 0-.151.147v6.98a.15.15 0 0 1-.152.148H4.906a.15.15 0 0 1-.15-.148V7.554a.15.15 0 0 1 .15-.149zm12.131 0h1.949a.15.15 0 0 1 .15.15v8.892a.15.15 0 0 1-.15.148h-1.949a.15.15 0 0 1-.151-.148V7.554a.15.15 0 0 1 .151-.149zM8.92 10.948h2.046c.083 0 .15.066.15.147v5.352a.15.15 0 0 1-.15.148H8.92a.15.15 0 0 1-.152-.148v-5.352a.15.15 0 0 1 .152-.147Z","#FF6900",0],"Huawei":["-0.15 2.81 24.3 18.38","M3.67 6.14S1.82 7.91 1.72 9.78v.35c.08 1.51 1.22 2.4 1.22 2.4 1.83 1.79 6.26 4.04 7.3 4.55 0 0 .06.03.1-.01l.02-.04v-.04C7.52 10.8 3.67 6.14 3.67 6.14zM9.65 18.6c-.02-.08-.1-.08-.1-.08l-7.38.26c.8 1.43 2.15 2.53 3.56 2.2.96-.25 3.16-1.78 3.88-2.3.06-.05.04-.09.04-.09zm.08-.78C6.49 15.63.21 12.28.21 12.28c-.15.46-.2.9-.21 1.3v.07c0 1.07.4 1.82.4 1.82.8 1.69 2.34 2.2 2.34 2.2.7.3 1.4.31 1.4.31.12.02 4.4 0 5.54 0 .05 0 .08-.05.08-.05v-.06c0-.03-.03-.05-.03-.05zM9.06 3.19a3.42 3.42 0 00-2.57 3.15v.41c.03.6.16 1.05.16 1.05.66 2.9 3.86 7.65 4.55 8.65.05.05.1.03.1.03a.1.1 0 00.06-.1c1.06-10.6-1.11-13.42-1.11-13.42-.32.02-1.19.23-1.19.23zm8.299 2.27s-.49-1.8-2.44-2.28c0 0-.57-.14-1.17-.22 0 0-2.18 2.81-1.12 13.43.01.07.06.08.06.08.07.03.1-.03.1-.03.72-1.03 3.9-5.76 4.55-8.64 0 0 .36-1.4.02-2.34zm-2.92 13.07s-.07 0-.09.05c0 0-.01.07.03.1.7.51 2.85 2 3.88 2.3 0 0 .16.05.43.06h.14c.69-.02 1.9-.37 3-2.26l-7.4-.25zm7.83-8.41c.14-2.06-1.94-3.97-1.94-3.98 0 0-3.85 4.66-6.67 10.8 0 0-.03.08.02.13l.04.01h.06c1.06-.53 5.46-2.77 7.28-4.54 0 0 1.15-.93 1.21-2.42zm1.52 2.14s-6.28 3.37-9.52 5.55c0 0-.05.04-.03.11 0 0 .03.06.07.06 1.16 0 5.56 0 5.67-.02 0 0 .57-.02 1.27-.29 0 0 1.56-.5 2.37-2.27 0 0 .73-1.45.17-3.14z","#C7000B",0],"Oppo":["-0.15 9 24.3 6","M2.85 12.786h-.001C1.639 12.774.858 12.2.858 11.321s.781-1.452 1.99-1.465c1.21.013 1.992.588 1.992 1.465s-.782 1.453-1.99 1.465zm.034-3.638h-.073C1.156 9.175 0 10.068 0 11.32s1.156 2.147 2.811 2.174h.073c1.655-.027 2.811-.921 2.811-2.174S4.54 9.175 2.885 9.148zm18.27 3.638c-1.21-.012-1.992-.587-1.992-1.465s.782-1.452 1.991-1.465c1.21.013 1.991.588 1.991 1.465s-.781 1.453-1.99 1.465zm.035-3.638h-.073c-1.655.027-2.811.92-2.811 2.173s1.156 2.147 2.81 2.174h.074C22.844 13.468 24 12.574 24 11.32s-1.156-2.146-2.811-2.173zm-6.126 3.638c-1.21-.012-1.99-.587-1.99-1.465s.78-1.452 1.99-1.465c1.21.013 1.991.588 1.991 1.465s-.781 1.453-1.99 1.465zm.036-3.638h-.073c-.789.013-1.464.222-1.955.574v-.37h-.857v5.5h.857v-1.931c.49.351 1.166.56 1.954.574h.074c1.655-.027 2.81-.921 2.81-2.174s-1.155-2.146-2.81-2.173zm-6.144 3.638c-1.21-.012-1.99-.587-1.99-1.465s.78-1.452 1.99-1.465c1.21.013 1.991.588 1.991 1.465s-.781 1.453-1.99 1.465zm.037-3.638H8.92c-.789.013-1.464.222-1.955.574v-.37h-.856v5.5h.856v-1.931c.491.351 1.166.56 1.955.574a3.728 3.728 0 0 0 .073 0c1.655-.027 2.811-.921 2.811-2.174s-1.156-2.146-2.81-2.173z","#2D683D",1],"Vivo":["-0.15 8.7 24.3 6.59","M19.604 14.101c-1.159 0-1.262-.95-1.262-1.24 0-.29.103-1.242 1.262-1.242h2.062c1.16 0 1.263.951 1.263 1.242 0 .29-.104 1.24-1.263 1.24m-2.062-3.527c-2.142 0-2.333 1.752-2.333 2.287 0 .535.19 2.286 2.333 2.286h2.062c2.143 0 2.334-1.751 2.334-2.286 0-.535-.19-2.287-2.334-2.287m-5.477.107c-.286 0-.345.05-.456.213-.11.164-2.022 3.082-2.022 3.082-.06.09-.126.126-.206.126-.08 0-.145-.036-.206-.126 0 0-1.912-2.918-2.022-3.082-.11-.164-.17-.213-.456-.213h-.668c-.154 0-.224.12-.127.267l2.283 3.467c.354.521.614.732 1.196.732s.842-.21 1.196-.732l2.284-3.467c.096-.146.026-.267-.128-.267m-8.876.284c0-.203.08-.284.283-.284h.505c.203 0 .283.08.283.283v3.9c0 .202-.08.283-.283.283h-.505c-.203 0-.283-.08-.283-.283zm-1.769-.285c-.287 0-.346.05-.456.213-.11.164-2.022 3.082-2.022 3.082-.061.09-.126.126-.206.126-.08 0-.145-.036-.206-.126 0 0-1.912-2.918-2.023-3.082-.11-.164-.169-.213-.455-.213H.175c-.171 0-.224.12-.127.267l2.283 3.467c.355.521.615.732 1.197.732.582 0 .842-.21 1.196-.732l2.283-3.467c.097-.146.044-.267-.127-.267m1.055-.893c-.165-.164-.165-.295 0-.46l.351-.351c.165-.165.296-.165.46 0l.352.351c.165.165.165.296 0 .46l-.352.352c-.164.165-.295.165-.46 0z","#415FFF",1],"Honor":["-0.15 9.54 24.3 4.92","M2.601 9.753v1.823H.807V9.753H0v4.498h.807v-1.874h1.794v1.874h.807V9.753h-.807Zm18.671.801h.898c.369 0 .667.297.667.662a.665.665 0 0 1-.667.663h-.898v-1.325Zm-.806-.801v4.498h.806v-2.002l1.68 2.002H24l-1.376-1.64a1.462 1.462 0 0 0-.444-2.858h-1.716.002Zm-7.63-.014v2.807l-1.959-2.807h-.644v4.498h.807v-2.82l1.968 2.82h.633V9.739h-.805Zm-7.532 2.26c0-.832.68-1.506 1.517-1.506A1.51 1.51 0 0 1 8.337 12c0 .832-.679 1.506-1.516 1.506-.403 0-.789-.159-1.073-.441A1.504 1.504 0 0 1 5.304 12v-.001ZM4.497 12c0 .933.566 1.774 1.434 2.132.869.357 1.868.16 2.533-.5.664-.66.863-1.653.503-2.515a2.324 2.324 0 0 0-2.146-1.425 2.316 2.316 0 0 0-2.323 2.307L4.497 12Zm11.04-.001a1.513 1.513 0 0 1 1.518-1.506c.838 0 1.516.675 1.516 1.507a1.513 1.513 0 0 1-1.518 1.506c-.402 0-.788-.159-1.072-.441a1.5 1.5 0 0 1-.444-1.066ZM14.73 12c0 .933.566 1.774 1.434 2.132.868.357 1.868.16 2.532-.5.665-.66.864-1.653.504-2.515a2.325 2.325 0 0 0-2.147-1.425 2.316 2.316 0 0 0-2.323 2.307V12Z","#000000",1]};
+  // [viewBox, path, rang, faqat logo (yozuvsiz)]; vektor logosi yo'q brendlar rangli yozuv bilan chiqadi
+  const WORDMARK = { 'Redmi': '#E4002B', 'Tecno & Infinix': '#1F4FD8', 'Realme': '#C99A00' };
+  function brandMark(b, h) {
+    const L = LOGOS[b];
+    if (L) {
+      const [vb, d, c, onlyLogo] = L, w = vb.split(' ').map(Number);
+      const svg = '<svg class="lg" viewBox="' + vb + '" style="height:' + h + 'px;width:' + (h * w[2] / w[3]).toFixed(1) + 'px;color:' + c + '" aria-hidden="true"><path fill="currentColor" d="' + d + '"/></svg>';
+      return onlyLogo ? svg : svg + '<span>' + b + '</span>';
+    }
+    return '<span class="wm" style="color:' + (WORDMARK[b] || 'inherit') + '">' + b + '</span>';
+  }
+
   const products = SOURCE.map(p => { const pm = prettyModel(p.name, p.brand);
     return { ...p, _pm: pm, _key: norm([p.brand, p.name, pm.main, ...pm.alts].join(' ')) }; });
   const byId = new Map(products.map(p => [String(p.id), p]));
 
-  const typeClass = (t) => /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'premium' : /incell/i.test(t) ? 'incell' : 'ips';
-  const TYPE_LABEL = { ips: 'IPS', incell: 'Incell', premium: 'Premium', oled: 'OLED', tft: 'TFT', servis: 'Servis' };
-  const TYPE_NOTE = { ips: 'Arzon, kundalik taʼmir', incell: 'Arzon, kundalik taʼmir', premium: 'Originalga yaqin rang', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi' };
-  const TYPE_ORDER = ['ips', 'incell', 'tft', 'premium', 'oled', 'servis'];
+  // Sifat: kod oxiri G (ARG, AHG, AVG, ASI, ACT) = HD, J (ARJ, ASJ, AHJ, AVJ, ACJ) = HD+; iPhone AII = Incell
+  const typeClass = (t, b) => /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
+  const TYPE_LABEL = { hd: 'HD', hdp: 'HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis' };
+  const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
+  const TYPE_NOTE = { hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi' };
+  const typeNote = (tc) => (TYPE_RES[tc] ? TYPE_RES[tc] + ' · ' : '') + TYPE_NOTE[tc];
+  const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'servis'];
 
   /* ---- bir xil model (turli sifat) bitta qatorga yig'iladi ---- */
   const tokSet = (p) => new Set([p._pm.main, ...p._pm.alts].map(norm));
   const similar = (a, b) => { let n = 0; a.forEach(x => { if (b.has(x)) n++; }); return n / Math.max(1, Math.min(a.size, b.size)) >= 0.5; };
   const groups = [];
   products.forEach(p => {
-    const k = [p.brand, norm(p._pm.main), p._pm.tags.join(',')].join('|'), ts = tokSet(p), tc = typeClass(p.type);
-    const g = groups.find(g => g.k === k && !g.vars.some(v => typeClass(v.type) === tc) && similar(g.ts, ts));
+    const k = [p.brand, norm(p._pm.main), p._pm.tags.join(',')].join('|'), ts = tokSet(p), tc = typeClass(p.type, p.brand);
+    const g = groups.find(g => g.k === k && !g.vars.some(v => typeClass(v.type, v.brand) === tc) && similar(g.ts, ts));
     if (g) { g.vars.push(p); ts.forEach(x => g.ts.add(x)); g.key += ' ' + p._key; }
     else groups.push({ k, ts, vars: [p], key: p._key, brand: p.brand });
   });
-  groups.forEach(g => g.vars.sort((a, b) => TYPE_ORDER.indexOf(typeClass(a.type)) - TYPE_ORDER.indexOf(typeClass(b.type)) || a.retail - b.retail));
+  groups.forEach(g => g.vars.sort((a, b) => TYPE_ORDER.indexOf(typeClass(a.type, a.brand)) - TYPE_ORDER.indexOf(typeClass(b.type, b.brand)) || a.retail - b.retail));
 
   /* ---- saqlash: localStorage (shu qurilma) + Telegram CloudStorage (hamma qurilmada) ---- */
   const cloud = tg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9') ? tg.CloudStorage : null;
@@ -607,7 +646,9 @@ function startShop() {
     if (!n) return;
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(b === brand));
-    const label = document.createElement('span'); label.textContent = b;
+    el.setAttribute('aria-label', b + ', ' + n + ' ta model');
+    const label = document.createElement('span'); label.className = 'bm';
+    if (b === 'Barchasi') label.textContent = b; else label.innerHTML = brandMark(b, LOGOS[b] && LOGOS[b][3] ? 13 : 16);
     const cnt = document.createElement('i'); cnt.textContent = n;
     el.append(label, cnt);
     el.onclick = () => {
@@ -622,8 +663,8 @@ function startShop() {
 
   /* ---- sifat turi chiplari ---- */
   const typeChips = $('typeChips');
-  const DOT = { ips: '#2D4A6B', incell: '#145244', premium: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608' };
-  ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type) === t))].forEach(t => {
+  const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608' };
+  ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type, p.brand) === t))].forEach(t => {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(t === qtype));
     if (t !== 'all') { const d = document.createElement('span'); d.className = 'dot'; d.style.background = DOT[t]; el.appendChild(d); }
@@ -645,14 +686,14 @@ function startShop() {
     const el = document.createElement('article');
     el.className = 'row grp';
     el.innerHTML = `
-      <div class="glyph t-${typeClass(p.type)}" aria-hidden="true"></div>
+      <div class="glyph t-${typeClass(p.type, p.brand)}" aria-hidden="true"></div>
       <div class="info">
         <div class="meta"><span class="br"></span></div>
         <div class="name"></div>
         <div class="alts" hidden></div>
       </div>
       <div class="vars"></div>`;
-    el.querySelector('.br').textContent = p.brand;
+    const br = el.querySelector('.br'); br.innerHTML = brandMark(p.brand, LOGOS[p.brand] && LOGOS[p.brand][3] ? 9 : 12); br.setAttribute('role', 'img'); br.setAttribute('aria-label', p.brand);
     el.querySelector('.name').textContent = p._pm.main;
     p._pm.tags.forEach(t => { const tag = document.createElement('span'); tag.className = 'type-tag' + (t === 'Ramkali' ? ' frame' : ''); tag.textContent = t; el.querySelector('.meta').appendChild(tag); });
     const alts = [...new Set(g.vars.flatMap(v => v._pm.alts))].filter(a => a !== p._pm.main);
@@ -665,13 +706,13 @@ function startShop() {
     g.el = el; g.recs = [];
     const box = el.querySelector('.vars');
     g.vars.forEach(v => {
-      const tc = typeClass(v.type);
+      const tc = typeClass(v.type, v.brand);
       const out = typeof v.stock === 'number' && v.stock <= 0;
       const ve = document.createElement('div');
       ve.className = 'var' + (out ? ' out' : '');
       ve.innerHTML = `<div class="vinfo"><div class="vhead"><span class="type-tag ${tc}"></span><span class="vnote"></span></div><div class="price"></div></div><div class="act"></div>`;
       ve.querySelector('.type-tag').textContent = TYPE_LABEL[tc];
-      ve.querySelector('.vnote').textContent = TYPE_NOTE[tc];
+      ve.querySelector('.vnote').textContent = typeNote(tc);
       box.appendChild(ve);
       const r = { el: ve, p: v, out, g, tc, priceEl: ve.querySelector('.price'), actEl: ve.querySelector('.act') };
       g.recs.push(r); rows.set(String(v.id), r);
@@ -814,7 +855,7 @@ function startShop() {
       const p = byId.get(id), q = cart[id], pr = priceOf(p, w);
       const line = document.createElement('div'); line.className = 'line';
       line.innerHTML = `<div><div class="nm"></div><div class="sub">${q} × ${fmtN(pr)} = <b>${fmt(pr * q)}</b></div></div>${stepperHTML(id, q)}`;
-      line.querySelector('.nm').textContent = `${p.brand} ${p._pm.main}, ${TYPE_LABEL[typeClass(p.type)]}` + (p._pm.alts.length ? ` (+${p._pm.alts.length} mos model)` : '') + (p._pm.tags.includes('Ramkali') ? ', ramkali' : '');
+      line.querySelector('.nm').textContent = `${p.brand} ${p._pm.main}, ${TYPE_LABEL[typeClass(p.type, p.brand)]}` + (p._pm.alts.length ? ` (+${p._pm.alts.length} mos model)` : '') + (p._pm.tags.includes('Ramkali') ? ', ramkali' : '');
       box.appendChild(line);
     });
     const diff = cartSum(false) - cartSum(true);
