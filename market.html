@@ -479,6 +479,7 @@ function startShop() {
       if (!p) return '';
       p = p.replace(/^(RY|XM)\s*/i, '');
       if (/redmi/i.test(brand)) p = p.replace(/^HM\s*/i, 'Redmi ');
+      if (/tecno/i.test(brand)) p = p.replace(/^(Tecno|Infinix|Itel)\s+/i, '');
       if (/tecno/i.test(brand)) p = p.replace(/\s*\((?:[A-Z]{1,2}\d{1,4}[A-Z]{0,3}[^)]*)\)?/gi, '');
       if (/vivo/i.test(brand)) p = p.replace(/\s*-\s*V\d{4}[A-Z]{0,2}\b/gi, '');                       // RY = Honor, XM = Xiaomi
       // so'z va raqam orasiga bo'sh joy: NOTE8 -> NOTE 8, 13PROMAX -> 13 PROMAX, HOT12PLAY -> HOT 12 PLAY
@@ -507,7 +508,7 @@ function startShop() {
     // Zavod kodlari (X6882, KG5K, A105...) ko'rinmaydi, lekin qidiruvda qoladi
     const isCode = (p) => /^[A-Z]$/i.test(p) || /[().]/.test(p) && !/\s/.test(p)
       || (/samsung/i.test(brand) ? /^[AMJFSG]\d{3}[A-Z]{0,3}$/.test(p)
-      : /tecno/i.test(brand) ? /^([A-Z]{1,2}\d{1,4}[A-Za-z]{0,3}|\d{4}[A-Z]?)$/.test(p)
+      : /tecno/i.test(brand) ? /^(([A-Z]{1,2}\d{1,4}[A-Za-z]{0,3})+|\d{4}[A-Z]?)$/.test(p)
       : /vivo/i.test(brand) ? /^V\d{4}[A-Z]{0,2}$/.test(p) : false);
     const shown = parts.filter(p => !isCode(p));
     const vis = shown.length ? shown : parts.slice(0, 1);
