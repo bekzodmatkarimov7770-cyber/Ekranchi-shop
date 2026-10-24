@@ -182,6 +182,7 @@
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
     .alts.open { -webkit-line-clamp: unset; display: block; }
     .alts b { font-weight: 600; color: #3E4B48; }
+    .alts .more { border: 0; background: none; color: var(--mat); font-weight: 600; padding: 0 0 0 4px; font-size: inherit; cursor: pointer; }
     .type-tag.frame { background: #FFF6E6; color: #8A5608; }
     .price { display: flex; align-items: baseline; column-gap: 8px; flex-wrap: wrap; }
     .price b { font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
@@ -477,7 +478,9 @@ function startShop() {
       let p = part.trim();
       if (!p) return '';
       p = p.replace(/^(RY|XM)\s*/i, '');
-      if (/redmi/i.test(brand)) p = p.replace(/^HM\s*/i, 'Redmi ');                       // RY = Honor, XM = Xiaomi
+      if (/redmi/i.test(brand)) p = p.replace(/^HM\s*/i, 'Redmi ');
+      if (/tecno/i.test(brand)) p = p.replace(/\s*\((?:[A-Z]{1,2}\d{1,4}[A-Z]{0,3}[^)]*)\)?/gi, '');
+      if (/vivo/i.test(brand)) p = p.replace(/\s*-\s*V\d{4}[A-Z]{0,2}\b/gi, '');                       // RY = Honor, XM = Xiaomi
       // so'z va raqam orasiga bo'sh joy: NOTE8 -> NOTE 8, 13PROMAX -> 13 PROMAX, HOT12PLAY -> HOT 12 PLAY
       p = p.replace(/\b(NOTE|HOT|SPARK|CAMON|POVA|POP|SMART|NOVA|NARZO|REALME|REAIME|RENO|ZERO|MAGIC|MI|POCO|VISION|VISON|PLAY|GT|GO)(?=\d)/gi, '$1 ')
            .replace(/(\d[A-Z]?)(PROMAX|PRO|MAX|PLUS|LITE|MINI|PRIME|POWER|PLAY|NEO|AIR|SE|VIP|CORE|INDIA|NEW)/gi, '$1 $2')
@@ -501,11 +504,15 @@ function startShop() {
       if (!seen.has(p.toLowerCase())) { seen.add(p.toLowerCase()); parts.push(p); }
     });
     // Asosiy nom sifatida ichki kod emas, tanish model nomini tanlaymiz
-    const isCode = (p) => /samsung/i.test(brand) ? /^[AMJFS]\d{3}[A-Z]{0,2}$/.test(p)
-      : /tecno/i.test(brand) ? /^([A-Z]{2}\d{1,3}[A-Z]{0,2}|S\d{3}[A-Z]{0,2}|\d{4}[A-Z]?)$/.test(p) : false;
-    const mi = Math.max(0, parts.findIndex(p => !isCode(p)));
-    const main = parts[mi] || String(raw);
-    return { main, alts: parts.filter((_, i) => i !== mi), tags: [...tags] };
+    // Zavod kodlari (X6882, KG5K, A105...) ko'rinmaydi, lekin qidiruvda qoladi
+    const isCode = (p) => /^[A-Z]$/i.test(p) || /[().]/.test(p) && !/\s/.test(p)
+      || (/samsung/i.test(brand) ? /^[AMJFSG]\d{3}[A-Z]{0,3}$/.test(p)
+      : /tecno/i.test(brand) ? /^([A-Z]{1,2}\d{1,4}[A-Za-z]{0,3}|\d{4}[A-Z]?)$/.test(p)
+      : /vivo/i.test(brand) ? /^V\d{4}[A-Z]{0,2}$/.test(p) : false);
+    const shown = parts.filter(p => !isCode(p));
+    const vis = shown.length ? shown : parts.slice(0, 1);
+    const main = vis[0] || String(raw);
+    return { main, alts: vis.slice(1), tags: [...tags] };
   }
   
   const products = SOURCE.map(p => { const pm = prettyModel(p.name, p.brand);
@@ -604,7 +611,11 @@ function startShop() {
     el.querySelector('.name').textContent = p._pm.main;
     p._pm.tags.forEach(t => { const tag = document.createElement('span'); tag.className = 'type-tag' + (t === 'Ramkali' ? ' frame' : ''); tag.textContent = t; el.querySelector('.meta').appendChild(tag); });
     if (p._pm.alts.length) { const a = el.querySelector('.alts'); a.hidden = false;
-      a.innerHTML = '<b>Mos keladi:</b> '; a.appendChild(document.createTextNode(p._pm.alts.join(', '))); a.title = 'Toʻliq roʻyxat'; }
+      const few = p._pm.alts.slice(0, 4), more = p._pm.alts.length - few.length;
+      a.innerHTML = '<b>Mos keladi:</b> '; a.appendChild(document.createTextNode(few.join(', ')));
+      if (more > 0) { const b = document.createElement('button'); b.type = 'button'; b.className = 'more'; b.textContent = `+${more} ta`;
+        b.onclick = (e) => { e.stopPropagation(); a.lastChild.remove(); a.lastChild.textContent = p._pm.alts.join(', '); }; a.appendChild(b); }
+      a.title = 'Toʻliq roʻyxat'; }
     rows.set(String(p.id), { el, p, out, priceEl: el.querySelector('.price'), actEl: el.querySelector('.act') });
     frag.appendChild(el);
   });
