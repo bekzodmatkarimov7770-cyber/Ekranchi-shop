@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from html import escape
-import json, os, io, csv, hmac, hashlib, time, logging, re, requests
+import json, os, io, hmac, hashlib, time, logging, re, requests
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ekranchi")
@@ -1203,24 +1203,20 @@ def handle_order(m):
         is_wholesale = t_qty >= WHOLESALE_MIN
         pt = "Optom" if is_wholesale else "Chakana"
 
-        csv_buffer = io.StringIO()
-        writer = csv.writer(csv_buffer)
-        writer.writerow(["№", "Model nomi", "Soni", "Narxi (UZS)", "Umumiy summa (UZS)"])
+        xlsx_rows = []
         payload_items, items_txt, t_sum = [], "", 0
         for idx, (item_id, q) in enumerate(clean_ok.items(), 1):
             cat = catalog[item_id]
             price = int(cat['wholesale'] if is_wholesale else cat['retail'])
             subtotal = q * price
             t_sum += subtotal
-            writer.writerow([idx, cat['name'], q, price, subtotal])
+            xlsx_rows.append((cat.get('brand', ''), cat['name'], q, price, subtotal))
             payload_items.append({"id": item_id, "n": cat['name'], "oq": q, "aq": q, "rq": q, "p": price,
                                   "asked": clean[item_id]})
             if idx <= 15:
                 items_txt += f"• <b>{h(cat['name'][:30])}</b>: {q} dona\n"
             elif idx == 16:
                 items_txt += f"<i>... va yana (jami {len(clean_ok)} xil model)</i>\n"
-        writer.writerow([])
-        writer.writerow(["", "JAMI", t_qty, "", t_sum])
 
         oid = next_order_id()
         save_order(cid, {"id": oid, "cid": cid, "created": now_ms(), "status": "yangi",
@@ -1230,8 +1226,7 @@ def handle_order(m):
                          "qty": t_qty, "total": t_sum, "items": payload_items, "note": "",
                          "stock_reserved": True})
 
-        csv_file = io.BytesIO(csv_buffer.getvalue().encode('utf-8-sig'))
-        csv_file.name = f"Buyurtma_{oid}.csv"
+        csv_file = build_order_xlsx(oid, xlsx_rows, t_qty, t_sum)
 
         client_txt = (
             f"🛒 <b>Buyurtmangiz #{oid} qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
@@ -1271,7 +1266,7 @@ def handle_order(m):
                 f"💬 <i>To'lovni mijoz bilan o'zingiz kelishasiz</i>\n"
                 + (f"⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
                 f"━━━━━━━━━━━━━━━━━━━\n"
-                f"📥 <i>To'liq ro'yxat pastdagi Excel (.csv) faylda 👇</i>"
+                f"📥 <i>To'liq ro'yxat pastdagi Excel (.xlsx) faylda 👇</i>"
             )
             try:
                 bot.send_document(ADMIN_ID, document=csv_file, caption=admin_txt,
@@ -1283,6 +1278,47 @@ def handle_order(m):
         log.exception("handle_order")
         notify_admin(f"⚠️ Buyurtmani qayta ishlashda xato ({cid}): {h(e)}")
         safe_send(cid, "⚠️ Texnik xato yuz berdi. Admin bilan bog'laning, buyurtmangizni qo'lda qabul qilamiz.")
+
+
+def build_order_xlsx(oid, rows, t_qty, t_sum):
+    """Buyurtma fayli: Seriya | Model | Soni | Narxi | Umumiy narxi (+ JAMI qatori)."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Buyurtma {oid}"[:31]
+    ws.append(["Seriya", "Model", "Soni", "Narxi", "Umumiy narxi"])
+    for r in rows:
+        ws.append(list(r))
+    last = ws.max_row
+    ws.append(["JAMI", "", t_qty, "", t_sum])
+    thin = Side(style="thin", color="BFC8C5")
+    head_fill = PatternFill("solid", fgColor="123F38")
+    for c in ws[1]:
+        c.font = Font(bold=True, color="FFFFFF")
+        c.fill = head_fill
+        c.alignment = Alignment(horizontal="center", vertical="center")
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+        for c in row:
+            c.border = Border(top=thin, bottom=thin, left=thin, right=thin)
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=4, max_col=5):
+        for c in row:
+            c.number_format = '#,##0'
+    for c in ws[ws.max_row]:
+        c.font = Font(bold=True)
+        c.fill = PatternFill("solid", fgColor="FFF0D6")
+    ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=2)
+    for col, w in zip("ABCDE", (16, 48, 8, 12, 16)):
+        ws.column_dimensions[col].width = w
+    for row in ws.iter_rows(min_row=2, max_row=last, min_col=2, max_col=2):
+        for c in row:
+            c.alignment = Alignment(wrap_text=True, vertical="top")
+    ws.freeze_panes = "A2"
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    buf.name = f"Buyurtma_{oid}.xlsx"
+    return buf
 
 
 def show_missing_menu_screen(chat_id, message_id, p, cid):
