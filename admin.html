@@ -147,6 +147,10 @@
     .p-meta { font-size: 12px; color: var(--muted); }
     .p-name { font-weight: 600; font-size: 14px; line-height: 1.3; margin-top: 2px; word-break: break-word; }
     .p-fields { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 8px; margin-top: 10px; }
+    .p-img { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+    .p-img img { width: 34px; height: 46px; object-fit: cover; border-radius: 6px; border: 1px solid var(--hair); flex: none; background: #f3f5f2; }
+    .p-img input { flex: 1; min-width: 0; height: 36px; border: 1.5px solid var(--hair); border-radius: 9px; padding: 0 8px; font-size: 13px; background: #fff; }
+    .p-img input.bad { border-color: var(--danger); }
     .p-fields label { font-size: 11.5px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 3px; }
     .p-fields input { width: 100%; height: 40px; border: 1.5px solid var(--hair); border-radius: 9px; padding: 0 8px; font-size: 15px; font-weight: 600; background: #fff; font-variant-numeric: tabular-nums; }
     .p-fields input:focus { outline: 0; border-color: var(--mat); }
@@ -621,6 +625,7 @@
       return !q || (p.id + ' ' + val(p, 'name')).toLowerCase().replace(/[\s/]+/g, '').includes(q);
     });
   }
+  const okImg = (u) => /^https:\/\/\S+$/.test(u || '') && String(u).length <= 500;
   function prodHTML(p) {
     const st = +val(p, 'stock'), hid = val(p, 'active') === false;
     return `<article class="prod${edits.has(p.id) ? ' dirty' : ''}${hid ? ' hidden-p' : ''} ${st <= 0 ? 'stock-0' : st <= LOW ? 'stock-low' : ''}" data-pid="${esc(p.id)}">
@@ -632,7 +637,9 @@
         <div><label>Optom</label><input type="number" inputmode="numeric" data-f="wholesale" value="${val(p, 'wholesale')}"></div>
         <div><label>Qoldiq${st <= 0 ? ' (tugagan)' : ''}</label><div class="qty"><button type="button" data-step="-1" aria-label="Kamaytirish">−</button>
           <input type="number" inputmode="numeric" data-f="stock" value="${st}" aria-label="Qoldiq"><button type="button" data-step="1" aria-label="Koʻpaytirish">+</button></div></div>
-      </div></article>`;
+      </div>
+      <div class="p-img">${okImg(val(p, 'img')) ? `<img src="${esc(val(p, 'img'))}" alt="" loading="lazy">` : ''}
+        <input type="url" inputmode="url" data-img placeholder="Rasm havolasi (https://…), ixtiyoriy" value="${esc(val(p, 'img') || '')}" aria-label="Rasm havolasi"></div></article>`;
   }
   function renderProducts() {
     if (!catalog) return;
@@ -645,7 +652,7 @@
   function setEdit(pid, k, v) {
     const p = catalog.find(x => x.id === pid); if (!p) return;
     const e = { ...(edits.get(pid) || {}) };
-    if (String(p[k]) === String(v)) delete e[k]; else e[k] = v;
+    if (String(p[k] ?? '') === String(v)) delete e[k]; else e[k] = v;
     Object.keys(e).length ? edits.set(pid, e) : edits.delete(pid);
     const el = document.querySelector(`.prod[data-pid="${CSS.escape(pid)}"]`);
     if (el) { el.classList.toggle('dirty', edits.has(pid)); const st = +val(p, 'stock');
@@ -657,6 +664,12 @@
     $('saveBar').hidden = !show; $('saveTxt').textContent = `${edits.size} ta modelda oʻzgarish`;
   }
   $('products').addEventListener('input', e => {
+    if ('img' in e.target.dataset) {
+      const v = e.target.value.trim(), ok = v === '' || okImg(v);
+      e.target.classList.toggle('bad', !ok);
+      if (ok) setEdit(e.target.closest('.prod').dataset.pid, 'img', v);
+      return;
+    }
     const f = e.target.dataset.f; if (!f) return;
     const pid = e.target.closest('.prod').dataset.pid;
     const n = e.target.value === '' ? NaN : Math.round(+e.target.value);

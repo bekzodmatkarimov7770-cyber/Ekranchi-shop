@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from html import escape
-import json, os, io, csv, hmac, hashlib, time, logging, requests
+import json, os, io, csv, hmac, hashlib, time, logging, re, requests
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ekranchi")
@@ -22,7 +22,7 @@ log = logging.getLogger("ekranchi")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
-WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v6")
+WEB_APP_URL = os.environ.get("WEB_APP_URL", "https://bekzodmatkarimov7770-cyber.github.io/Ekranchi-shop/market.html?v=wow_v7")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "").lstrip("@").strip()
 PAYMENT_TEXT = "💬 <b>To'lov masalasida admin siz bilan o'zi bog'lanadi.</b> Savollar bo'lsa, pastdagi tugma orqali adminga yozing."
 
@@ -663,7 +663,8 @@ def store_all(name):
         return {}
 
 # ===================== KATALOG: narx va qoldiq bazada =====================
-PRODUCT_FIELDS = ("brand", "type", "name", "retail", "wholesale", "active")
+PRODUCT_FIELDS = ("brand", "type", "name", "retail", "wholesale", "active", "img")
+IMG_RE = re.compile(r"^https://[^\s\"'<>]{4,490}$")
 
 def _set_many(name, mapping):
     if not mapping:
@@ -927,12 +928,35 @@ def save_order(key, p):
 def order_cid(key, p):
     return str((p or {}).get("cid") or key)
 
+def rereserve_order_stock(p):
+    """Bekor qilingan buyurtma qayta tiklanganda tovarlarni ombordan yana band qiladi.
+    Omborda yetmasa, bor qismi olinadi va mavjud son (aq) shunga tushiriladi. Yetmagan modellar ro'yxatini qaytaradi."""
+    if not p or not p.get("stock_reserved") or not p.get("stock_returned"):
+        return []
+    short = []
+    for it in p.get("items", []):
+        want = int(it.get("rq", it.get("aq", 0)) or 0)
+        got = reserve_stock(it["id"], want) if want > 0 else 0
+        it["rq"] = got
+        if got < int(it.get("aq", 0) or 0):
+            it["aq"] = got
+        if got < want:
+            short.append(f"{it.get('n', it['id'])}: {want} o'rniga {got} ta")
+    p["stock_returned"] = False
+    p["total"], p["qty"] = order_summary(p)
+    return short
+
 def set_status(p, status, note=None, by="bot"):
     if not p or not p.get("id") or status not in STATUSES:
         return p
     if p.get("status") != status or note:
         if status == "bekor":
             release_order_stock(p, by)
+        elif p.get("status") == "bekor":
+            short = rereserve_order_stock(p)
+            if short:
+                note = ((note + " | ") if note else "") + "Omborda yetmadi: " + "; ".join(short)[:300]
+                notify_admin(f"⚠️ <b>#{h(p['id'])} qayta tiklandi, lekin omborda yetmadi:</b>\n" + "\n".join(h(x) for x in short[:15]))
         p["status"] = status
         p.setdefault("history", []).append({"t": now_ms(), "s": status, "by": by, **({"note": note} if note else {})})
         save_order(p["cid"], p)
@@ -1324,9 +1348,22 @@ def handle_change_qty(c):
     idx, val = int(idx), int(val)
     p = get_payload(cid)
     if not p or idx >= len(p.get('items', [])): return bot.answer_callback_query(c.id, "Xato!")
+    if p.get('status') == 'bekor':
+        return bot.answer_callback_query(c.id, "Buyurtma bekor qilingan, tarkibini o'zgartirib bo'lmaydi.", show_alert=True)
     item = p['items'][idx]
     oq, cur = item.get('oq', 1), item.get('aq', 1)
-    item['aq'] = max(0, min(oq, cur + val)) if action == 'st' else max(0, min(oq, val))
+    new = max(0, min(oq, cur + val)) if action == 'st' else max(0, min(oq, val))
+    # "Mijozga yuborish"dan keyin kamaytirilgan qism omborga qaytgan bo'ladi: ko'paytirilsa, yana band qilamiz
+    held = int(item.get('rq', oq) or 0)
+    if p.get('stock_reserved') and not p.get('stock_returned') and new > held:
+        got = reserve_stock(item['id'], new - held)
+        item['rq'] = held + got
+        if got < new - held:
+            new = held + got
+            bot.answer_callback_query(c.id, f"Omborda faqat {got} ta qo'shimcha bor edi", show_alert=True)
+            item['aq'] = new; save_order(cid, p)
+            return show_edit_item_screen(c.message.chat.id, c.message.message_id, p, idx, cid)
+    item['aq'] = new
     save_order(cid, p)
     bot.answer_callback_query(c.id, f"Mavjud: {item['aq']} ta")
     show_edit_item_screen(c.message.chat.id, c.message.message_id, p, idx, cid)
@@ -1407,16 +1444,25 @@ def handle_receipt(m):
     cid = str(m.chat.id)
     if is_admin(cid):
         return
+    if not ADMIN_ID:
+        return
     phone = get_user(cid).get('phone')
+    order = get_payload(cid)
+    if not order:
+        bot.reply_to(m, "ℹ️ Sizda faol buyurtma yo'q. Avval «🛍 Do'konni ochish» orqali buyurtma bering.",
+                     reply_markup=main_kb())
+        return
     kb = InlineKeyboardMarkup(row_width=2)
-    kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{cid}:today"),
-           InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{cid}:tomorrow"),
-           InlineKeyboardButton("❌ To'lov tushmadi", callback_data=f"pay:{cid}:fake"))
+    key = order.get("id") or cid  # aniq buyurtma ID si: mijoz yangi buyurtma bersa ham tugma eskisiga tegadi
+    kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{key}:today"),
+           InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{key}:tomorrow"),
+           InlineKeyboardButton("❌ To'lov tushmadi", callback_data=f"pay:{key}:fake"))
     try:
         bot.send_photo(ADMIN_ID, m.photo[-1].file_id,
-                       caption=f"📷 <b>MIJOZDAN RASM KELDI</b> {('#' + h(get_payload(cid).get('id', ''))) if get_payload(cid) else ''}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
+                       caption=f"📷 <b>MIJOZDAN RASM KELDI</b> #{h(order.get('id', ''))}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
                        reply_markup=kb, parse_mode="HTML")
-        set_status(get_payload(cid), "chek", by="mijoz")
+        if order.get("status") in ("yangi", "chek"):
+            set_status(order, "chek", by="mijoz")
         bot.reply_to(m, "✅ Rasm adminga yuborildi, tez orada javob beradi.")
     except Exception:
         log.exception("receipt forward")
@@ -1480,7 +1526,7 @@ def handle_panel(m):
 def public_catalog():
     cat = get_catalog()
     items = sorted(cat.values(), key=lambda p: (-int(p.get("stock", 0) > 0), int(p["id"]) if str(p["id"]).isdigit() else 0))
-    resp = jsonify({"products": [{k: p.get(k) for k in ("id", "brand", "type", "name", "retail", "wholesale", "stock")} for p in items],
+    resp = jsonify({"products": [{k: p.get(k) for k in ("id", "brand", "type", "name", "retail", "wholesale", "stock", "img") if k != "img" or p.get("img")} for p in items],
                     "wholesale_min": WHOLESALE_MIN, "now": now_ms()})
     resp.headers["Cache-Control"] = "public, s-maxage=10, stale-while-revalidate=30"
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -1526,6 +1572,11 @@ def admin_api():
                 errors.append(f"{pid}: topilmadi"); continue
             for k in ("brand", "type", "name"):
                 if k in ch: base[k] = str(ch[k]).strip()[:200]
+            if "img" in ch:
+                img = str(ch["img"] or "").strip()
+                if img and not IMG_RE.match(img):
+                    errors.append(f"{base.get('name') or pid}: rasm havolasi https:// bilan boshlanishi kerak"); continue
+                base["img"] = img
             for k in ("retail", "wholesale"):
                 if k in ch:
                     v = _int_or_none(ch[k])
