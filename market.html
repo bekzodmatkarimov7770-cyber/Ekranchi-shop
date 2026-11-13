@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Ekranchi_Bola — displeylar ombori</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="data.js?v=wow_v5"></script>
+  <script src="data.js?v=wow_v7"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -157,6 +157,36 @@
     .wm { font-weight: 800; letter-spacing: -0.01em; }
     .meta .br .lg { color: var(--muted) !important; }
     .meta .br .wm { color: var(--muted) !important; font-weight: 600; }
+
+    /* ============ Banner karusel (rasmli) ============ */
+    .promo { padding: 14px 0 4px; }
+    .promo-track { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 14px; scrollbar-width: none; }
+    .promo-track::-webkit-scrollbar { display: none; }
+    .promo-card {
+      position: relative; flex: 0 0 calc(100% - 44px); max-width: 520px; scroll-snap-align: center;
+      min-height: 132px; border-radius: 18px; overflow: hidden; color: #fff;
+      display: grid; grid-template-columns: 1fr 118px; align-items: center;
+      padding: 14px 4px 14px 16px; box-shadow: 0 10px 24px -16px rgba(12,46,41,.8);
+    }
+    .promo-card::before { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 18px 18px,
+                  linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 18px 18px; pointer-events: none; }
+    .promo-card .pc-tx { position: relative; z-index: 1; min-width: 0; }
+    .promo-card .badge { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+      background: var(--kapton); color: #2B1A00; padding: 3px 8px; border-radius: 6px; }
+    .promo-card h3 { font-family: var(--display); font-size: 15px; line-height: 1.2; font-weight: 700; margin: 8px 0 5px; letter-spacing: -.01em; }
+    .promo-card p { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,.78); }
+    .promo-card img { position: relative; z-index: 1; width: 118px; height: 104px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.3)); }
+    .promo-dots { display: flex; justify-content: center; gap: 6px; padding-top: 8px; }
+    .promo-dots i { width: 6px; height: 6px; border-radius: 6px; background: var(--hair); transition: width .25s, background .25s; }
+    .promo-dots i.on { width: 18px; background: var(--kapton); }
+
+    /* ============ Mahsulot rasmi (admin paneldan qo'shiladi) ============ */
+    .thumb { width: 44px; height: 70px; border-radius: 9px; overflow: hidden; background: #EEF2F0; align-self: start; border: 1px solid var(--hair); }
+    .row.grp .thumb { height: 56px; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .row.out .thumb { opacity: .55; }
+    .empty img { width: 150px; height: auto; display: block; margin: 0 auto 14px; }
 
     .result-meta { padding: 4px 16px 8px; font-size: 12px; color: var(--muted); }
 
@@ -347,6 +377,11 @@
     <div class="ruler" role="progressbar" aria-label="Optom narxgacha" aria-valuemin="0" aria-valuemax="50" aria-valuenow="0" id="ruler">
       <div class="tape" id="tape"></div>
     </div>
+  </section>
+
+  <section class="promo" id="promo" aria-label="Yangiliklar" hidden>
+    <div class="promo-track" id="promoTrack"></div>
+    <div class="promo-dots" id="promoDots" aria-hidden="true"></div>
   </section>
 
   <div class="toolbar" id="toolbar">
@@ -624,14 +659,39 @@ function startShop() {
   const priceOf = (p, w) => w ? p.wholesale : p.retail;
   const cartSum = (w) => Object.entries(cart).reduce((s, [id, q]) => s + priceOf(byId.get(id), w) * q, 0);
 
-  /* ---- hero xabarlari: data.js dagi bannersData ---- */
-  if (typeof bannersData !== 'undefined' && bannersData.length > 1) {
-    const clean = (s) => String(s).replace(/^[^\p{L}\p{N}]+/u, '');
-    let bi = 0; const note = $('heroNote');
-    setInterval(() => {
-      bi = (bi + 1) % bannersData.length;
-      note.style.opacity = 0;
-      setTimeout(() => { note.textContent = clean(bannersData[bi].title); note.style.opacity = 1; }, 350);
+  /* ---- rasmli bannerlar: data.js dagi bannersData ---- */
+  if (typeof bannersData !== 'undefined' && bannersData.length) {
+    const track = $('promoTrack'), dots = $('promoDots');
+    const safeImg = (u) => /^(img\/[\w.-]+|https:\/\/[^\s"'<>]+)$/.test(u || '') ? u : '';
+    bannersData.forEach((bn) => {
+      const c = document.createElement('article');
+      c.className = 'promo-card';
+      if (bn.bg) c.style.background = bn.bg;
+      const tx = document.createElement('div'); tx.className = 'pc-tx';
+      const bd = document.createElement('span'); bd.className = 'badge'; bd.textContent = bn.badge || '';
+      const h3 = document.createElement('h3'); h3.textContent = String(bn.title || '').replace(/^[^\p{L}\p{N}]+/u, '');
+      const p = document.createElement('p'); p.textContent = bn.desc || '';
+      tx.append(bd, h3, p); c.appendChild(tx);
+      const src = safeImg(bn.img);
+      if (src) { const im = document.createElement('img'); im.src = src; im.alt = ''; im.decoding = 'async'; c.appendChild(im); }
+      track.appendChild(c);
+      dots.appendChild(document.createElement('i'));
+    });
+    $('promo').hidden = false;
+    const cards = [...track.children];
+    let cur = 0, paused = false;
+    const mark = (i) => { cur = i; [...dots.children].forEach((d, k) => d.classList.toggle('on', k === i)); };
+    mark(0);
+    track.addEventListener('scroll', () => {
+      const i = Math.round(track.scrollLeft / (cards[0].offsetWidth + 10));
+      if (i !== cur && cards[i]) mark(i);
+    }, { passive: true });
+    ['touchstart', 'pointerdown'].forEach(ev => track.addEventListener(ev, () => { paused = true; }, { passive: true }));
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (cards.length > 1 && !reduce) setInterval(() => {
+      if (paused || document.hidden) return;
+      const n = (cur + 1) % cards.length;
+      track.scrollTo({ left: cards[n].offsetLeft - 14, behavior: 'smooth' });
     }, 5000);
   }
 
@@ -683,16 +743,19 @@ function startShop() {
   const frag = document.createDocumentFragment();
   groups.forEach(g => {
     const p = g.vars[0];
+    const photo = (g.vars.find(v => /^https:\/\/\S+$/.test(v.img || '')) || {}).img || '';
     const el = document.createElement('article');
     el.className = 'row grp';
     el.innerHTML = `
-      <div class="glyph t-${typeClass(p.type, p.brand)}" aria-hidden="true"></div>
+      ${photo ? '<div class="thumb"><img loading="lazy" decoding="async" alt=""></div>' : `<div class="glyph t-${typeClass(p.type, p.brand)}" aria-hidden="true"></div>`}
       <div class="info">
         <div class="meta"><span class="br"></span></div>
         <div class="name"></div>
         <div class="alts" hidden></div>
       </div>
       <div class="vars"></div>`;
+    if (photo) { const im = el.querySelector('.thumb img'); im.src = photo; im.alt = p.brand + ' ' + p._pm.main;
+      im.onerror = () => { im.parentNode.outerHTML = `<div class="glyph t-${typeClass(p.type, p.brand)}" aria-hidden="true"></div>`; }; }
     const br = el.querySelector('.br'); br.innerHTML = brandMark(p.brand, LOGOS[p.brand] && LOGOS[p.brand][3] ? 9 : 12); br.setAttribute('role', 'img'); br.setAttribute('aria-label', p.brand);
     el.querySelector('.name').textContent = p._pm.main;
     p._pm.tags.forEach(t => { const tag = document.createElement('span'); tag.className = 'type-tag' + (t === 'Ramkali' ? ' frame' : ''); tag.textContent = t; el.querySelector('.meta').appendChild(tag); });
@@ -724,7 +787,7 @@ function startShop() {
   list.appendChild(frag);
   const emptyEl = document.createElement('div');
   emptyEl.className = 'empty'; emptyEl.hidden = true;
-  emptyEl.innerHTML = '<strong>Bunday model topilmadi</strong>Boshqacha yozib koʻring, masalan “note8” yoki “a10”.<br><button type="button">Qidiruvni tozalash</button>';
+  emptyEl.innerHTML = '<img src="img/empty.svg" alt="" width="150" height="131"><strong>Bunday model topilmadi</strong>Boshqacha yozib koʻring, masalan “note8” yoki “a10”.<br><button type="button">Qidiruvni tozalash</button>';
   emptyEl.querySelector('button').onclick = () => { $('q').value = ''; query = ''; syncSearch(); typeChips.firstChild.click(); chips.firstChild.click(); };
   list.appendChild(emptyEl);
 

@@ -4,21 +4,31 @@
 const bannersData = [
   {
     badge: "YANGI PARTIYA",
-    title: "🔥 Barcha turdagi Displeylar Omborda!",
+    title: "Barcha turdagi displeylar omborda!",
     desc: "Samsung, iPhone, Redmi, Tecno, Infinix, Oppo, Vivo, Honor, Huawei va Xiaomi ekranlari.",
-    bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)"
+    img: "img/partiya.svg",
+    bg: "linear-gradient(135deg, #0C2E29 0%, #1A5248 100%)"
   },
   {
     badge: "OPTOM NARX",
-    title: "⚡️ 50+ ta displeyga maxsus ulgurji narx!",
-    desc: "Savatga jami 50 ta ekran to'plang va eng arzon birinchi qo'l narxda xarid qiling.",
-    bg: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
+    title: "50+ ta displeyga ulgurji narx!",
+    desc: "Savatga jami 50 ta ekran to'plang, hamma narx avtomatik arzonlashadi.",
+    img: "img/optom.svg",
+    bg: "linear-gradient(135deg, #3A2606 0%, #8A5608 100%)"
   },
   {
     badge: "KAFOLAT",
-    title: "🛡 Barcha displeylarga 2 OY kafolat!",
-    desc: "Zavod braki bo'lsa video/rasm orqali darhol yangisiga almashtiramiz yoki pulni qaytaramiz.",
-    bg: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"
+    title: "Barcha displeylarga 2 oy kafolat!",
+    desc: "Zavod braki bo'lsa, video yoki rasm bilan yangisiga almashtiramiz yoki pulni qaytaramiz.",
+    img: "img/kafolat.svg",
+    bg: "linear-gradient(135deg, #123F38 0%, #2E6258 100%)"
+  },
+  {
+    badge: "YETKAZISH",
+    title: "BTS pochta va taksi orqali",
+    desc: "Viloyatlarga BTS orqali, shahar ichida taksi bilan tezkor yetkazamiz.",
+    img: "img/yetkazish.svg",
+    bg: "linear-gradient(135deg, #16232B 0%, #2D4A6B 100%)"
   }
 ];
 

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 140" fill="none">
+  <defs><linearGradient id="sh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC75A"/><stop offset="1" stop-color="#E08D12"/></linearGradient>
+  <linearGradient id="sc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4FDFF"/><stop offset="1" stop-color="#8CCFE4"/></linearGradient></defs>
+  <g transform="rotate(-8 56 76)">
+    <rect x="24" y="22" width="62" height="112" rx="12" fill="#0A1614" stroke="#2E6258" stroke-width="1.5"/>
+    <rect x="29" y="27" width="52" height="102" rx="8" fill="url(#sc)"/>
+    <path d="M38 50l10 12-6 10 14 18" stroke="#3C8FB0" stroke-width="1.5" stroke-linecap="round" opacity=".55"/>
+  </g>
+  <path d="M108 26l34 12v26c0 24-15 40-34 48-19-8-34-24-34-48V38z" fill="url(#sh)" stroke="#0C2E29" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M93 66l11 11 21-23" stroke="#0C2E29" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="108" y="104" font-family="Unbounded,Arial,sans-serif" font-size="11" font-weight="800" fill="#0C2E29" text-anchor="middle">2 OY</text>
+  <g fill="#7FD6EE"><circle cx="150" cy="18" r="3"/><circle cx="16" cy="112" r="2.5"/></g>
+</svg>
