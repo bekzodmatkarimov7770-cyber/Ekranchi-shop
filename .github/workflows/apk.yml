@@ -1,7 +1,7 @@
 name: APK
 on:
   push:
-    branches: [main, apk-demo]
+    branches: [main, apk-demo, ilova-2]
     paths: ['android/**', '.github/workflows/apk.yml', 'market.html', 'data.js', 'catalog.seed.json', 'img/**']
   workflow_dispatch:
 permissions:

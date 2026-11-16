@@ -111,3 +111,21 @@ def test_out_of_stock_order_is_refused(api, client):
     api.get_catalog(); api.store_set("stock", pid, 0)
     r = client.post("/api/index?app=order", headers={"X-App-Token": tok}, json={"i": [[int(pid), 5]]})
     assert r.status_code == 409 and api.store_all("orders2") == {}
+
+
+def test_order_location_is_saved_and_sent_to_admin(api, client):
+    tok = login(api, client)
+    pid = next(p["id"] for p in api.SEED_CATALOG if p["stock"] >= 60)
+    r = client.post("/api/index?app=order", headers={"X-App-Token": tok},
+                    json={"d": "Taksi", "a": "Urganch, Al-Xorazmiy 10", "i": [[int(pid), 1]], "g": [41.5500123, 60.6333456]})
+    order = r.get_json()["order"]
+    assert order["geo"] == [41.550012, 60.633346]
+    assert "maps.google.com/?q=41.550012,60.633346" in api.bot.send_document.call_args.kwargs["caption"]
+
+
+def test_bad_location_is_ignored(api, client):
+    tok = login(api, client)
+    pid = next(p["id"] for p in api.SEED_CATALOG if p["stock"] >= 60)
+    for bad in ([999, 60], ["x", "y"], [41.5], "41.5,60.6", {"lat": 1}):
+        r = client.post("/api/index?app=order", headers={"X-App-Token": tok}, json={"i": [[int(pid), 1]], "g": bad})
+        assert r.status_code == 200 and r.get_json()["order"]["geo"] is None, bad

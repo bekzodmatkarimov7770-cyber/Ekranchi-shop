@@ -445,6 +445,29 @@
     .ord li span:last-child { white-space: nowrap; color: var(--ink); font-weight: 600; }
     .ord .oaddr { font-size: 12px; color: var(--muted); margin-top: 8px; }
     .ord .again { margin-top: 10px; border: 1px solid var(--hair); background: var(--card); height: 36px; padding: 0 14px; border-radius: 10px; font-weight: 600; font-size: 13px; }
+    .linfo { min-width: 0; cursor: pointer; }
+    .linfo .nm::after { content: "›"; display: inline-block; margin-left: 6px; color: var(--muted); transition: transform .15s; }
+    .linfo[aria-expanded="true"] .nm::after { transform: rotate(90deg); }
+    .line-more { grid-column: 1 / -1; background: var(--paper); border-radius: 12px; padding: 10px 12px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    .line-more b { color: var(--ink); font-weight: 600; }
+    .line-more div + div { margin-top: 4px; }
+    .tabs button.dot::after { content: ""; position: absolute; top: 8px; left: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: var(--danger); border: 2px solid #fff; }
+    .addr-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .addr-chips::-webkit-scrollbar { display: none; }
+    .addr-chip { flex: none; max-width: 240px; border: 1px solid var(--hair); background: var(--card); border-radius: 12px; padding: 8px 12px; font-size: 13px; text-align: left; line-height: 1.25; }
+    .addr-chip small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+    .addr-chip span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .addr-chip[aria-pressed="true"] { border-color: var(--mat); background: #EEF5F2; }
+    .addr-chip.new { color: var(--mat); font-weight: 600; align-self: stretch; }
+    .geo-btn { width: 100%; min-height: 44px; border: 1px dashed var(--hair); background: var(--card); border-radius: 12px; font-size: 13.5px; font-weight: 600; color: var(--mat); padding: 8px 12px; }
+    .geo-btn.on { border-style: solid; border-color: var(--mat); background: #EEF5F2; }
+    .geo-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .addr-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--hair); }
+    .addr-row:first-child { border-top: 0; padding-top: 0; }
+    .addr-row .tx { flex: 1; min-width: 0; font-size: 13.5px; }
+    .addr-row .tx small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+    .addr-row button { border: 0; background: none; color: var(--muted); width: 36px; height: 36px; font-size: 16px; flex: none; }
+    .p-card .ghost-btn { width: 100%; height: 44px; border: 1px solid var(--hair); background: var(--card); border-radius: 12px; font-weight: 600; font-size: 14px; color: var(--mat); margin-top: 10px; }
     .p-ver { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 4px; }
 
     @media (prefers-reduced-motion: reduce) {
@@ -535,16 +558,14 @@
     <div class="p-card" id="pAuth"></div>
     <div class="p-card" id="pOrdersCard" hidden><h3>Buyurtmalarim</h3><div id="pOrders"></div></div>
     <div class="p-card">
-      <h3>Yetkazish maʼlumotlari</h3>
-      <div class="field"><label for="pName">Ismingiz</label><input id="pName" maxlength="30" autocomplete="name" placeholder="Masalan, Sardor"></div>
-      <div class="field"><label>Qanday yetkazamiz?</label>
-        <div class="seg" id="pDeliv">
-          <button type="button" data-v="BTS" aria-pressed="true">BTS pochta<small>Viloyatlarga</small></button>
-          <button type="button" data-v="Taksi" aria-pressed="false">Taksi<small>Tezkor, shahar ichida</small></button>
-        </div>
-      </div>
-      <div class="field"><label for="pAddr">Manzil</label><textarea id="pAddr" rows="2" maxlength="80" placeholder="Viloyat, tuman, filial"></textarea></div>
+      <h3>Ismingiz</h3>
+      <div class="field"><input id="pName" maxlength="30" autocomplete="name" placeholder="Masalan, Sardor" aria-label="Ismingiz"></div>
       <button class="wide-btn" type="button" id="pSave">Saqlash</button>
+    </div>
+    <div class="p-card">
+      <h3>Manzillarim</h3>
+      <div id="pAddrs"></div>
+      <button class="ghost-btn" type="button" id="pAddAddr">+ Yangi manzil qoʻshish</button>
     </div>
     <div class="p-card" id="pLastCard"><div class="p-row"><div class="tx"><b>Oldingi buyurtma</b><span id="pLast">Hali buyurtma yoʻq</span></div><button type="button" id="pRepeat" hidden>Takrorlash</button></div></div>
     <div class="p-card"><div class="p-row"><div class="tx"><b>Kuzatuvdagi modellar</b><span id="pWatch">Yoʻq</span></div></div></div>
@@ -586,6 +607,10 @@
         <input id="custName" maxlength="30" autocomplete="name" placeholder="Masalan, Sardor">
         <div class="err">Ismingizni yozing</div>
       </div>
+      <div class="field app-only" id="fSaved" hidden>
+        <label>Saqlangan manzillar</label>
+        <div class="addr-chips" id="addrChips"></div>
+      </div>
       <div class="field">
         <label>Qanday yetkazamiz?</label>
         <div class="seg" id="deliv">
@@ -598,12 +623,35 @@
         <textarea id="custAddress" rows="2" maxlength="80" placeholder="Viloyat, tuman, filial"></textarea>
         <div class="err">Manzilni yozing</div>
       </div>
+      <div class="field app-only">
+        <button type="button" class="geo-btn" id="geoBtn">📍 Joylashuvimni biriktirish</button>
+        <div class="geo-note" id="geoNote"></div>
+      </div>
     </div>
     <div class="sheet-foot">
       <div class="total"><span id="coMode">Jami</span><strong id="coTotal">0 soʻm</strong></div>
       <div class="save-note"></div>
       <button class="primary" id="submitOrder" type="button">Buyurtmani yuborish</button>
       <button class="ghost" id="backToCart" type="button">Savatga qaytish</button>
+    </div>
+  </section>
+
+  <section class="sheet" id="addrSheet" role="dialog" aria-modal="true" aria-labelledby="adTitle">
+    <div class="grab"></div>
+    <div class="sheet-head"><h2 id="adTitle">Yangi manzil</h2></div>
+    <div class="sheet-body">
+      <div class="field"><label>Qanday yetkazamiz?</label>
+        <div class="seg" id="aDeliv">
+          <button type="button" data-v="BTS" aria-pressed="true">BTS pochta<small>Viloyatlarga</small></button>
+          <button type="button" data-v="Taksi" aria-pressed="false">Taksi<small>Tezkor, shahar ichida</small></button>
+        </div>
+      </div>
+      <div class="field" id="fAText"><label for="aText">Manzil</label><textarea id="aText" rows="2" maxlength="80" placeholder="Viloyat, tuman, filial yoki koʻcha, uy"></textarea><div class="err">Manzilni yozing</div></div>
+      <div class="field"><button type="button" class="geo-btn" id="aGeoBtn">📍 Joylashuvimni biriktirish</button><div class="geo-note" id="aGeoNote"></div></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="primary" id="aSave" type="button">Saqlash</button>
+      <button class="ghost" id="aCancel" type="button">Bekor qilish</button>
     </div>
   </section>
 
@@ -665,7 +713,7 @@ function startShop() {
   const norm = (s) => String(s).toLowerCase().replace(/[\s\-_/.()]+/g, '');
 
   const toastEl = $('toast'); let toastT;
-  const toast = (msg) => { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 2400); };
+  const toast = (msg, ms) => { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), ms || 2400); };
   // Klaviatura tugmasidan ochilganda initData bo'sh bo'ladi, shuning uchun platformaga qaraymiz
   const inTelegram = () => !!(tg && tg.platform && tg.platform !== 'unknown');
   const APP = document.documentElement.classList.contains('app');
@@ -1075,7 +1123,7 @@ function startShop() {
     if (tg && tg.BackButton) tg.BackButton.show();
   }
   function closeSheets() {
-    if (APP) { $('checkoutSheet').classList.remove('open'); scrim.classList.remove('open'); return; }
+    if (APP) { document.querySelectorAll('.sheet.open:not(#cartSheet)').forEach(s => s.classList.remove('open')); scrim.classList.remove('open'); return; }
     document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open'));
     scrim.classList.remove('open');
     if (tg && tg.BackButton) tg.BackButton.hide();
@@ -1084,6 +1132,14 @@ function startShop() {
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => APP ? setView('catalog') : closeSheets());
   if (tg && tg.BackButton) tg.BackButton.onClick(() => $('checkoutSheet').classList.contains('open') ? openCart() : closeSheets());
 
+  const openLines = new Set();   // savatda batafsil ochilgan qatorlar (qayta chizilganda yopilib qolmasin)
+  $('cartLines').addEventListener('click', (e) => {
+    const el = e.target.closest('.linfo'); if (!el) return;
+    const id = el.dataset.line, on = !openLines.has(id);
+    on ? openLines.add(id) : openLines.delete(id);
+    el.setAttribute('aria-expanded', String(on)); el.parentNode.querySelector('.line-more').hidden = !on;
+  });
+  $('cartLines').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.classList.contains('linfo')) e.target.click(); });
   function renderCart() {
     const box = $('cartLines'); box.innerHTML = '';
     const w = isWholesale();
@@ -1098,7 +1154,14 @@ function startShop() {
     ids.forEach(id => {
       const p = byId.get(id), q = cart[id], pr = priceOf(p, w);
       const line = document.createElement('div'); line.className = 'line';
-      line.innerHTML = `<div><div class="nm"></div><div class="sub">${q} × ${fmtN(pr)} = <b>${fmt(pr * q)}</b></div></div>${stepperHTML(id, q)}`;
+const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
+      line.innerHTML = `<div class="linfo" data-line="${id}" role="button" tabindex="0" aria-expanded="${isOpen}"><div class="nm"></div><div class="sub">${q} × ${fmtN(pr)} = <b>${fmt(pr * q)}</b></div></div>${stepperHTML(id, q)}<div class="line-more"${isOpen ? '' : ' hidden'}></div>`;
+      const more = line.querySelector('.line-more');
+      const row = (label, text) => { const d = document.createElement('div'), b = document.createElement('b'); b.textContent = label + ' '; d.append(b, document.createTextNode(text)); more.appendChild(d); };
+      if (p._pm.alts.length) row('Mos keladi:', [p._pm.main, ...p._pm.alts].join(', '));
+      row('Sifat:', TYPE_LABEL[tc] + ' · ' + typeNote(tc) + (p._pm.tags.includes('Ramkali') ? ' · ramkali' : ''));
+      row('Narx:', `chakana ${fmt(p.retail)}, optom ${fmt(p.wholesale)}`);
+      if (typeof p.stock === 'number' && p.stock > 0 && p.stock <= 5) row('Omborda:', `faqat ${p.stock} ta qoldi`);
       line.querySelector('.nm').textContent = `${p.brand} ${p._pm.main}, ${TYPE_LABEL[typeClass(p.type, p.brand)]}` + (p._pm.alts.length ? ` (+${p._pm.alts.length} mos model)` : '') + (p._pm.tags.includes('Ramkali') ? ', ramkali' : '');
       box.appendChild(line);
     });
@@ -1137,6 +1200,7 @@ function startShop() {
     const w = isWholesale();
     $('coMode').textContent = `${totalQty()} ta, ${w ? 'optom' : 'chakana'}`;
     $('coTotal').textContent = fmt(cartSum(w));
+    if (APP) { const m = findAddr(delivery, addrIn.value); coGeo = m ? m.g || null : coGeo; renderAddrChips(); updateGeo(); }
     openSheet('checkoutSheet');
   };
   $('backToCart').onclick = openCart;
@@ -1158,10 +1222,12 @@ function startShop() {
     if (nt.length) payload.nt = nt;
     if (APP) {
       if (!token) { closeSheets(); setView('profile'); toast('Buyurtma berish uchun avval Telegram orqali kiring'); return; }
+      if (coGeo) payload.g = coGeo;
       const btn = $('submitOrder'); btn.disabled = true; btn.textContent = 'Yuborilmoqda…';
       appApi('order', { body: payload }).then(d => {
         store('ek_last', { i: items, t: Date.now() }); lastOrder = { i: items, t: Date.now() };
         store('ek_info', { n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80) });
+        addAddr({ d: delivery, a: addr.slice(0, 80), g: coGeo });   // ishlatilgan manzil arxivda qoladi
         cart = {}; markWatchSent(); rows.forEach(renderAct); refreshAll();
         closeSheets(); setView('profile');
         toast(d.need_phone ? `Buyurtma #${d.order.id} qabul qilindi. Telegramda telefon raqamingizni yuboring` : `Buyurtma #${d.order.id} qabul qilindi`);
@@ -1270,7 +1336,7 @@ function startShop() {
     document.querySelectorAll('#tabs button').forEach(b => b.dataset.tab === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
     $('cartSheet').classList.toggle('open', v === 'cart');
     if (v === 'cart') renderCart();
-    if (v === 'profile') renderProfile();
+    if (v === 'profile') { renderProfile(); const tb = $('tabs').querySelector('[data-tab="profile"]'); if (tb) tb.classList.remove('dot'); }
     if (!keepScroll) window.scrollTo(0, 0);
   }
   /* ---- ilova hisobi: Telegram orqali kirish, buyurtmalar tarixi ---- */
@@ -1288,7 +1354,7 @@ function startShop() {
         return j;
       }), () => { throw new Error('Internet bilan aloqa yoʻq'); });
   }
-  const setToken = (t) => { token = t || ''; try { t ? localStorage.setItem('ek_app_token', t) : localStorage.removeItem('ek_app_token'); } catch (e) {} };
+  const setToken = (t) => { token = t || ''; try { t ? localStorage.setItem('ek_app_token', t) : localStorage.removeItem('ek_app_token'); if (!t) localStorage.removeItem('ek_seen'); } catch (e) {} nativeToken(token); };
   function logout() { setToken(''); me = null; myOrders = null; if (view === 'profile') renderProfile(); }
   const readPending = () => { const p = readLocal('ek_login', null); return p && p.until > Date.now() ? p : null; };
   function stopLogin() { clearInterval(loginPoll); loginPoll = null; try { localStorage.removeItem('ek_login'); } catch (e) {} }
@@ -1350,7 +1416,7 @@ function startShop() {
   }
   function loadMe() {
     if (!token) return;
-    appApi('me').then(d => { me = d.user; myOrders = d.orders || []; if (view === 'profile') { renderAuth(); renderOrders(); } }).catch(() => {});
+    appApi('me').then(d => { me = d.user; myOrders = d.orders || []; checkStatuses(myOrders); if (view === 'profile') { renderAuth(); renderOrders(); } }).catch(() => {});
   }
   function addToCart(pairs) {
     let added = 0, missing = 0;
@@ -1364,13 +1430,78 @@ function startShop() {
     toast(`${added} xil model savatga qoʻshildi` + (missing ? `, ${missing} tasi tugagan` : '')); openCart();
   }
 
+  /* ---- manzillar arxivi: shu telefonda saqlanadi, buyurtmada ishlatilgani o'zi qo'shiladi ---- */
+  let addrs = readLocal('ek_addrs', null), coGeo = null;
+  if (!Array.isArray(addrs)) { const inf = readLocal('ek_info', null); addrs = inf && inf.a ? [{ d: inf.d === 'Taksi' ? 'Taksi' : 'BTS', a: String(inf.a).slice(0, 80), g: null }] : []; }
+  const saveAddrs = () => store('ek_addrs', addrs);
+  const sameAddr = (x, d, a) => x.d === d && norm(x.a) === norm(a);
+  const findAddr = (d, a) => a && addrs.find(x => sameAddr(x, d, a));
+  function addAddr(n) {
+    const i = addrs.findIndex(x => sameAddr(x, n.d, n.a));
+    const g = n.g || (i >= 0 ? addrs[i].g : null) || null;
+    if (i >= 0) addrs.splice(i, 1);
+    addrs.unshift({ d: n.d, a: n.a, g }); addrs = addrs.slice(0, 8); saveAddrs();
+  }
+  const dLabel = (d) => d === 'Taksi' ? 'Taksi' : 'BTS pochta';
+  function renderAddrChips() {
+    $('fSaved').hidden = !addrs.length;
+    const box = $('addrChips'); box.innerHTML = '';
+    addrs.forEach((x, i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'addr-chip'; b.dataset.i = i;
+      b.setAttribute('aria-pressed', String(sameAddr(x, delivery, addrIn.value)));
+      const sm = document.createElement('small'); sm.textContent = dLabel(x.d) + (x.g ? ' · 📍' : '');
+      const sp = document.createElement('span'); sp.textContent = x.a;
+      b.append(sm, sp); box.appendChild(b);
+    });
+    const nb = document.createElement('button'); nb.type = 'button'; nb.className = 'addr-chip new'; nb.textContent = '+ Yangi manzil'; box.appendChild(nb);
+  }
+  function renderAddrList() {
+    const box = $('pAddrs'); box.innerHTML = '';
+    if (!addrs.length) { box.innerHTML = '<p class="hint">Hali manzil yoʻq. Buyurtma berganingizda manzil shu yerga oʻzi saqlanadi.</p>'; return; }
+    addrs.forEach((x, i) => {
+      const r = document.createElement('div'); r.className = 'addr-row';
+      const tx = document.createElement('div'); tx.className = 'tx';
+      const sm = document.createElement('small'); sm.textContent = dLabel(x.d) + (x.g ? ' · 📍 joylashuv bilan' : '');
+      tx.append(sm, document.createTextNode(x.a));
+      const del = document.createElement('button'); del.type = 'button'; del.dataset.del = i; del.textContent = '✕'; del.setAttribute('aria-label', 'Manzilni oʻchirish');
+      r.append(tx, del); box.appendChild(r);
+    });
+  }
+  function getGeo(cb) {
+    if (!navigator.geolocation) { toast('Bu qurilmada joylashuvni aniqlab boʻlmaydi'); return; }
+    toast('Joylashuv aniqlanmoqda…', 8000);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { toast('Joylashuv biriktirildi'); cb([+pos.coords.latitude.toFixed(6), +pos.coords.longitude.toFixed(6)]); },
+      () => toast('Joylashuv aniqlanmadi. Ruxsat berilgani va GPS yoqilganini tekshiring.', 4000),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  }
+  function updateGeo() {
+    $('geoBtn').classList.toggle('on', !!coGeo);
+    $('geoBtn').textContent = coGeo ? '📍 Joylashuv biriktirildi · olib tashlash' : '📍 Joylashuvimni biriktirish';
+    $('geoNote').textContent = coGeo ? 'Buyurtma bilan birga xaritadagi aniq nuqta yuboriladi.' : 'Ixtiyoriy: taksi yoki kuryer sizni oson topishi uchun.';
+  }
+
+  /* ---- buyurtma holati o'zgarsa: ilova ichida xabar va Profil ustida belgi ---- */
+  const STATUS_TXT = { tasdiqlandi: 'tasdiqlandi, tayyorlanmoqda', yuborildi: 'yuborildi', yetkazildi: 'yetkazildi', bekor: 'bekor qilindi' };
+  const nativeToken = (t) => { try { if (window.EkranchiApp) window.EkranchiApp.setToken(t || ''); } catch (e) {} };
+  function checkStatuses(orders) {
+    const seen = readLocal('ek_seen', null), now = {}, changed = [];
+    orders.forEach(o => { now[o.id] = o.status; if (seen && ((o.id in seen) ? seen[o.id] !== o.status : false)) changed.push(o); });
+    const raw = JSON.stringify(now);
+    try { localStorage.setItem('ek_seen', raw); } catch (e) {}
+    try { if (window.EkranchiApp) window.EkranchiApp.setSeen(raw); } catch (e) {}
+    if (!changed.length) return;
+    const o = changed[0];
+    haptic('heavy');
+    toast(`Buyurtma #${o.id} ${STATUS_TXT[o.status] || ': ' + o.status_label}` + (changed.length > 1 ? ` (+${changed.length - 1} ta yangilik)` : ''), 6000);
+    if (view !== 'profile') $('tabs').querySelector('[data-tab="profile"]').classList.add('dot');
+  }
+
   function renderProfile() {
     renderAuth(); if (token) { renderOrders(); loadMe(); }
     const inf = readLocal('ek_info', null) || {};
     $('pName').value = inf.n || nameIn.value || '';
-    $('pAddr').value = inf.a || addrIn.value || '';
-    const d = inf.d || delivery;
-    $('pDeliv').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === d)));
+    renderAddrList();
     const its = lastItems();
     $('pRepeat').hidden = !its.length;
     $('pLast').textContent = its.length ? `${its.length} xil model, ${its.reduce((a, [, q]) => a + q, 0)} ta ekran` : 'Hali buyurtma yoʻq';
@@ -1388,15 +1519,44 @@ function startShop() {
       t.onclick = () => { setView('catalog'); chip.click(); chip.scrollIntoView({ block: 'nearest', inline: 'center' }); };
       $('brandGrid').appendChild(t);
     });
-    $('pDeliv').addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (!b) return;
-      $('pDeliv').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
     $('pSave').onclick = () => {
-      const inf = { n: $('pName').value.trim().slice(0, 30), d: $('pDeliv').querySelector('[aria-pressed="true"]').dataset.v, a: $('pAddr').value.trim().slice(0, 80) };
-      store('ek_info', inf);
-      nameIn.value = inf.n; addrIn.value = inf.a;
-      const b = $('deliv').querySelector(`button[data-v="${inf.d}"]`); if (b) b.click();
+      const old = readLocal('ek_info', null) || {};
+      const inf = { n: $('pName').value.trim().slice(0, 30), d: old.d || delivery, a: old.a || '' };
+      store('ek_info', inf); nameIn.value = inf.n;
       toast('Saqlandi');
     };
+    /* manzillar */
+    $('geoBtn').onclick = () => { if (coGeo) { coGeo = null; updateGeo(); } else getGeo(g => { coGeo = g; updateGeo(); }); };
+    [addrIn].forEach(i => i.addEventListener('input', () => renderAddrChips()));
+    $('addrChips').addEventListener('click', (e) => {
+      const b = e.target.closest('.addr-chip'); if (!b) return;
+      haptic();
+      if (b.classList.contains('new')) { addrIn.value = ''; coGeo = null; updateGeo(); renderAddrChips(); addrIn.focus(); return; }
+      const a = addrs[+b.dataset.i]; if (!a) return;
+      const db = $('deliv').querySelector(`button[data-v="${a.d}"]`); if (db) db.click();
+      addrIn.value = a.a; coGeo = a.g || null; $('fAddr').classList.remove('invalid');
+      updateGeo(); renderAddrChips();
+    });
+    let aGeo = null;
+    const updateAGeo = () => { $('aGeoBtn').classList.toggle('on', !!aGeo); $('aGeoBtn').textContent = aGeo ? '📍 Joylashuv biriktirildi · olib tashlash' : '📍 Joylashuvimni biriktirish'; };
+    $('pAddAddr').onclick = () => { $('aText').value = ''; aGeo = null; updateAGeo(); $('fAText').classList.remove('invalid'); openSheet('addrSheet'); };
+    $('aDeliv').addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (!b) return;
+      $('aDeliv').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+    $('aGeoBtn').onclick = () => { if (aGeo) { aGeo = null; updateAGeo(); } else getGeo(g => { aGeo = g; updateAGeo(); }); };
+    $('aCancel').onclick = closeSheets;
+    $('aSave').onclick = () => {
+      const a = $('aText').value.trim();
+      $('fAText').classList.toggle('invalid', !a); if (!a) return;
+      addAddr({ d: $('aDeliv').querySelector('[aria-pressed="true"]').dataset.v, a: a.slice(0, 80), g: aGeo });
+      closeSheets(); renderAddrList(); toast('Manzil saqlandi');
+    };
+    $('pAddrs').addEventListener('click', (e) => { const b = e.target.closest('[data-del]'); if (!b) return;
+      addrs.splice(+b.dataset.del, 1); saveAddrs(); renderAddrList(); });
+    /* buyurtma holati: ilova ochiq turganda har 45 soniyada tekshiriladi */
+    setInterval(() => { if (token && !document.hidden) loadMe(); }, 45000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && token) loadMe(); });
+    window.__appOpen = (tab) => { closeSheets(); setView(tab); };
+    if (token) { nativeToken(token); loadMe(); }
     $('pRepeat').onclick = () => $('repeatBtn').click();
     $('pOrders').addEventListener('click', (e) => { const b = e.target.closest('[data-again]'); if (!b || !myOrders) return;
       haptic('medium'); addToCart(myOrders[+b.dataset.again].items.map(x => [x.id, x.q])); });
@@ -1408,7 +1568,7 @@ function startShop() {
       if (view !== 'home') { setView('home'); return true; }
       return false;
     };
-    setView('home');
+    setView(location.hash === '#profile' ? 'profile' : 'home');
   }
 
   /* ---- start ---- */

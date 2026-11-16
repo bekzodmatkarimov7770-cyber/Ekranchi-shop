@@ -1,9 +1,15 @@
 package uz.ekranchi.bola;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -21,7 +27,39 @@ public class MainActivity extends Activity {
     private static final String HOST = "ekranchi-shop.vercel.app";
     private static final String HOME = "https://" + HOST + "/market.html?app=1";
 
+    private static final int REQ_LOCATION = 1, REQ_NOTIFY = 2;
+
     private WebView web;
+    private GeolocationPermissions.Callback geoCallback;
+    private String geoOrigin;
+
+    /** Sahifadan chaqiriladi: kirish tokeni va ko'rilgan holatlar fon tekshiruvi uchun saqlanadi. */
+    private final class Bridge {
+        @JavascriptInterface
+        public void setToken(String token) {
+            boolean has = token != null && !token.isEmpty();
+            getSharedPreferences(OrderCheckService.PREFS, MODE_PRIVATE).edit()
+                .putString("token", has ? token : "").apply();
+            if (!has) {
+                getSharedPreferences(OrderCheckService.PREFS, MODE_PRIVATE).edit().remove("seen").apply();
+                OrderCheckService.cancel(MainActivity.this);
+                return;
+            }
+            OrderCheckService.schedule(MainActivity.this);
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFY);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void setSeen(String json) {
+            // ilova ichida ko'rsatilgan o'zgarish uchun bildirishnoma ikkinchi marta chiqmasin
+            getSharedPreferences(OrderCheckService.PREFS, MODE_PRIVATE).edit().putString("seen", json).apply();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle state) {
@@ -36,6 +74,24 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setTextZoom(100);
         s.setUserAgentString(s.getUserAgentString() + " EkranchiApp/1.0");
+        s.setGeolocationEnabled(true);
+        web.addJavascriptInterface(new Bridge(), "EkranchiApp");
+
+        // Joylashuv: sahifa so'raganda (mijoz tugmani bosganda) Android ruxsati so'raladi
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    callback.invoke(origin, true, false);
+                    return;
+                }
+                geoCallback = callback;
+                geoOrigin = origin;
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_LOCATION);
+            }
+        });
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -67,7 +123,26 @@ public class MainActivity extends Activity {
         });
 
         if (state != null) web.restoreState(state);
-        else web.loadUrl(HOME);
+        else web.loadUrl("profile".equals(getIntent().getStringExtra("tab")) ? HOME + "#profile" : HOME);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // bildirishnoma bosilganda ochiq turgan ilova Profil bo'limiga o'tadi
+        if ("profile".equals(intent.getStringExtra("tab"))) {
+            web.evaluateJavascript("window.__appOpen && window.__appOpen('profile')", null);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(code, permissions, results);
+        if (code != REQ_LOCATION || geoCallback == null) return;
+        boolean granted = false;
+        for (int r : results) granted |= r == PackageManager.PERMISSION_GRANTED;
+        geoCallback.invoke(geoOrigin, granted, false);
+        geoCallback = null;
     }
 
     private static String mime(String path) {

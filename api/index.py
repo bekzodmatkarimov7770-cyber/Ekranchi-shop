@@ -643,6 +643,13 @@ def process_order(m, src="bot"):
         deliv = data.get('d') if data.get('d') in ALLOWED_DELIVERY else 'BTS'
         addr = str(data.get('a', ''))[:80].strip()
         tg_name = " ".join(x for x in [m.from_user.first_name, m.from_user.last_name] if x)
+        geo = None   # ilovadan biriktirilgan joylashuv: [kenglik, uzunlik]
+        try:
+            g = data.get('g')
+            if isinstance(g, (list, tuple)) and len(g) == 2 and -90 <= float(g[0]) <= 90 and -180 <= float(g[1]) <= 180:
+                geo = [round(float(g[0]), 6), round(float(g[1]), 6)]
+        except (TypeError, ValueError):
+            geo = None
 
         # 1) Tovarlarni tekshirish: faqat katalogdagi ID lar, musbat butun son
         catalog = get_catalog()
@@ -705,6 +712,8 @@ def process_order(m, src="bot"):
                  "role": user.get('role'), "deliv": deliv, "addr": addr, "pt": pt,
                  "qty": t_qty, "total": t_sum, "items": payload_items, "note": "",
                  "stock_reserved": True, "src": src}
+        if geo:
+            order["geo"] = geo
         save_order(cid, order)
 
         csv_file = io.BytesIO(csv_buffer.getvalue().encode('utf-8-sig'))
@@ -742,6 +751,7 @@ def process_order(m, src="bot"):
                 f"✍️ <b>Ism (formada):</b> {h(name)} ({h(role)})\n"
                 f"{contact_line(cid, tg_name or name, m.from_user.username, phone)}\n"
                 f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
+                + (f"🗺 <a href=\"https://maps.google.com/?q={geo[0]},{geo[1]}\">Xaritada ko'rish</a>\n" if geo else "") +
                 f"📊 <b>Rejim:</b> {pt}\n"
                 f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean)} xil model)\n"
                 f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>{h(mismatch)}\n"
@@ -1192,7 +1202,7 @@ def _app_order(o):
     return {"id": o.get("id"), "created": o.get("created"), "status": o.get("status"),
             "status_label": STATUSES.get(o.get("status"), o.get("status")),
             "total": sum(int(i.get("p", 0)) * int(i.get("rq", i.get("aq", 0)) or 0) for i in o.get("items", [])) or o.get("total", 0),
-            "pt": o.get("pt"), "deliv": o.get("deliv"), "addr": o.get("addr"),
+            "pt": o.get("pt"), "deliv": o.get("deliv"), "addr": o.get("addr"), "geo": o.get("geo"),
             "items": [{"id": i.get("id"), "n": i.get("n"), "q": int(i.get("rq", i.get("aq", 0)) or 0),
                        "asked": i.get("asked"), "p": i.get("p")} for i in o.get("items", [])]}
 
