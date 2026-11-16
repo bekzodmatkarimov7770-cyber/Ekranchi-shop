@@ -1294,14 +1294,18 @@ function startShop() {
   function stopLogin() { clearInterval(loginPoll); loginPoll = null; try { localStorage.removeItem('ek_login'); } catch (e) {} }
   function pollLogin() {
     clearInterval(loginPoll);
+    let busy = false;   // bir vaqtda bitta so'rov: kirgandan keyin kechikkan javob "muddat tugadi" deb chiqmasin
     const tick = () => {
       const p = readPending();
-      if (!p) { stopLogin(); renderAuth(); return; }
+      if (token || !p) { stopLogin(); renderAuth(); return; }
+      if (busy) return;
+      busy = true;
       appApi('login_check', { body: { code: p.code, poll: p.poll } }).then(d => {
-        if (!d.token) return;
+        if (!d.token || token) return;
         stopLogin(); setToken(d.token); me = d.user; toast('Xush kelibsiz' + (me.name ? ', ' + me.name : '') + '!');
         renderProfile();
-      }).catch(e => { if (e.status === 410) { stopLogin(); renderAuth(); toast(e.message); } });
+      }).catch(e => { if (e.status === 410 && !token) { stopLogin(); renderAuth(); toast(e.message); } })
+        .finally(() => { busy = false; });
     };
     loginPoll = setInterval(tick, 2500); tick();
   }
@@ -1397,7 +1401,7 @@ function startShop() {
     $('pOrders').addEventListener('click', (e) => { const b = e.target.closest('[data-again]'); if (!b || !myOrders) return;
       haptic('medium'); addToCart(myOrders[+b.dataset.again].items.map(x => [x.id, x.q])); });
     if (!token && readPending()) pollLogin();
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && !token && readPending()) pollLogin(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !token && readPending() && !loginPoll) pollLogin(); });
     // Android "orqaga" tugmasi: avval oyna yopiladi, keyin bosh sahifaga qaytadi, oxirida ilovadan chiqadi
     window.__appBack = () => {
       if ($('checkoutSheet').classList.contains('open')) { closeSheets(); return true; }
