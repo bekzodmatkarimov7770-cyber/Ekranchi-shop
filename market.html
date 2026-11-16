@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Ekranchi_Bola — displeylar ombori</title>
+  <script>if (/[?&]app=1\b/.test(location.search) || /EkranchiApp/.test(navigator.userAgent)) document.documentElement.classList.add('app');</script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="data.js?v=wow_v7"></script>
+  <script src="data.js?v=wow_v8"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -343,6 +344,109 @@
     }
     .toast.show { transform: translate(-50%, 0); }
 
+
+    /* ============ ILOVA REJIMI (APK): pastki menyu va 4 bo'lim ============ */
+    .app-only { display: none; }
+    .app .app-only { display: block; }
+    .app { --tabs-h: 62px; }
+    .app body { padding-bottom: calc(var(--tabs-h) + 92px + var(--safe-b)); }
+    .app body[data-view="home"] [data-views]:not([data-views~="home"]),
+    .app body[data-view="catalog"] [data-views]:not([data-views~="catalog"]),
+    .app body[data-view="cart"] [data-views]:not([data-views~="cart"]),
+    .app body[data-view="profile"] [data-views]:not([data-views~="profile"]) { display: none !important; }
+    .app nav.tabs {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; height: calc(var(--tabs-h) + var(--safe-b));
+      padding-bottom: var(--safe-b); display: grid; grid-template-columns: repeat(4, 1fr);
+      background: rgba(255,255,255,.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--hair);
+    }
+    .tabs button {
+      border: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      font-size: 11px; font-weight: 600; color: var(--muted); position: relative;
+    }
+    .tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .tabs button[aria-current="page"] { color: var(--mat); }
+    .tabs button[aria-current="page"]::before { content: ""; position: absolute; top: 0; width: 28px; height: 3px; border-radius: 0 0 3px 3px; background: var(--kapton); }
+    .tabs .badge {
+      position: absolute; top: 6px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+      background: var(--kapton); color: #2B1A00; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+    }
+    .app .dock { bottom: calc(var(--tabs-h) + 10px + var(--safe-b)); }
+    .app body[data-view="cart"] .dock, .app body[data-view="profile"] .dock { display: none; }
+
+    .home-extra { padding: 6px 12px 0; }
+    .home-search {
+      width: 100%; height: 48px; border: 1px solid var(--hair); border-radius: var(--r-md); background: var(--card);
+      display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--muted); font-size: 14.5px; text-align: left;
+    }
+    .sec-title { font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin: 20px 4px 10px; }
+    .brand-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .brand-tile {
+      border: 1px solid var(--hair); background: var(--card); border-radius: var(--r-md); min-height: 68px; padding: 10px 6px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 13px;
+    }
+    .brand-tile .bm { display: flex; align-items: center; gap: 5px; min-height: 18px; }
+    .brand-tile small { font-size: 11px; font-weight: 500; color: var(--muted); }
+    .facts { display: grid; gap: 8px; }
+    .fact { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 12px 14px; font-size: 13px; color: var(--muted); line-height: 1.4; }
+    .fact b { display: block; color: var(--ink); font-size: 14px; margin-bottom: 2px; }
+    .wide-btn { width: 100%; height: 50px; border: 0; border-radius: var(--r-md); background: var(--mat); color: #fff; font-weight: 700; font-size: 15px; margin-top: 12px; }
+
+    /* Savat ilovada sheet emas, to'liq sahifa */
+    .app #cartSheet {
+      position: static; transform: none; visibility: visible; max-height: none; border-radius: 0; background: none;
+      min-height: calc(100vh - var(--tabs-h) - var(--safe-b)); padding-bottom: 0; transition: none;
+    }
+    .app #cartSheet .grab { display: none; }
+    .app #cartSheet .sheet-head { padding: 18px 18px 12px; background: var(--mat); color: #fff; }
+    .app #cartSheet .sheet-head h2 { font-size: 20px; }
+    .app #cartSheet .sheet-head .link-btn { color: #CFE5DF; }
+    .app #cartSheet .sheet-body { background: var(--card); overflow: visible; flex: none; }
+    .app #cartSheet .sheet-foot {
+      position: sticky; bottom: calc(var(--tabs-h) + var(--safe-b)); background: var(--card); margin-top: auto;
+      box-shadow: 0 -10px 24px -18px rgba(12,46,41,.5);
+    }
+    .app #cartSheet.is-empty .sheet-foot, .app #cartSheet.is-empty .link-btn { display: none; }
+    .cart-empty { padding: 64px 24px; text-align: center; color: var(--muted); font-size: 14px; }
+    .cart-empty strong { display: block; color: var(--ink); font-size: 17px; margin: 14px 0 4px; }
+    .cart-empty .wide-btn { max-width: 260px; margin-top: 20px; }
+
+    .profile { padding: 0 12px; }
+    .page-head { background: var(--mat); color: #fff; padding: 18px 18px 16px; margin: 0 -12px 14px; }
+    .page-head h2 { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+    .page-head p { font-size: 13px; color: #A9CFC6; margin-top: 2px; }
+    .p-card { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 14px; margin-bottom: 10px; }
+    .p-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .p-card .field:last-of-type { margin-bottom: 0; }
+    .p-row { display: flex; align-items: center; gap: 12px; }
+    .p-row .tx { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
+    .p-row .tx b { display: block; color: var(--ink); font-size: 14px; }
+    .p-row button { border: 0; height: 38px; padding: 0 14px; border-radius: 12px; background: var(--mat); color: #fff; font-weight: 600; font-size: 13px; flex: none; }
+    .p-card p.hint { font-size: 13px; color: var(--muted); line-height: 1.45; }
+    .p-card .wide-btn.tg { background: #2481CC; }
+    .p-card .wide-btn:disabled { opacity: .6; }
+    .p-card .text-btn { display: block; margin: 10px auto 0; border: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 600; padding: 6px 10px; }
+    .ord { border-top: 1px solid var(--hair); padding: 12px 0; }
+    .ord:first-of-type { border-top: 0; padding-top: 0; }
+    .ord:last-of-type { padding-bottom: 0; }
+    .ord summary { list-style: none; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; cursor: pointer; }
+    .ord summary::-webkit-details-marker { display: none; }
+    .ord .oid { font-weight: 700; font-size: 14px; }
+    .ord .odate { font-size: 12px; color: var(--muted); font-weight: 500; margin-left: 6px; }
+    .ord .osum { font-size: 13px; color: var(--muted); grid-column: 1; }
+    .ord .osum b { color: var(--ink); }
+    .pill { grid-row: 1 / span 2; grid-column: 2; font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 20px; background: #E8EEEB; color: var(--mat); white-space: nowrap; }
+    .pill.s-yangi, .pill.s-chek { background: #FFF1D6; color: #8A5608; }
+    .pill.s-yuborildi { background: #DDEBFA; color: #1F4E82; }
+    .pill.s-yetkazildi { background: #DDF3E4; color: #17603A; }
+    .pill.s-bekor { background: #F8E1DC; color: var(--danger); }
+    .ord ul { list-style: none; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+    .ord li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+    .ord li span:last-child { white-space: nowrap; color: var(--ink); font-weight: 600; }
+    .ord .oaddr { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .ord .again { margin-top: 10px; border: 1px solid var(--hair); background: var(--card); height: 36px; padding: 0 14px; border-radius: 10px; font-weight: 600; font-size: 13px; }
+    .p-ver { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 4px; }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; transition-duration: .001ms !important; }
     }
@@ -356,7 +460,7 @@
 </head>
 <body>
 
-  <header class="hero">
+  <header class="hero" data-views="home">
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-copy">
       <h1 class="logo">Ekranchi<em>_Bola</em><span>Telefon displeylari ulgurji va donalab</span></h1>
@@ -369,7 +473,7 @@
     </div>
   </header>
 
-  <section class="tape-wrap" id="tapeWrap" aria-live="polite">
+  <section class="tape-wrap" id="tapeWrap" aria-live="polite" data-views="home catalog">
     <div class="tape-head">
       <b id="tapeText">50 ta olsangiz, optom narx</b>
       <span class="count" id="tapeCount">0/50</span>
@@ -379,12 +483,19 @@
     </div>
   </section>
 
-  <section class="promo" id="promo" aria-label="Yangiliklar" hidden>
+  <section class="promo" id="promo" aria-label="Yangiliklar" data-views="home" hidden>
     <div class="promo-track" id="promoTrack"></div>
     <div class="promo-dots" id="promoDots" aria-hidden="true"></div>
   </section>
 
-  <div class="toolbar" id="toolbar">
+  <section class="home-extra app-only" id="homeExtra" data-views="home">
+    <button class="home-search" type="button" id="homeSearch">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#62716D" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      Model qidirish: A10, Note 8, 13C…
+    </button>
+  </section>
+
+  <div class="toolbar" id="toolbar" data-views="catalog">
     <label class="search" id="searchBox">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#62716D" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="Model: A10, Note 8, 13C…" aria-label="Model qidirish">
@@ -394,7 +505,7 @@
     <div class="chips types" id="typeChips" role="toolbar" aria-label="Sifat turi"></div>
   </div>
 
-  <div class="notes">
+  <div class="notes" data-views="home catalog">
     <div class="note-card repeat" id="repeatCard" hidden>
       <div class="tx"><b>Oldingi buyurtmangiz</b><span id="repeatInfo"></span></div>
       <button type="button" id="repeatBtn">Takrorlash</button>
@@ -404,8 +515,42 @@
       <button type="button" id="watchBtn">Tasdiqlash</button>
     </div>
   </div>
-  <div class="result-meta" id="resultMeta"></div>
-  <main class="list" id="list"></main>
+  <div class="result-meta" id="resultMeta" data-views="catalog"></div>
+  <main class="list" id="list" data-views="catalog"></main>
+
+  <section class="home-extra app-only" data-views="home">
+    <h2 class="sec-title">Brendlar</h2>
+    <div class="brand-grid" id="brandGrid"></div>
+    <button class="wide-btn" type="button" id="homeAll">Butun katalogni ochish</button>
+    <h2 class="sec-title">Bilib qoʻying</h2>
+    <div class="facts">
+      <div class="fact"><b>50 tadan optom narx</b>Savatdagi jami ekranlar 50 taga yetsa, hamma narx optomga oʻtadi.</div>
+      <div class="fact"><b>2 oy kafolat</b>Zavod braki boʻlsa, almashtiramiz yoki pulni qaytaramiz.</div>
+      <div class="fact"><b>Yetkazish</b>Viloyatlarga BTS pochta, shahar ichida taksi orqali.</div>
+    </div>
+  </section>
+
+  <section class="profile app-only" id="profileView" data-views="profile">
+    <div class="page-head"><h2>Profil</h2><p>Maʼlumotlar shu telefonda saqlanadi</p></div>
+    <div class="p-card" id="pAuth"></div>
+    <div class="p-card" id="pOrdersCard" hidden><h3>Buyurtmalarim</h3><div id="pOrders"></div></div>
+    <div class="p-card">
+      <h3>Yetkazish maʼlumotlari</h3>
+      <div class="field"><label for="pName">Ismingiz</label><input id="pName" maxlength="30" autocomplete="name" placeholder="Masalan, Sardor"></div>
+      <div class="field"><label>Qanday yetkazamiz?</label>
+        <div class="seg" id="pDeliv">
+          <button type="button" data-v="BTS" aria-pressed="true">BTS pochta<small>Viloyatlarga</small></button>
+          <button type="button" data-v="Taksi" aria-pressed="false">Taksi<small>Tezkor, shahar ichida</small></button>
+        </div>
+      </div>
+      <div class="field"><label for="pAddr">Manzil</label><textarea id="pAddr" rows="2" maxlength="80" placeholder="Viloyat, tuman, filial"></textarea></div>
+      <button class="wide-btn" type="button" id="pSave">Saqlash</button>
+    </div>
+    <div class="p-card" id="pLastCard"><div class="p-row"><div class="tx"><b>Oldingi buyurtma</b><span id="pLast">Hali buyurtma yoʻq</span></div><button type="button" id="pRepeat" hidden>Takrorlash</button></div></div>
+    <div class="p-card"><div class="p-row"><div class="tx"><b>Kuzatuvdagi modellar</b><span id="pWatch">Yoʻq</span></div></div></div>
+    <div class="p-card"><div class="p-row"><div class="tx"><b>Kafolat</b><span>Barcha displeylarga 2 oy. Brak boʻlsa, rasm yoki video bilan murojaat qiling.</span></div></div></div>
+    <p class="p-ver">Ekranchi_Bola ilovasi</p>
+  </section>
 
   <div class="dock hidden" id="dock">
     <div class="dock-sum">
@@ -417,7 +562,7 @@
 
   <div class="scrim" id="scrim"></div>
 
-  <section class="sheet" id="cartSheet" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+  <section class="sheet" id="cartSheet" role="dialog" aria-modal="true" aria-labelledby="cartTitle" data-views="cart">
     <div class="grab"></div>
     <div class="sheet-head">
       <h2 id="cartTitle">Savat</h2>
@@ -462,22 +607,48 @@
     </div>
   </section>
 
+  <nav class="tabs app-only" id="tabs" aria-label="Boʻlimlar">
+    <button type="button" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/></svg>Bosh sahifa</button>
+    <button type="button" data-tab="catalog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Katalog</button>
+    <button type="button" data-tab="cart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.6L20.5 7H6.6"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg>Savat<span class="badge" id="tabBadge" hidden></span></button>
+    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg>Profil</button>
+  </nav>
+
   <div class="toast" id="toast" role="status"></div>
 
 <script>
-/* Narx va qoldiq admin paneldan boshqariladi: avval bazadan olamiz, bo'lmasa data.js ishlatiladi */
+/* Katalog manbasi bitta: baza (API). Oxirgi javob shu qurilmada saqlanadi va keyingi safar darhol chiqadi,
+   yangi narx va qoldiq esa orqa fonda kelib, joyida yangilanadi. API ishlamasa, catalog.seed.json zaxira bo'ladi. */
 const CATALOG_URL = 'https://ekranchi-shop.vercel.app/api/index?catalog=1';
+const SEED_URL = 'catalog.seed.json?v=wow_v8';
+const CACHE_KEY = 'ek_catalog';
 (function loadCatalog() {
   const list = document.getElementById('list');
+  const okList = (a) => Array.isArray(a) && a.length > 0;
+  const getJSON = (url, ms, opt) => {
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const t = setTimeout(() => ctl && ctl.abort(), ms);
+    return fetch(url, Object.assign({ signal: ctl ? ctl.signal : undefined }, opt || {}))
+      .then(r => r.ok ? r.json() : Promise.reject(r.status)).finally(() => clearTimeout(t));
+  };
+  const fromApi = () => getJSON(CATALOG_URL, 8000, { cache: 'no-store' }).then(d => {
+    if (!d || !okList(d.products)) return Promise.reject('empty');
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), p: d.products })); } catch (e) {}
+    return d.products;
+  });
+  const start = (products) => { window.__catalog = products; if (list) list.innerHTML = ''; startShop(); };
+
+  let cached = null;
+  try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && okList(c.p)) cached = c.p; } catch (e) {}
+  if (cached) {
+    start(cached);
+    fromApi().then(fresh => { if (window.__applyCatalog) window.__applyCatalog(fresh); }).catch(() => {});
+    return;
+  }
   if (list) list.innerHTML = '<div class="empty" style="padding:56px 24px"><strong>Narxlar yangilanmoqda…</strong></div>';
-  let done = false;
-  const go = () => { if (done) return; done = true; if (list) list.innerHTML = ''; startShop(); };
-  const timer = setTimeout(go, 5000);
-  fetch(CATALOG_URL, { cache: 'no-store' })
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(d => { if (d && Array.isArray(d.products) && d.products.length) window.__catalog = d.products; })
-    .catch(() => {})
-    .finally(() => { clearTimeout(timer); go(); });
+  fromApi()
+    .catch(() => getJSON(SEED_URL, 8000).then(p => okList(p) ? p : Promise.reject('empty')))
+    .then(start, () => start([]));
 })();
 
 function startShop() {
@@ -497,8 +668,10 @@ function startShop() {
   const toast = (msg) => { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 2400); };
   // Klaviatura tugmasidan ochilganda initData bo'sh bo'ladi, shuning uchun platformaga qaraymiz
   const inTelegram = () => !!(tg && tg.platform && tg.platform !== 'unknown');
+  const APP = document.documentElement.classList.contains('app');
+  let view = 'home';
 
-  const SOURCE = (window.__catalog && window.__catalog.length) ? window.__catalog : (typeof productsData !== 'undefined' ? productsData : []);
+  const SOURCE = (window.__catalog && window.__catalog.length) ? window.__catalog : [];
   if (!SOURCE.length) {
     $('list').innerHTML = '<div class="empty"><strong>Katalog yuklanmadi</strong>Sahifani yopib, qayta oching.</div>';
     return;
@@ -831,6 +1004,7 @@ function startShop() {
       lastW = w;
     }
     updateTape(); updateDock(); saveCart();
+    if (APP) { const q = totalQty(), bd = $('tabBadge'); bd.hidden = !q; bd.textContent = q > 999 ? '999+' : q; }
     updateRepeat();
     if ($('watchCard') && !$('watchCard').hidden) updateWatch();
   }
@@ -896,24 +1070,31 @@ function startShop() {
   /* ---- sheetlar ---- */
   const scrim = $('scrim');
   function openSheet(id) {
-    document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open'));
+    if (!APP) document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open'));
     $(id).classList.add('open'); scrim.classList.add('open');
     if (tg && tg.BackButton) tg.BackButton.show();
   }
   function closeSheets() {
+    if (APP) { $('checkoutSheet').classList.remove('open'); scrim.classList.remove('open'); return; }
     document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open'));
     scrim.classList.remove('open');
     if (tg && tg.BackButton) tg.BackButton.hide();
   }
   scrim.onclick = closeSheets;
-  document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => APP ? setView('catalog') : closeSheets());
   if (tg && tg.BackButton) tg.BackButton.onClick(() => $('checkoutSheet').classList.contains('open') ? openCart() : closeSheets());
 
   function renderCart() {
     const box = $('cartLines'); box.innerHTML = '';
     const w = isWholesale();
     const ids = Object.keys(cart);
-    if (!ids.length) { closeSheets(); return; }
+    $('cartSheet').classList.toggle('is-empty', !ids.length);
+    if (!ids.length) {
+      if (!APP) { closeSheets(); return; }
+      box.innerHTML = '<div class="cart-empty"><img src="img/empty.svg" alt="" width="150" height="131"><strong>Savat boʻsh</strong>Katalogdan kerakli ekranlarni tanlang.<br><button class="wide-btn" type="button">Katalogga oʻtish</button></div>';
+      box.querySelector('button').onclick = () => setView('catalog');
+      return;
+    }
     ids.forEach(id => {
       const p = byId.get(id), q = cart[id], pr = priceOf(p, w);
       const line = document.createElement('div'); line.className = 'line';
@@ -928,10 +1109,10 @@ function startShop() {
       ? `Optom narx bilan ${fmt(diff)} tejadingiz`
       : `Yana ${WHOLESALE_MIN - totalQty()} ta qoʻshsangiz, ${fmt(diff)} tejaysiz`;
   }
-  function openCart() { if (!totalQty()) return; renderCart(); openSheet('cartSheet'); }
+  function openCart() { if (APP) { closeSheets(); setView('cart'); return; } if (!totalQty()) return; renderCart(); openSheet('cartSheet'); }
   $('dockBtn').onclick = () => { haptic(); openCart(); };
   $('clearCart').onclick = () => {
-    const doClear = (ok) => { if (!ok) return; cart = {}; rows.forEach(renderAct); refreshAll(); closeSheets(); toast('Savat tozalandi'); };
+    const doClear = (ok) => { if (!ok) return; cart = {}; rows.forEach(renderAct); refreshAll(); closeSheets(); if (APP) renderCart(); toast('Savat tozalandi'); };
     (inTelegram() && tg.showConfirm) ? tg.showConfirm('Savatdagi hamma tovarni olib tashlaymizmi?', doClear) : doClear(confirm('Savatni tozalaymizmi?'));
   };
 
@@ -975,6 +1156,18 @@ function startShop() {
     };
     const nt = unsentWatch();
     if (nt.length) payload.nt = nt;
+    if (APP) {
+      if (!token) { closeSheets(); setView('profile'); toast('Buyurtma berish uchun avval Telegram orqali kiring'); return; }
+      const btn = $('submitOrder'); btn.disabled = true; btn.textContent = 'Yuborilmoqda…';
+      appApi('order', { body: payload }).then(d => {
+        store('ek_last', { i: items, t: Date.now() }); lastOrder = { i: items, t: Date.now() };
+        store('ek_info', { n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80) });
+        cart = {}; markWatchSent(); rows.forEach(renderAct); refreshAll();
+        closeSheets(); setView('profile');
+        toast(d.need_phone ? `Buyurtma #${d.order.id} qabul qilindi. Telegramda telefon raqamingizni yuboring` : `Buyurtma #${d.order.id} qabul qilindi`);
+      }).catch(e => toast(e.message)).finally(() => { btn.disabled = false; btn.textContent = 'Buyurtmani yuborish'; });
+      return;
+    }
     if (inTelegram() && tg.sendData) {
       store('ek_last', { i: items, t: Date.now() });
       store('ek_info', { n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80) });
@@ -982,7 +1175,7 @@ function startShop() {
       try { sessionStorage.removeItem('ekranchi_cart'); } catch (e) {}
       tg.sendData(JSON.stringify(payload));
     } else {
-      toast('Buyurtma faqat Telegram ichida yuboriladi. Botdagi “Doʻkonni ochish” tugmasidan kiring.');
+      toast(APP ? 'Ilovadan buyurtma berish tez orada ishga tushadi. Hozircha Telegram botdan buyurtma bering.' : 'Buyurtma faqat Telegram ichida yuboriladi. Botdagi “Doʻkonni ochish” tugmasidan kiring.');
     }
   };
 
@@ -1045,6 +1238,174 @@ function startShop() {
     if (inTelegram() && tg.sendData) { markWatchSent(); tg.sendData(JSON.stringify({ t: 'nt', w: ids })); }
     else toast('Faqat Telegram ichida ishlaydi. Botdagi “Doʻkonni ochish” tugmasidan kiring.');
   };
+
+  /* ---- yangi narx va qoldiq kelganda: sahifani qayta chizmasdan, faqat o'zgargan qatorlar yangilanadi ---- */
+  window.__applyCatalog = (fresh) => {
+    let changed = 0, cartCut = false;
+    const touched = new Set();
+    fresh.forEach(f => {
+      const id = String(f.id), p = byId.get(id), r = rows.get(id);
+      if (!p || !r) return;   // yangi qo'shilgan model keyingi ochilishda chiqadi
+      if (p.retail === f.retail && p.wholesale === f.wholesale && p.stock === f.stock) return;
+      p.retail = f.retail; p.wholesale = f.wholesale; p.stock = f.stock;
+      r.out = typeof p.stock === 'number' && p.stock <= 0;
+      r.el.classList.toggle('out', r.out);
+      if (cart[id] && (r.out || (typeof p.stock === 'number' && cart[id] > p.stock))) {
+        if (r.out) delete cart[id]; else cart[id] = p.stock;
+        cartCut = true;
+      }
+      touched.add(r.g); changed++;
+      renderPrice(r, isWholesale()); renderAct(r);
+    });
+    if (!changed) return;
+    touched.forEach(g => { g.out = g.recs.every(r => r.out); g.el.classList.toggle('out', g.out); });
+    lastW = null; refreshAll(); updateWatch();
+    if ($('cartSheet').classList.contains('open')) renderCart();
+    if (cartCut) toast('Ombordagi qoldiq oʻzgardi, savat yangilandi');
+  };
+
+  /* ---- ilova rejimi: Bosh sahifa / Katalog / Savat / Profil ---- */
+  function setView(v, keepScroll) {
+    view = v; document.body.dataset.view = v;
+    document.querySelectorAll('#tabs button').forEach(b => b.dataset.tab === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+    $('cartSheet').classList.toggle('open', v === 'cart');
+    if (v === 'cart') renderCart();
+    if (v === 'profile') renderProfile();
+    if (!keepScroll) window.scrollTo(0, 0);
+  }
+  /* ---- ilova hisobi: Telegram orqali kirish, buyurtmalar tarixi ---- */
+  const APP_API = 'https://ekranchi-shop.vercel.app/api/index';
+  let token = ''; try { token = localStorage.getItem('ek_app_token') || ''; } catch (e) {}
+  let me = null, myOrders = null, loginPoll = null;
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function appApi(action, opt) {
+    const body = opt && opt.body, post = body !== undefined || (opt && opt.post);
+    const headers = {}; if (body !== undefined) headers['Content-Type'] = 'application/json'; if (token) headers['X-App-Token'] = token;
+    return fetch(`${APP_API}?app=${action}`, { method: post ? 'POST' : 'GET', headers, body: body !== undefined ? JSON.stringify(body) : undefined, cache: 'no-store' })
+      .then(r => r.json().catch(() => ({})).then(j => {
+        if (r.status === 401 && token) logout();
+        if (!r.ok) throw Object.assign(new Error(j.error || 'Xatolik yuz berdi. Qayta urinib koʻring.'), { status: r.status });
+        return j;
+      }), () => { throw new Error('Internet bilan aloqa yoʻq'); });
+  }
+  const setToken = (t) => { token = t || ''; try { t ? localStorage.setItem('ek_app_token', t) : localStorage.removeItem('ek_app_token'); } catch (e) {} };
+  function logout() { setToken(''); me = null; myOrders = null; if (view === 'profile') renderProfile(); }
+  const readPending = () => { const p = readLocal('ek_login', null); return p && p.until > Date.now() ? p : null; };
+  function stopLogin() { clearInterval(loginPoll); loginPoll = null; try { localStorage.removeItem('ek_login'); } catch (e) {} }
+  function pollLogin() {
+    clearInterval(loginPoll);
+    const tick = () => {
+      const p = readPending();
+      if (!p) { stopLogin(); renderAuth(); return; }
+      appApi('login_check', { body: { code: p.code, poll: p.poll } }).then(d => {
+        if (!d.token) return;
+        stopLogin(); setToken(d.token); me = d.user; toast('Xush kelibsiz' + (me.name ? ', ' + me.name : '') + '!');
+        renderProfile();
+      }).catch(e => { if (e.status === 410) { stopLogin(); renderAuth(); toast(e.message); } });
+    };
+    loginPoll = setInterval(tick, 2500); tick();
+  }
+  function startLogin() {
+    const btn = $('pLogin'); if (btn) btn.disabled = true;
+    appApi('login_start', { post: true }).then(d => {
+      try { localStorage.setItem('ek_login', JSON.stringify({ code: d.code, poll: d.poll, url: d.url, until: Date.now() + (d.expires || 600) * 1000 })); } catch (e) {}
+      renderAuth(); pollLogin();
+      location.href = d.url;   // Telegram ochiladi; mijoz u yerda tasdiqlab, ilovaga qaytadi
+    }).catch(e => { toast(e.message); if (btn) btn.disabled = false; });
+  }
+  function renderAuth() {
+    const box = $('pAuth'), pend = !token && readPending();
+    if (token) {
+      box.innerHTML = `<div class="p-row"><div class="tx"><b>${esc((me && me.name) || 'Hisobingiz')}</b><span>${esc((me && me.phone) || 'Telegram orqali kirilgan')}</span></div><button type="button" id="pLogout" style="background:none;color:var(--muted);border:1px solid var(--hair)">Chiqish</button></div>`;
+      $('pLogout').onclick = () => { logout(); toast('Hisobdan chiqdingiz'); };
+    } else if (pend) {
+      box.innerHTML = `<h3>Telegramda tasdiqlang</h3><p class="hint">Botda <b>“Ha, ilovaga kiraman”</b> tugmasini bosing va shu yerga qayting. Sahifa oʻzi yangilanadi.</p>
+        <button class="wide-btn tg" type="button" id="pOpenTg">Telegramni ochish</button><button class="text-btn" type="button" id="pCancel">Bekor qilish</button>`;
+      $('pOpenTg').onclick = () => { location.href = pend.url; };
+      $('pCancel').onclick = () => { stopLogin(); renderAuth(); };
+    } else {
+      box.innerHTML = `<h3>Hisobga kirish</h3><p class="hint">Buyurtma berish va buyurtmalaringiz holatini koʻrish uchun Telegram orqali kiring. Parol kerak emas.</p>
+        <button class="wide-btn tg" type="button" id="pLogin">Telegram orqali kirish</button>`;
+      $('pLogin').onclick = startLogin;
+    }
+    $('pOrdersCard').hidden = !token;
+    $('pLastCard').hidden = !!token;
+  }
+  const when = (ms) => { const d = new Date(ms), z = (n) => String(n).padStart(2, '0'); return `${z(d.getDate())}.${z(d.getMonth() + 1)} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  function renderOrders() {
+    const box = $('pOrders');
+    if (!myOrders) { box.innerHTML = '<p class="hint">Yuklanmoqda…</p>'; return; }
+    if (!myOrders.length) { box.innerHTML = '<p class="hint">Hali buyurtma yoʻq. Katalogdan tanlab, birinchi buyurtmangizni bering.</p>'; return; }
+    box.innerHTML = myOrders.map((o, i) => `<details class="ord"><summary>
+        <span><span class="oid">#${esc(o.id)}</span><span class="odate">${o.created ? when(o.created) : ''}</span></span>
+        <span class="pill s-${esc(o.status)}">${esc(o.status_label)}</span>
+        <span class="osum"><b>${fmt(o.total || 0)}</b> · ${o.items.reduce((a, x) => a + x.q, 0)} ta, ${esc((o.pt || '').toLowerCase())}</span></summary>
+        <ul>${o.items.map(x => `<li><span>${esc(x.n)}</span><span>${x.q} × ${fmtN(x.p || 0)}</span></li>`).join('')}</ul>
+        <div class="oaddr">${esc(o.deliv || '')}${o.addr ? ' · ' + esc(o.addr) : ''}</div>
+        <button class="again" type="button" data-again="${i}">Shu buyurtmani takrorlash</button></details>`).join('');
+  }
+  function loadMe() {
+    if (!token) return;
+    appApi('me').then(d => { me = d.user; myOrders = d.orders || []; if (view === 'profile') { renderAuth(); renderOrders(); } }).catch(() => {});
+  }
+  function addToCart(pairs) {
+    let added = 0, missing = 0;
+    pairs.forEach(([id, q]) => {
+      const r = rows.get(String(id));
+      if (!r || r.out || !(q > 0)) { missing++; return; }
+      cart[String(id)] = typeof r.p.stock === 'number' && r.p.stock > 0 ? Math.min(q, r.p.stock) : q; renderAct(r); added++;
+    });
+    refreshAll();
+    if (!added) { toast('Bu buyurtmadagi modellar hozir omborda yoʻq'); return; }
+    toast(`${added} xil model savatga qoʻshildi` + (missing ? `, ${missing} tasi tugagan` : '')); openCart();
+  }
+
+  function renderProfile() {
+    renderAuth(); if (token) { renderOrders(); loadMe(); }
+    const inf = readLocal('ek_info', null) || {};
+    $('pName').value = inf.n || nameIn.value || '';
+    $('pAddr').value = inf.a || addrIn.value || '';
+    const d = inf.d || delivery;
+    $('pDeliv').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === d)));
+    const its = lastItems();
+    $('pRepeat').hidden = !its.length;
+    $('pLast').textContent = its.length ? `${its.length} xil model, ${its.reduce((a, [, q]) => a + q, 0)} ta ekran` : 'Hali buyurtma yoʻq';
+    const wn = Object.keys(watch).filter(id => rows.has(id)).length;
+    $('pWatch').textContent = wn ? `${wn} ta model kelishi kutilmoqda` : 'Yoʻq';
+  }
+  if (APP) {
+    $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) { haptic(); setView(b.dataset.tab); } });
+    $('homeSearch').onclick = () => { setView('catalog'); $('q').focus(); };
+    $('homeAll').onclick = () => { setView('catalog'); chips.firstChild.click(); };
+    [...chips.children].slice(1).forEach(chip => {
+      const t = document.createElement('button'); t.type = 'button'; t.className = 'brand-tile';
+      t.setAttribute('aria-label', chip.getAttribute('aria-label'));
+      t.innerHTML = `<span class="bm">${chip.querySelector('.bm').innerHTML}</span><small>${chip.querySelector('i').textContent} ta model</small>`;
+      t.onclick = () => { setView('catalog'); chip.click(); chip.scrollIntoView({ block: 'nearest', inline: 'center' }); };
+      $('brandGrid').appendChild(t);
+    });
+    $('pDeliv').addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (!b) return;
+      $('pDeliv').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+    $('pSave').onclick = () => {
+      const inf = { n: $('pName').value.trim().slice(0, 30), d: $('pDeliv').querySelector('[aria-pressed="true"]').dataset.v, a: $('pAddr').value.trim().slice(0, 80) };
+      store('ek_info', inf);
+      nameIn.value = inf.n; addrIn.value = inf.a;
+      const b = $('deliv').querySelector(`button[data-v="${inf.d}"]`); if (b) b.click();
+      toast('Saqlandi');
+    };
+    $('pRepeat').onclick = () => $('repeatBtn').click();
+    $('pOrders').addEventListener('click', (e) => { const b = e.target.closest('[data-again]'); if (!b || !myOrders) return;
+      haptic('medium'); addToCart(myOrders[+b.dataset.again].items.map(x => [x.id, x.q])); });
+    if (!token && readPending()) pollLogin();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !token && readPending()) pollLogin(); });
+    // Android "orqaga" tugmasi: avval oyna yopiladi, keyin bosh sahifaga qaytadi, oxirida ilovadan chiqadi
+    window.__appBack = () => {
+      if ($('checkoutSheet').classList.contains('open')) { closeSheets(); return true; }
+      if (view !== 'home') { setView('home'); return true; }
+      return false;
+    };
+    setView('home');
+  }
 
   /* ---- start ---- */
   rows.forEach(renderAct);
