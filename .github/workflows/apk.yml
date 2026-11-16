@@ -1,0 +1,32 @@
+name: APK
+on:
+  push:
+    branches: [main, apk-demo]
+    paths: ['android/**', '.github/workflows/apk.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: APK yig'ish
+        run: bash android/build.sh
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ekranchi_Bola
+          path: android/build/Ekranchi_Bola.apk
+      - name: Yuklab olish havolasi (sinov relizi)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-demo --yes --cleanup-tag || true
+          sleep 3
+          gh release create apk-demo android/build/Ekranchi_Bola.apk --prerelease --target "$GITHUB_SHA" \
+            --title "Ekranchi_Bola APK (sinov)" \
+            --notes "Sinov uchun yig'ilgan APK. Do'kon sahifasini ilova ichida ochadi; buyurtma berish hozircha faqat Telegram bot orqali ishlaydi."
