@@ -353,7 +353,8 @@
     .app body[data-view="home"] [data-views]:not([data-views~="home"]),
     .app body[data-view="catalog"] [data-views]:not([data-views~="catalog"]),
     .app body[data-view="cart"] [data-views]:not([data-views~="cart"]),
-    .app body[data-view="profile"] [data-views]:not([data-views~="profile"]) { display: none !important; }
+    .app body[data-view="profile"] [data-views]:not([data-views~="profile"]),
+    .app body[data-view="orders"] [data-views]:not([data-views~="orders"]) { display: none !important; }
     .app nav.tabs {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; height: calc(var(--tabs-h) + var(--safe-b));
       padding-bottom: var(--safe-b); display: grid; grid-template-columns: repeat(4, 1fr);
@@ -372,7 +373,7 @@
       background: var(--kapton); color: #2B1A00; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
     }
     .app .dock { bottom: calc(var(--tabs-h) + 10px + var(--safe-b)); }
-    .app body[data-view="cart"] .dock, .app body[data-view="profile"] .dock { display: none; }
+    .app body[data-view="cart"] .dock, .app body[data-view="profile"] .dock, .app body[data-view="orders"] .dock { display: none; }
 
     .home-extra { padding: 6px 12px 0; }
     .home-search {
@@ -468,6 +469,136 @@
     .addr-row .tx small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; }
     .addr-row button { border: 0; background: none; color: var(--muted); width: 36px; height: 36px; font-size: 16px; flex: none; }
     .p-card .ghost-btn { width: 100%; height: 44px; border: 1px solid var(--hair); background: var(--card); border-radius: 12px; font-weight: 600; font-size: 14px; color: var(--mat); margin-top: 10px; }
+    /* ---- ilova: yangi tuzilish (5 bo'lim, mahsulot sahifasi, buyurtmalar) ---- */
+    .app .hero { display: none; }
+    .app .toast { top: auto; bottom: calc(var(--tabs-h) + 16px + var(--safe-b)); transform: translate(-50%, 500%); }
+    .app .toast.show { transform: translate(-50%, 0); }
+    .app nav.tabs { grid-template-columns: repeat(5, 1fr); }
+    .app .tabs button { font-size: 10.5px; }
+    .app .appbar { display: block; background: var(--mat); color: #fff; padding: 14px 14px 14px; }
+    .ab-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+    .ab-logo { flex: 1; font-family: var(--display); font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
+    .ab-logo em { font-style: normal; color: var(--kapton); }
+    .ab-ico { position: relative; width: 42px; height: 42px; border: 0; border-radius: 12px; background: rgba(255,255,255,.08); color: #fff; display: grid; place-items: center; }
+    .ab-ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .ab-ico .badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--kapton); color: #2B1A00; font-size: 11px; font-weight: 700; line-height: 18px; }
+    .ab-ico.dot::after { content: ""; position: absolute; top: 8px; right: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--kapton); border: 2px solid var(--mat); }
+    .appbar .home-search { border-color: transparent; }
+    .app .home-extra { padding-top: 14px; }
+    .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .quick button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink); padding: 0; }
+    .quick i { width: 58px; height: 58px; border-radius: 18px; background: var(--card); border: 1px solid var(--hair); display: grid; place-items: center; color: var(--mat); }
+    .quick svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .sec-row { display: flex; align-items: baseline; justify-content: space-between; }
+    .sec-link { border: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 600; padding: 4px; }
+    .pop-track { display: flex; gap: 10px; overflow-x: auto; margin: 0 -12px; padding: 0 12px 4px; scrollbar-width: none; }
+    .pop-track::-webkit-scrollbar { display: none; }
+    .pop-card { flex: none; width: 138px; border: 1px solid var(--hair); background: var(--card); border-radius: 16px; padding: 10px; text-align: left; }
+    .pop-art { height: 92px; border-radius: 11px; background: var(--paper); display: grid; place-items: center; margin-bottom: 8px; overflow: hidden; }
+    .pop-art img { width: 100%; height: 100%; object-fit: cover; }
+    .pop-art .glyph { width: 40px; height: 68px; align-self: center; }
+    .pop-card small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
+    .pop-card b { display: block; font-size: 13.5px; line-height: 1.25; margin: 2px 0 6px; height: 34px; overflow: hidden; }
+    .pop-card span { font-size: 13px; font-weight: 700; color: var(--mat); }
+
+    .app .cat-head { display: block; background: var(--mat); color: #fff; padding: 16px 16px 14px; }
+    .cat-head h2, .orders-view .page-head h2 { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+    .seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: rgba(255,255,255,.1); padding: 4px; border-radius: 12px; margin-top: 12px; }
+    .seg2 button { border: 0; background: none; color: #CFE5DF; height: 36px; border-radius: 9px; font-weight: 600; font-size: 13.5px; }
+    .seg2 button[aria-pressed="true"] { background: #fff; color: var(--mat); }
+    .app .tape-wrap[data-views] { }
+    .app body[data-view="catalog"] .tape-wrap { display: none; }
+    .app body[data-cat="brands"] #chips, .app body[data-cat="brands"] #typeChips,
+    .app body[data-cat="brands"] #list, .app body[data-cat="brands"] #resultMeta { display: none !important; }
+    .app body[data-cat="models"] .cat-brands { display: none !important; }
+    .cat-brands { padding: 4px 12px 0; }
+    .brand-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--hair); background: var(--card); border-radius: var(--r-md); text-align: left; }
+    .brand-row .lg-wrap { width: 44px; height: 44px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; flex: none; overflow: hidden; font-weight: 800; font-size: 15px; color: var(--mat); }
+    .brand-row .tx { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; }
+    .brand-row .tx small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+    .chev { color: var(--muted); font-size: 20px; flex: none; }
+    .app .row .info, .app .row .thumb, .app .row > .glyph { cursor: pointer; }
+
+    .orders-view { padding: 0 12px; }
+    .ord-filter { display: flex; gap: 8px; margin-bottom: 12px; }
+    .ord-filter button { border: 1px solid var(--hair); background: var(--card); height: 36px; padding: 0 14px; border-radius: 18px; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .ord-filter button[aria-pressed="true"] { background: var(--mat); border-color: var(--mat); color: #fff; }
+    .orders-view .ord { border: 1px solid var(--hair); background: var(--card); border-radius: var(--r-md); padding: 14px; margin-bottom: 8px; }
+    .orders-view .ord:first-of-type { border-top: 1px solid var(--hair); padding-top: 14px; }
+    .orders-view .ord:last-of-type { padding-bottom: 14px; }
+    .orders-view .ord summary { grid-template-columns: 40px 1fr auto; }
+    .ord .obox { grid-row: 1 / span 2; width: 40px; height: 40px; border-radius: 12px; background: var(--paper); display: grid; place-items: center; color: var(--mat); }
+    .ord .obox svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+    .orders-view .ord .osum { grid-column: 2; }
+    .orders-view .pill { grid-column: 3; }
+    .ord-empty { text-align: center; padding: 48px 20px; color: var(--muted); font-size: 14px; }
+    .ord-empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+    .ord-empty .wide-btn { max-width: 240px; margin-top: 18px; }
+
+    .line.has-art { grid-template-columns: 38px 1fr auto; }
+    .line .glyph { width: 38px; height: 58px; align-self: center; }
+    .line.has-art .line-more { grid-column: 1 / -1; }
+
+    /* mahsulot sahifasi */
+    #prodSheet { top: 0; max-height: none; border-radius: 0; background: var(--paper); z-index: 110; }
+    .pd-top { display: flex; align-items: center; gap: 8px; padding: 10px 10px; background: var(--mat); color: #fff; flex: none; }
+    .pd-top button { width: 42px; height: 42px; border: 0; background: none; color: #fff; font-size: 24px; }
+    .pd-top b { flex: 1; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pd-body { overflow-y: auto; flex: 1; padding: 12px; }
+    .pd-art { height: 230px; border-radius: 20px; display: grid; place-items: center; overflow: hidden;
+      background: radial-gradient(120% 90% at 50% 0%, #1A5248 0%, var(--mat-deep) 70%); }
+    .pd-art img { width: 100%; height: 100%; object-fit: contain; }
+    .pd-art .glyph { width: 96px; height: 170px; border-radius: 18px; align-self: center; box-shadow: 0 24px 40px -18px rgba(0,0,0,.7); transform: rotate(-6deg); }
+    .pd-art .glyph::before { inset: 6px; border-radius: 13px; }
+    .pd-brand { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 14px 4px 2px; display: flex; align-items: center; gap: 6px; }
+    .pd-name { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin: 0 4px 12px; }
+    .pd-vars { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 2px 12px; }
+    .pd-vars button { border: 1px solid var(--hair); background: var(--card); height: 36px; padding: 0 14px; border-radius: 18px; font-size: 13px; font-weight: 600; }
+    .pd-vars button[aria-pressed="true"] { background: var(--kapton); border-color: var(--kapton); color: #2B1A00; }
+    .pd-vars button.out { color: var(--muted); text-decoration: line-through; }
+    .pd-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .pd-prices div { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 12px 14px; }
+    .pd-prices small { display: block; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .pd-prices b { font-family: var(--display); font-size: 17px; letter-spacing: -.02em; }
+    .pd-prices .ws b { color: var(--kapton-deep); }
+    .pd-info { background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-md); padding: 4px 14px; font-size: 13.5px; }
+    .pd-info div { display: flex; gap: 12px; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--hair); }
+    .pd-info div:first-child { border-top: 0; }
+    .pd-info span { color: var(--muted); flex: none; }
+    .pd-info b { font-weight: 600; text-align: right; }
+    .pd-info .ok { color: #17603A; } .pd-info .low { color: var(--kapton-deep); } .pd-info .no { color: var(--danger); }
+    .pd-foot { display: flex; gap: 10px; padding: 12px 12px calc(12px + var(--safe-b)); background: var(--card); border-top: 1px solid var(--hair); flex: none; }
+    .pd-foot .stepper { flex: none; }
+    .pd-foot .primary { flex: 1; margin: 0; }
+
+    /* profil menyusi */
+    .p-acc { display: flex; align-items: center; gap: 12px; }
+    .p-ava { width: 48px; height: 48px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; color: var(--mat); flex: none; font-weight: 800; font-size: 18px; }
+    .p-role { border-color: var(--kapton); background: #FFFBF3; }
+    .p-role .p-ava { background: var(--kapton); color: #2B1A00; border-radius: 14px; }
+    details.p-menu { padding: 0; }
+    details.p-menu > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 14px; font-weight: 600; font-size: 14.5px; cursor: pointer; }
+    details.p-menu > summary::-webkit-details-marker { display: none; }
+    details.p-menu > summary svg { width: 22px; height: 22px; fill: none; stroke: var(--mat); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    details.p-menu > summary span { flex: 1; }
+    details.p-menu > summary .chev { transition: transform .15s; }
+    details.p-menu[open] > summary .chev { transform: rotate(90deg); }
+    details.p-menu > .p-in { padding: 0 14px 14px; }
+
+    /* birinchi ochilishdagi tanishtiruv */
+    .onb { position: fixed; inset: 0; z-index: 300; background: radial-gradient(120% 70% at 50% 100%, #1A5248 0%, var(--mat-deep) 65%); color: #fff; display: flex; flex-direction: column; padding: 24px 22px calc(22px + var(--safe-b)); }
+    .onb[hidden] { display: none; }
+    .onb-logo { font-family: var(--display); font-weight: 800; font-size: 22px; text-align: center; margin-top: 18px; }
+    .onb-logo em { font-style: normal; color: var(--kapton); }
+    .onb-slide { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .onb-slide img { width: 230px; height: 200px; object-fit: contain; filter: drop-shadow(0 18px 26px rgba(0,0,0,.4)); }
+    .onb-slide h2 { font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; margin: 26px 0 10px; }
+    .onb-slide p { font-size: 15px; color: #CFE5DF; line-height: 1.45; max-width: 300px; }
+    .onb-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 18px; }
+    .onb-dots i { width: 6px; height: 6px; border-radius: 6px; background: rgba(255,255,255,.3); transition: width .25s, background .25s; }
+    .onb-dots i.on { width: 20px; background: var(--kapton); }
+    .onb button.go { height: 54px; border: 0; border-radius: 16px; background: var(--kapton); color: #2B1A00; font-weight: 700; font-size: 16px; }
+    .onb button.skip { border: 0; background: none; color: #A9CFC6; font-size: 13.5px; font-weight: 600; height: 40px; margin-top: 4px; }
     .p-ver { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 4px; }
 
     @media (prefers-reduced-motion: reduce) {
@@ -482,6 +613,18 @@
   </style>
 </head>
 <body>
+
+  <header class="appbar app-only" data-views="home">
+    <div class="ab-row">
+      <div class="ab-logo">Ekranchi<em>_Bola</em></div>
+      <button type="button" class="ab-ico" id="abBell" aria-label="Buyurtmalar yangiliklari"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.500 2h-15z"/><path d="M10 20.500a2 2 0 0 0 4 0"/></svg></button>
+      <button type="button" class="ab-ico" id="abCart" aria-label="Savat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.500l2.200 11h10.600L20.500 7H6.600"/><circle cx="9" cy="19.500" r="1.400"/><circle cx="17" cy="19.500" r="1.400"/></svg><span class="badge" id="abBadge" hidden></span></button>
+    </div>
+    <button class="home-search" type="button" id="homeSearch">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#62716D" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      Model qidirish: A10, Note 8, 13C…
+    </button>
+  </header>
 
   <header class="hero" data-views="home">
     <div class="hero-glow" aria-hidden="true"></div>
@@ -511,12 +654,13 @@
     <div class="promo-dots" id="promoDots" aria-hidden="true"></div>
   </section>
 
-  <section class="home-extra app-only" id="homeExtra" data-views="home">
-    <button class="home-search" type="button" id="homeSearch">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#62716D" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      Model qidirish: A10, Note 8, 13C…
-    </button>
-  </section>
+  <div class="cat-head app-only" data-views="catalog">
+    <h2>Katalog</h2>
+    <div class="seg2" id="catSeg">
+      <button type="button" data-cat="brands" aria-pressed="true">Brendlar</button>
+      <button type="button" data-cat="models" aria-pressed="false">Modellar</button>
+    </div>
+  </div>
 
   <div class="toolbar" id="toolbar" data-views="catalog">
     <label class="search" id="searchBox">
@@ -528,7 +672,7 @@
     <div class="chips types" id="typeChips" role="toolbar" aria-label="Sifat turi"></div>
   </div>
 
-  <div class="notes" data-views="home catalog">
+  <div class="notes" data-views="home">
     <div class="note-card repeat" id="repeatCard" hidden>
       <div class="tx"><b>Oldingi buyurtmangiz</b><span id="repeatInfo"></span></div>
       <button type="button" id="repeatBtn">Takrorlash</button>
@@ -542,9 +686,14 @@
   <main class="list" id="list" data-views="catalog"></main>
 
   <section class="home-extra app-only" data-views="home">
-    <h2 class="sec-title">Brendlar</h2>
-    <div class="brand-grid" id="brandGrid"></div>
-    <button class="wide-btn" type="button" id="homeAll">Butun katalogni ochish</button>
+    <div class="quick">
+      <button type="button" data-quick="brands"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.500 12 3l8 4.500v9L12 21l-8-4.500z"/><path d="M4 7.500 12 12l8-4.500M12 12v9"/></svg></i>Brendlar</button>
+      <button type="button" data-quick="models"><i><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.500" width="10" height="19" rx="2.500"/><path d="M10.500 18.500h3"/></svg></i>Modellar</button>
+      <button type="button" data-quick="repeat"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.700-5.600L20 8.500"/><path d="M20 4v4.500h-4.500"/><path d="M20 12a8 8 0 0 1-13.700 5.600L4 15.500"/><path d="M4 20v-4.500h4.500"/></svg></i>Takrorlash</button>
+      <button type="button" data-quick="warranty"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z"/><path d="m9 12 2.200 2.200L15.500 10"/></svg></i>Kafolat</button>
+    </div>
+    <div class="sec-row"><h2 class="sec-title">Ommabop modellar</h2><button class="sec-link" type="button" id="popAll">Barchasi ›</button></div>
+    <div class="pop-track" id="popTrack"></div>
     <h2 class="sec-title">Bilib qoʻying</h2>
     <div class="facts">
       <div class="fact"><b>50 tadan optom narx</b>Savatdagi jami ekranlar 50 taga yetsa, hamma narx optomga oʻtadi.</div>
@@ -553,24 +702,42 @@
     </div>
   </section>
 
-  <section class="profile app-only" id="profileView" data-views="profile">
-    <div class="page-head"><h2>Profil</h2><p>Maʼlumotlar shu telefonda saqlanadi</p></div>
-    <div class="p-card" id="pAuth"></div>
-    <div class="p-card" id="pOrdersCard" hidden><h3>Buyurtmalarim</h3><div id="pOrders"></div></div>
-    <div class="p-card">
-      <h3>Ismingiz</h3>
-      <div class="field"><input id="pName" maxlength="30" autocomplete="name" placeholder="Masalan, Sardor" aria-label="Ismingiz"></div>
-      <button class="wide-btn" type="button" id="pSave">Saqlash</button>
+  <section class="cat-brands app-only" data-views="catalog"><div id="brandGrid"></div></section>
+
+  <section class="orders-view app-only" id="ordersView" data-views="orders">
+    <div class="page-head"><h2>Buyurtmalar</h2></div>
+    <div class="ord-filter" id="ordFilter">
+      <button type="button" data-f="all" aria-pressed="true">Barchasi</button>
+      <button type="button" data-f="active" aria-pressed="false">Jarayonda</button>
+      <button type="button" data-f="done" aria-pressed="false">Yetkazilgan</button>
     </div>
-    <div class="p-card">
-      <h3>Manzillarim</h3>
+    <div id="pOrders"></div>
+  </section>
+
+  <section class="profile app-only" id="profileView" data-views="profile">
+    <div class="page-head"><h2>Profil</h2></div>
+    <div class="p-card" id="pAuth"></div>
+    <div class="p-card p-role" id="pRole" hidden><div class="p-acc"><div class="p-ava"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l2-4 3 3 3-5 3 5 3-3 2 4-1.500 9h-13z" fill="none" stroke="currentColor" stroke-width="1.700" stroke-linejoin="round"/></svg></div><div class="tx" style="flex:1"><small style="display:block;font-size:12px;color:var(--muted);font-weight:600">Mijoz turi</small><b id="pRoleTx" style="font-size:15px"></b></div></div></div>
+    <details class="p-card p-menu" id="mName"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.500 20.500c1.200-3.600 4-5.500 7.500-5.500s6.300 1.900 7.500 5.500"/></svg><span>Shaxsiy maʼlumotlar</span><i class="chev">›</i></summary><div class="p-in">
+      <div class="field"><label for="pName">Ismingiz</label><input id="pName" maxlength="30" autocomplete="name" placeholder="Masalan, Sardor"></div>
+      <button class="wide-btn" type="button" id="pSave" style="margin-top:0">Saqlash</button>
+    </div></details>
+    <details class="p-card p-menu" id="mAddr"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.200 7-11.500a7 7 0 0 0-14 0C5 14.800 12 21 12 21z"/><circle cx="12" cy="9.500" r="2.500"/></svg><span>Manzillar</span><i class="chev">›</i></summary><div class="p-in">
       <div id="pAddrs"></div>
       <button class="ghost-btn" type="button" id="pAddAddr">+ Yangi manzil qoʻshish</button>
-    </div>
-    <div class="p-card" id="pLastCard"><div class="p-row"><div class="tx"><b>Oldingi buyurtma</b><span id="pLast">Hali buyurtma yoʻq</span></div><button type="button" id="pRepeat" hidden>Takrorlash</button></div></div>
-    <div class="p-card"><div class="p-row"><div class="tx"><b>Kuzatuvdagi modellar</b><span id="pWatch">Yoʻq</span></div></div></div>
-    <div class="p-card"><div class="p-row"><div class="tx"><b>Kafolat</b><span>Barcha displeylarga 2 oy. Brak boʻlsa, rasm yoki video bilan murojaat qiling.</span></div></div></div>
-    <p class="p-ver">Ekranchi_Bola ilovasi</p>
+    </div></details>
+    <details class="p-card p-menu" id="mNotify"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.500 2h-15z"/><path d="M10 20.500a2 2 0 0 0 4 0"/></svg><span>Bildirishnomalar</span><i class="chev">›</i></summary><div class="p-in">
+      <p class="hint">Buyurtma holati oʻzgarsa, ilova xabar beradi: ochiq turganda darhol, yopiq boʻlsa taxminan 15 daqiqa ichida. Telegram bot ham yozadi.</p>
+      <p class="hint" style="margin-top:8px"><b style="color:var(--ink)">Kuzatuvdagi modellar:</b> <span id="pWatch">yoʻq</span></p>
+    </div></details>
+    <details class="p-card p-menu" id="mHelp"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z"/><path d="m9 12 2.200 2.200L15.500 10"/></svg><span>Kafolat va yordam</span><i class="chev">›</i></summary><div class="p-in">
+      <p class="hint"><b style="color:var(--ink)">2 oy kafolat.</b> Zavod braki boʻlsa, rasm yoki video bilan murojaat qiling: yangisiga almashtiramiz yoki pulni qaytaramiz.</p>
+      <p class="hint" style="margin-top:8px"><b style="color:var(--ink)">Yetkazish.</b> Viloyatlarga BTS pochta, shahar ichida taksi orqali.</p>
+      <p class="hint" style="margin-top:8px"><b style="color:var(--ink)">Savollar.</b> Telegram botimizga yozing, admin javob beradi.</p>
+    </div></details>
+    <details class="p-card p-menu"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.500v.500"/></svg><span>Ilova haqida</span><i class="chev">›</i></summary><div class="p-in">
+      <p class="hint">Ekranchi_Bola: telefon displeylari ulgurji va donalab. Narx va qoldiq har doim ombor bilan bir xil.</p>
+    </div></details>
   </section>
 
   <div class="dock hidden" id="dock">
@@ -655,10 +822,32 @@
     </div>
   </section>
 
+  <section class="sheet" id="prodSheet" role="dialog" aria-modal="true" aria-labelledby="pdTitle">
+    <div class="pd-top"><button type="button" id="pdBack" aria-label="Orqaga">‹</button><b id="pdTitle"></b></div>
+    <div class="pd-body">
+      <div class="pd-art" id="pdArt"></div>
+      <div class="pd-brand" id="pdBrand"></div>
+      <h2 class="pd-name" id="pdName"></h2>
+      <div class="pd-vars" id="pdVars"></div>
+      <div class="pd-prices"><div><small>Chakana narx</small><b id="pdRetail"></b></div><div class="ws"><small>Optom narx (50+)</small><b id="pdWholesale"></b></div></div>
+      <div class="pd-info" id="pdInfo"></div>
+    </div>
+    <div class="pd-foot" id="pdFoot"></div>
+  </section>
+
+  <div class="onb" id="onb" hidden>
+    <div class="onb-logo">Ekranchi<em>_Bola</em></div>
+    <div class="onb-slide"><img id="onbImg" alt=""><h2 id="onbTitle"></h2><p id="onbText"></p></div>
+    <div class="onb-dots" id="onbDots"><i></i><i></i><i></i></div>
+    <button type="button" class="go" id="onbGo">Davom etish</button>
+    <button type="button" class="skip" id="onbSkip">Oʻtkazib yuborish</button>
+  </div>
+
   <nav class="tabs app-only" id="tabs" aria-label="Boʻlimlar">
     <button type="button" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/></svg>Bosh sahifa</button>
     <button type="button" data-tab="catalog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Katalog</button>
     <button type="button" data-tab="cart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.5l2.2 11h10.6L20.5 7H6.6"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg>Savat<span class="badge" id="tabBadge" hidden></span></button>
+    <button type="button" data-tab="orders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.500 12 3l8 4.500v9L12 21l-8-4.500z"/><path d="M4 7.500 12 12l8-4.500M12 12v9"/></svg>Buyurtmalar</button>
     <button type="button" data-tab="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg>Profil</button>
   </nav>
 
@@ -1052,7 +1241,7 @@ function startShop() {
       lastW = w;
     }
     updateTape(); updateDock(); saveCart();
-    if (APP) { const q = totalQty(), bd = $('tabBadge'); bd.hidden = !q; bd.textContent = q > 999 ? '999+' : q; }
+    if (APP) { const q = totalQty(); [$('tabBadge'), $('abBadge')].forEach(bd => { bd.hidden = !q; bd.textContent = q > 999 ? '999+' : q; }); }
     updateRepeat();
     if ($('watchCard') && !$('watchCard').hidden) updateWatch();
   }
@@ -1123,7 +1312,7 @@ function startShop() {
     if (tg && tg.BackButton) tg.BackButton.show();
   }
   function closeSheets() {
-    if (APP) { document.querySelectorAll('.sheet.open:not(#cartSheet)').forEach(s => s.classList.remove('open')); scrim.classList.remove('open'); return; }
+    if (APP) { document.querySelectorAll('.sheet.open:not(#cartSheet):not(#prodSheet)').forEach(s => s.classList.remove('open')); scrim.classList.remove('open'); return; }
     document.querySelectorAll('.sheet.open').forEach(s => s.classList.remove('open'));
     scrim.classList.remove('open');
     if (tg && tg.BackButton) tg.BackButton.hide();
@@ -1153,9 +1342,9 @@ function startShop() {
     }
     ids.forEach(id => {
       const p = byId.get(id), q = cart[id], pr = priceOf(p, w);
-      const line = document.createElement('div'); line.className = 'line';
+      const line = document.createElement('div'); line.className = 'line has-art';
 const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
-      line.innerHTML = `<div class="linfo" data-line="${id}" role="button" tabindex="0" aria-expanded="${isOpen}"><div class="nm"></div><div class="sub">${q} × ${fmtN(pr)} = <b>${fmt(pr * q)}</b></div></div>${stepperHTML(id, q)}<div class="line-more"${isOpen ? '' : ' hidden'}></div>`;
+      line.innerHTML = `<div class="glyph t-${tc}" aria-hidden="true"></div><div class="linfo" data-line="${id}" role="button" tabindex="0" aria-expanded="${isOpen}"><div class="nm"></div><div class="sub">${q} × ${fmtN(pr)} = <b>${fmt(pr * q)}</b></div></div>${stepperHTML(id, q)}<div class="line-more"${isOpen ? '' : ' hidden'}></div>`;
       const more = line.querySelector('.line-more');
       const row = (label, text) => { const d = document.createElement('div'), b = document.createElement('b'); b.textContent = label + ' '; d.append(b, document.createTextNode(text)); more.appendChild(d); };
       if (p._pm.alts.length) row('Mos keladi:', [p._pm.main, ...p._pm.alts].join(', '));
@@ -1229,7 +1418,7 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
         store('ek_info', { n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80) });
         addAddr({ d: delivery, a: addr.slice(0, 80), g: coGeo });   // ishlatilgan manzil arxivda qoladi
         cart = {}; markWatchSent(); rows.forEach(renderAct); refreshAll();
-        closeSheets(); setView('profile');
+        closeSheets(); setView('orders');
         toast(d.need_phone ? `Buyurtma #${d.order.id} qabul qilindi. Telegramda telefon raqamingizni yuboring` : `Buyurtma #${d.order.id} qabul qilindi`);
       }).catch(e => toast(e.message)).finally(() => { btn.disabled = false; btn.textContent = 'Buyurtmani yuborish'; });
       return;
@@ -1336,7 +1525,8 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
     document.querySelectorAll('#tabs button').forEach(b => b.dataset.tab === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
     $('cartSheet').classList.toggle('open', v === 'cart');
     if (v === 'cart') renderCart();
-    if (v === 'profile') { renderProfile(); const tb = $('tabs').querySelector('[data-tab="profile"]'); if (tb) tb.classList.remove('dot'); }
+    if (v === 'profile') renderProfile();
+    if (v === 'orders') { renderOrders(); loadMe(); $('tabs').querySelector('[data-tab="orders"]').classList.remove('dot'); $('abBell').classList.remove('dot'); }
     if (!keepScroll) window.scrollTo(0, 0);
   }
   /* ---- ilova hisobi: Telegram orqali kirish, buyurtmalar tarixi ---- */
@@ -1386,7 +1576,8 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
   function renderAuth() {
     const box = $('pAuth'), pend = !token && readPending();
     if (token) {
-      box.innerHTML = `<div class="p-row"><div class="tx"><b>${esc((me && me.name) || 'Hisobingiz')}</b><span>${esc((me && me.phone) || 'Telegram orqali kirilgan')}</span></div><button type="button" id="pLogout" style="background:none;color:var(--muted);border:1px solid var(--hair)">Chiqish</button></div>`;
+      const nm = (me && me.name) || 'Hisobingiz';
+      box.innerHTML = `<div class="p-acc"><div class="p-ava">${esc(nm.slice(0, 1).toUpperCase())}</div><div class="p-row" style="flex:1"><div class="tx"><b>${esc(nm)}</b><span>${esc((me && me.phone) || 'Telegram orqali kirilgan')}</span></div><button type="button" id="pLogout" style="background:none;color:var(--muted);border:1px solid var(--hair)">Chiqish</button></div></div>`;
       $('pLogout').onclick = () => { logout(); toast('Hisobdan chiqdingiz'); };
     } else if (pend) {
       box.innerHTML = `<h3>Telegramda tasdiqlang</h3><p class="hint">Botda <b>“Ha, ilovaga kiraman”</b> tugmasini bosing va shu yerga qayting. Sahifa oʻzi yangilanadi.</p>
@@ -1398,25 +1589,41 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
         <button class="wide-btn tg" type="button" id="pLogin">Telegram orqali kirish</button>`;
       $('pLogin').onclick = startLogin;
     }
-    $('pOrdersCard').hidden = !token;
-    $('pLastCard').hidden = !!token;
+    const role = token && me && me.role;
+    $('pRole').hidden = !role;
+    if (role) $('pRoleTx').textContent = role === 'Optom' ? 'Ulgurji mijoz (doʻkon / usta)' : 'Chakana mijoz';
   }
   const when = (ms) => { const d = new Date(ms), z = (n) => String(n).padStart(2, '0'); return `${z(d.getDate())}.${z(d.getMonth() + 1)} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  let ordFilter = 'all';
+  const ORD_ACTIVE = ['yangi', 'chek', 'tasdiqlandi', 'yuborildi'];
   function renderOrders() {
     const box = $('pOrders');
-    if (!myOrders) { box.innerHTML = '<p class="hint">Yuklanmoqda…</p>'; return; }
-    if (!myOrders.length) { box.innerHTML = '<p class="hint">Hali buyurtma yoʻq. Katalogdan tanlab, birinchi buyurtmangizni bering.</p>'; return; }
-    box.innerHTML = myOrders.map((o, i) => `<details class="ord"><summary>
+    $('ordFilter').hidden = !token;
+    if (!token) {
+      box.innerHTML = '<div class="ord-empty"><strong>Buyurtmalaringiz shu yerda chiqadi</strong>Holatini kuzatish uchun hisobingizga kiring.<br><button class="wide-btn" type="button" data-go="profile">Kirish</button></div>';
+      return;
+    }
+    if (!myOrders) { box.innerHTML = '<div class="ord-empty">Yuklanmoqda…</div>'; return; }
+    const list = myOrders.map((o, i) => [o, i]).filter(([o]) => ordFilter === 'all' || (ordFilter === 'active' ? ORD_ACTIVE.includes(o.status) : o.status === 'yetkazildi'));
+    if (!list.length) {
+      box.innerHTML = myOrders.length
+        ? '<div class="ord-empty"><strong>Bu boʻlimda buyurtma yoʻq</strong></div>'
+        : '<div class="ord-empty"><strong>Hali buyurtma yoʻq</strong>Katalogdan tanlab, birinchi buyurtmangizni bering.<br><button class="wide-btn" type="button" data-go="catalog">Katalogga oʻtish</button></div>';
+      return;
+    }
+    const open = new Set([...box.querySelectorAll('details[open]')].map(d => d.dataset.oid));
+    box.innerHTML = list.map(([o, i]) => `<details class="ord" data-oid="${esc(o.id)}"${open.has(String(o.id)) ? ' open' : ''}><summary>
+        <span class="obox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></span>
         <span><span class="oid">#${esc(o.id)}</span><span class="odate">${o.created ? when(o.created) : ''}</span></span>
         <span class="pill s-${esc(o.status)}">${esc(o.status_label)}</span>
         <span class="osum"><b>${fmt(o.total || 0)}</b> · ${o.items.reduce((a, x) => a + x.q, 0)} ta, ${esc((o.pt || '').toLowerCase())}</span></summary>
         <ul>${o.items.map(x => `<li><span>${esc(x.n)}</span><span>${x.q} × ${fmtN(x.p || 0)}</span></li>`).join('')}</ul>
-        <div class="oaddr">${esc(o.deliv || '')}${o.addr ? ' · ' + esc(o.addr) : ''}</div>
+        <div class="oaddr">${esc(o.deliv || '')}${o.addr ? ' · ' + esc(o.addr) : ''}${o.geo ? ' · 📍' : ''}</div>
         <button class="again" type="button" data-again="${i}">Shu buyurtmani takrorlash</button></details>`).join('');
   }
   function loadMe() {
     if (!token) return;
-    appApi('me').then(d => { me = d.user; myOrders = d.orders || []; checkStatuses(myOrders); if (view === 'profile') { renderAuth(); renderOrders(); } }).catch(() => {});
+    appApi('me').then(d => { me = d.user; myOrders = d.orders || []; checkStatuses(myOrders); if (view === 'profile') renderAuth(); if (view === 'orders') renderOrders(); }).catch(() => {});
   }
   function addToCart(pairs) {
     let added = 0, missing = 0;
@@ -1494,31 +1701,133 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
     const o = changed[0];
     haptic('heavy');
     toast(`Buyurtma #${o.id} ${STATUS_TXT[o.status] || ': ' + o.status_label}` + (changed.length > 1 ? ` (+${changed.length - 1} ta yangilik)` : ''), 6000);
-    if (view !== 'profile') $('tabs').querySelector('[data-tab="profile"]').classList.add('dot');
+    if (view !== 'orders') { $('tabs').querySelector('[data-tab="orders"]').classList.add('dot'); $('abBell').classList.add('dot'); }
   }
 
   function renderProfile() {
-    renderAuth(); if (token) { renderOrders(); loadMe(); }
+    renderAuth(); if (token) loadMe();
     const inf = readLocal('ek_info', null) || {};
     $('pName').value = inf.n || nameIn.value || '';
     renderAddrList();
-    const its = lastItems();
-    $('pRepeat').hidden = !its.length;
-    $('pLast').textContent = its.length ? `${its.length} xil model, ${its.reduce((a, [, q]) => a + q, 0)} ta ekran` : 'Hali buyurtma yoʻq';
     const wn = Object.keys(watch).filter(id => rows.has(id)).length;
-    $('pWatch').textContent = wn ? `${wn} ta model kelishi kutilmoqda` : 'Yoʻq';
+    $('pWatch').textContent = wn ? `${wn} ta model kelishi kutilmoqda` : 'yoʻq';
   }
   if (APP) {
     $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) { haptic(); setView(b.dataset.tab); } });
-    $('homeSearch').onclick = () => { setView('catalog'); $('q').focus(); };
-    $('homeAll').onclick = () => { setView('catalog'); chips.firstChild.click(); };
-    [...chips.children].slice(1).forEach(chip => {
-      const t = document.createElement('button'); t.type = 'button'; t.className = 'brand-tile';
-      t.setAttribute('aria-label', chip.getAttribute('aria-label'));
-      t.innerHTML = `<span class="bm">${chip.querySelector('.bm').innerHTML}</span><small>${chip.querySelector('i').textContent} ta model</small>`;
-      t.onclick = () => { setView('catalog'); chip.click(); chip.scrollIntoView({ block: 'nearest', inline: 'center' }); };
+    /* katalog: Brendlar / Modellar */
+    const setCat = (m) => { document.body.dataset.cat = m; $('catSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.cat === m))); };
+    const openModels = (chip) => { setView('catalog'); setCat('models'); (chip || chips.firstChild).click(); if (chip) chip.scrollIntoView({ block: 'nearest', inline: 'center' }); window.scrollTo(0, 0); };
+    setCat('brands');
+    $('catSeg').addEventListener('click', (e) => { const b = e.target.closest('button[data-cat]'); if (b) { haptic(); setCat(b.dataset.cat); window.scrollTo(0, 0); } });
+    $('q').addEventListener('input', () => setCat('models'));
+    $('q').addEventListener('focus', () => setCat('models'));
+    $('homeSearch').onclick = () => { setView('catalog'); setCat('models'); $('q').focus(); };
+    [...chips.children].forEach((chip, i) => {
+      const name = i ? chip.getAttribute('aria-label').split(',')[0] : 'Barcha modellar';
+      const t = document.createElement('button'); t.type = 'button'; t.className = 'brand-row';
+      const lg = document.createElement('span'); lg.className = 'lg-wrap'; lg.textContent = i ? name.slice(0, 1) : '∑';
+      const tx = document.createElement('span'); tx.className = 'tx'; tx.textContent = name;
+      const sm = document.createElement('small'); sm.textContent = chip.querySelector('i').textContent + ' ta model'; tx.appendChild(sm);
+      const ch = document.createElement('i'); ch.className = 'chev'; ch.textContent = '›';
+      t.append(lg, tx, ch); t.onclick = () => { haptic(); openModels(i ? chip : null); };
       $('brandGrid').appendChild(t);
     });
+
+    /* bosh sahifa: tezkor tugmalar va ommabop modellar */
+    $('abCart').onclick = () => setView('cart');
+    $('abBell').onclick = () => setView('orders');
+    $('popAll').onclick = () => openModels(null);
+    document.querySelector('.quick').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-quick]'); if (!b) return; haptic();
+      const k = b.dataset.quick;
+      if (k === 'brands') { setView('catalog'); setCat('brands'); }
+      else if (k === 'models') openModels(null);
+      else if (k === 'repeat') { lastItems().length ? $('repeatBtn').click() : (token ? setView('orders') : toast('Hali buyurtma bermagansiz')); }
+      else if (k === 'warranty') { setView('profile'); $('mHelp').open = true; $('mHelp').scrollIntoView({ block: 'center' }); }
+    });
+    // Ommaboplik maʼlumoti yoʻq: omborda eng koʻp turgan modellar olinadi (odatda eng koʻp sotiladiganlari)
+    groups.filter(g => !g.out).map(g => [g, Math.max(...g.vars.map(v => +v.stock || 0))]).sort((a, b) => b[1] - a[1]).slice(0, 10).forEach(([g]) => {
+      const r = g.recs.find(x => !x.out), p = r.p;
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'pop-card';
+      const art = document.createElement('div'); art.className = 'pop-art';
+      const photo = (g.vars.find(v => /^https:\/\/\S+$/.test(v.img || '')) || {}).img;
+      if (photo) { const im = document.createElement('img'); im.loading = 'lazy'; im.alt = ''; im.src = photo; im.onerror = () => { art.innerHTML = `<div class="glyph t-${r.tc}"></div>`; }; art.appendChild(im); }
+      else art.innerHTML = `<div class="glyph t-${r.tc}"></div>`;
+      const sm = document.createElement('small'); sm.textContent = p.brand;
+      const nm = document.createElement('b'); nm.textContent = p._pm.main;
+      const pr = document.createElement('span'); pr.textContent = fmt(Math.min(...g.recs.filter(x => !x.out).map(x => x.p.retail)));
+      c.append(art, sm, nm, pr); c.onclick = () => { haptic(); openProduct(g, r); };
+      $('popTrack').appendChild(c);
+    });
+
+    /* mahsulot sahifasi */
+    let pd = null;
+    function renderProduct() {
+      const { g, r } = pd, p = r.p, id = String(p.id);
+      $('pdTitle').textContent = `${p.brand} ${p._pm.main}`;
+      $('pdName').textContent = p._pm.main + (p._pm.tags.includes('Ramkali') ? ' (ramkali)' : '');
+      $('pdBrand').innerHTML = brandMark(p.brand, 13);
+      const art = $('pdArt'), photo = (g.vars.find(v => /^https:\/\/\S+$/.test(v.img || '')) || {}).img;
+      art.innerHTML = '';
+      if (photo) { const im = document.createElement('img'); im.alt = p.brand + ' ' + p._pm.main; im.src = photo; im.onerror = () => { art.innerHTML = `<div class="glyph t-${r.tc}"></div>`; }; art.appendChild(im); }
+      else art.innerHTML = `<div class="glyph t-${r.tc}"></div>`;
+      $('pdVars').innerHTML = g.recs.map((x, i) => `<button type="button" data-var="${i}" class="${x.out ? 'out' : ''}" aria-pressed="${x === r}">${TYPE_LABEL[x.tc]}</button>`).join('');
+      $('pdRetail').textContent = fmt(p.retail); $('pdWholesale').textContent = fmt(p.wholesale);
+      const info = $('pdInfo'); info.innerHTML = '';
+      const row = (k, v, cls) => { const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b'); a.textContent = k; b.textContent = v; if (cls) b.className = cls; d.append(a, b); info.appendChild(d); };
+      const st = +p.stock || 0;
+      row('Omborda', r.out ? 'Hozircha yoʻq' : st <= 5 ? `Kam qoldi: ${st} ta` : 'Bor', r.out ? 'no' : st <= 5 ? 'low' : 'ok');
+      row('Sifat', TYPE_LABEL[r.tc] + ' · ' + typeNote(r.tc));
+      const alts = [...new Set(g.vars.flatMap(v => [v._pm.main, ...v._pm.alts]))];
+      if (alts.length > 1) row('Mos keladi', alts.join(', '));
+      row('Kafolat', '2 oy');
+      const foot = $('pdFoot'), q = cart[id] || 0;
+      if (r.out) {
+        const on = id in watch;
+        foot.innerHTML = `<button class="primary" type="button" data-watch="${id}">${on ? '🔔 Kutilmoqda · bekor qilish' : '🔔 Kelganda xabar bering'}</button>`;
+      } else if (q) {
+        foot.innerHTML = stepperHTML(id, q) + '<button class="primary" type="button" id="pdToCart">Savatga oʻtish</button>';
+        $('pdToCart').onclick = () => { closeProduct(); setView('cart'); };
+      } else {
+        foot.innerHTML = `<button class="primary" type="button" data-add="${id}">Savatga qoʻshish</button>`;
+      }
+    }
+    function openProduct(g, r) { pd = { g, r: r || g.recs.find(x => !x.out) || g.recs[0] }; renderProduct(); $('prodSheet').classList.add('open'); $('prodSheet').querySelector('.pd-body').scrollTop = 0; }
+    function closeProduct() { $('prodSheet').classList.remove('open'); pd = null; }
+    $('pdBack').onclick = closeProduct;
+    $('pdVars').addEventListener('click', (e) => { const b = e.target.closest('[data-var]'); if (b && pd) { haptic(); pd.r = pd.g.recs[+b.dataset.var]; renderProduct(); } });
+    // savatga qo'shish, soni va kuzatuv umumiy bosish ishlovchisida o'zgaradi; shundan keyin sahifa yangilanadi
+    $('prodSheet').addEventListener('click', () => setTimeout(() => { if (pd) renderProduct(); }, 0));
+    $('prodSheet').addEventListener('change', () => setTimeout(() => { if (pd) renderProduct(); }, 0));
+    list.addEventListener('click', (e) => {
+      if (!e.target.closest('.info, .thumb, .glyph') || e.target.closest('.alts, button')) return;
+      const el = e.target.closest('.row'), g = el && groups.find(x => x.el === el);
+      if (g) { haptic(); openProduct(g); }
+    });
+
+    /* buyurtmalar bo'limi */
+    $('ordFilter').addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (!b) return;
+      ordFilter = b.dataset.f; $('ordFilter').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderOrders(); });
+
+    /* birinchi ochilishdagi tanishtiruv */
+    const SLIDES = [
+      ['img/partiya.svg', 'Telefon displeylari ombori', 'Samsung, iPhone, Redmi va boshqa brendlar: narx va qoldiq har doim ombor bilan bir xil.'],
+      ['img/optom.svg', '50 tadan optom narx', 'Savatdagi ekranlar 50 taga yetsa, hamma narx oʻzi optomga oʻtadi.'],
+      ['img/yetkazish.svg', 'Kafolat va yetkazish', 'Barcha displeylarga 2 oy kafolat. Viloyatlarga BTS, shahar ichida taksi.']
+    ];
+    let slide = 0;
+    const showSlide = () => {
+      const [img, t, tx] = SLIDES[slide];
+      $('onbImg').src = img; $('onbTitle').textContent = t; $('onbText').textContent = tx;
+      [...$('onbDots').children].forEach((d, i) => d.classList.toggle('on', i === slide));
+      $('onbGo').textContent = slide === SLIDES.length - 1 ? 'Boshlash' : 'Davom etish';
+      $('onbSkip').style.visibility = slide === SLIDES.length - 1 ? 'hidden' : 'visible';
+    };
+    const endOnb = () => { $('onb').hidden = true; try { localStorage.setItem('ek_onb', '1'); } catch (e) {} };
+    $('onbGo').onclick = () => { haptic(); if (slide < SLIDES.length - 1) { slide++; showSlide(); } else endOnb(); };
+    $('onbSkip').onclick = endOnb;
+    if (!readLocal('ek_onb', null)) { showSlide(); $('onb').hidden = false; }
+
     $('pSave').onclick = () => {
       const old = readLocal('ek_info', null) || {};
       const inf = { n: $('pName').value.trim().slice(0, 30), d: old.d || delivery, a: old.a || '' };
@@ -1555,20 +1864,23 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
     /* buyurtma holati: ilova ochiq turganda har 45 soniyada tekshiriladi */
     setInterval(() => { if (token && !document.hidden) loadMe(); }, 45000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden && token) loadMe(); });
-    window.__appOpen = (tab) => { closeSheets(); setView(tab); };
+    window.__appOpen = (tab) => { closeSheets(); closeProduct(); setView(tab === 'profile' ? 'orders' : tab); };
     if (token) { nativeToken(token); loadMe(); }
-    $('pRepeat').onclick = () => $('repeatBtn').click();
-    $('pOrders').addEventListener('click', (e) => { const b = e.target.closest('[data-again]'); if (!b || !myOrders) return;
+    $('pOrders').addEventListener('click', (e) => { const go = e.target.closest('[data-go]'); if (go) { setView(go.dataset.go); return; }
+      const b = e.target.closest('[data-again]'); if (!b || !myOrders) return;
       haptic('medium'); addToCart(myOrders[+b.dataset.again].items.map(x => [x.id, x.q])); });
     if (!token && readPending()) pollLogin();
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !token && readPending() && !loginPoll) pollLogin(); });
     // Android "orqaga" tugmasi: avval oyna yopiladi, keyin bosh sahifaga qaytadi, oxirida ilovadan chiqadi
     window.__appBack = () => {
-      if ($('checkoutSheet').classList.contains('open')) { closeSheets(); return true; }
+      if (!$('onb').hidden) { endOnb(); return true; }
+      if (document.querySelector('.sheet.open:not(#cartSheet):not(#prodSheet)')) { closeSheets(); return true; }
+      if (pd) { closeProduct(); return true; }
+      if (view === 'catalog' && document.body.dataset.cat === 'models') { setCat('brands'); window.scrollTo(0, 0); return true; }
       if (view !== 'home') { setView('home'); return true; }
       return false;
     };
-    setView(location.hash === '#profile' ? 'profile' : 'home');
+    setView(location.hash === '#profile' ? 'orders' : 'home');
   }
 
   /* ---- start ---- */
