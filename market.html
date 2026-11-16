@@ -422,6 +422,29 @@
     .p-row .tx { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
     .p-row .tx b { display: block; color: var(--ink); font-size: 14px; }
     .p-row button { border: 0; height: 38px; padding: 0 14px; border-radius: 12px; background: var(--mat); color: #fff; font-weight: 600; font-size: 13px; flex: none; }
+    .p-card p.hint { font-size: 13px; color: var(--muted); line-height: 1.45; }
+    .p-card .wide-btn.tg { background: #2481CC; }
+    .p-card .wide-btn:disabled { opacity: .6; }
+    .p-card .text-btn { display: block; margin: 10px auto 0; border: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 600; padding: 6px 10px; }
+    .ord { border-top: 1px solid var(--hair); padding: 12px 0; }
+    .ord:first-of-type { border-top: 0; padding-top: 0; }
+    .ord:last-of-type { padding-bottom: 0; }
+    .ord summary { list-style: none; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; cursor: pointer; }
+    .ord summary::-webkit-details-marker { display: none; }
+    .ord .oid { font-weight: 700; font-size: 14px; }
+    .ord .odate { font-size: 12px; color: var(--muted); font-weight: 500; margin-left: 6px; }
+    .ord .osum { font-size: 13px; color: var(--muted); grid-column: 1; }
+    .ord .osum b { color: var(--ink); }
+    .pill { grid-row: 1 / span 2; grid-column: 2; font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 20px; background: #E8EEEB; color: var(--mat); white-space: nowrap; }
+    .pill.s-yangi, .pill.s-chek { background: #FFF1D6; color: #8A5608; }
+    .pill.s-yuborildi { background: #DDEBFA; color: #1F4E82; }
+    .pill.s-yetkazildi { background: #DDF3E4; color: #17603A; }
+    .pill.s-bekor { background: #F8E1DC; color: var(--danger); }
+    .ord ul { list-style: none; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+    .ord li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+    .ord li span:last-child { white-space: nowrap; color: var(--ink); font-weight: 600; }
+    .ord .oaddr { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .ord .again { margin-top: 10px; border: 1px solid var(--hair); background: var(--card); height: 36px; padding: 0 14px; border-radius: 10px; font-weight: 600; font-size: 13px; }
     .p-ver { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 4px; }
 
     @media (prefers-reduced-motion: reduce) {
@@ -509,6 +532,8 @@
 
   <section class="profile app-only" id="profileView" data-views="profile">
     <div class="page-head"><h2>Profil</h2><p>Maʼlumotlar shu telefonda saqlanadi</p></div>
+    <div class="p-card" id="pAuth"></div>
+    <div class="p-card" id="pOrdersCard" hidden><h3>Buyurtmalarim</h3><div id="pOrders"></div></div>
     <div class="p-card">
       <h3>Yetkazish maʼlumotlari</h3>
       <div class="field"><label for="pName">Ismingiz</label><input id="pName" maxlength="30" autocomplete="name" placeholder="Masalan, Sardor"></div>
@@ -521,7 +546,7 @@
       <div class="field"><label for="pAddr">Manzil</label><textarea id="pAddr" rows="2" maxlength="80" placeholder="Viloyat, tuman, filial"></textarea></div>
       <button class="wide-btn" type="button" id="pSave">Saqlash</button>
     </div>
-    <div class="p-card"><div class="p-row"><div class="tx"><b>Oldingi buyurtma</b><span id="pLast">Hali buyurtma yoʻq</span></div><button type="button" id="pRepeat" hidden>Takrorlash</button></div></div>
+    <div class="p-card" id="pLastCard"><div class="p-row"><div class="tx"><b>Oldingi buyurtma</b><span id="pLast">Hali buyurtma yoʻq</span></div><button type="button" id="pRepeat" hidden>Takrorlash</button></div></div>
     <div class="p-card"><div class="p-row"><div class="tx"><b>Kuzatuvdagi modellar</b><span id="pWatch">Yoʻq</span></div></div></div>
     <div class="p-card"><div class="p-row"><div class="tx"><b>Kafolat</b><span>Barcha displeylarga 2 oy. Brak boʻlsa, rasm yoki video bilan murojaat qiling.</span></div></div></div>
     <p class="p-ver">Ekranchi_Bola ilovasi</p>
@@ -1131,6 +1156,18 @@ function startShop() {
     };
     const nt = unsentWatch();
     if (nt.length) payload.nt = nt;
+    if (APP) {
+      if (!token) { closeSheets(); setView('profile'); toast('Buyurtma berish uchun avval Telegram orqali kiring'); return; }
+      const btn = $('submitOrder'); btn.disabled = true; btn.textContent = 'Yuborilmoqda…';
+      appApi('order', { body: payload }).then(d => {
+        store('ek_last', { i: items, t: Date.now() }); lastOrder = { i: items, t: Date.now() };
+        store('ek_info', { n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80) });
+        cart = {}; markWatchSent(); rows.forEach(renderAct); refreshAll();
+        closeSheets(); setView('profile');
+        toast(d.need_phone ? `Buyurtma #${d.order.id} qabul qilindi. Telegramda telefon raqamingizni yuboring` : `Buyurtma #${d.order.id} qabul qilindi`);
+      }).catch(e => toast(e.message)).finally(() => { btn.disabled = false; btn.textContent = 'Buyurtmani yuborish'; });
+      return;
+    }
     if (inTelegram() && tg.sendData) {
       store('ek_last', { i: items, t: Date.now() });
       store('ek_info', { n: name.slice(0, 30), d: delivery, a: addr.slice(0, 80) });
@@ -1236,7 +1273,95 @@ function startShop() {
     if (v === 'profile') renderProfile();
     if (!keepScroll) window.scrollTo(0, 0);
   }
+  /* ---- ilova hisobi: Telegram orqali kirish, buyurtmalar tarixi ---- */
+  const APP_API = 'https://ekranchi-shop.vercel.app/api/index';
+  let token = ''; try { token = localStorage.getItem('ek_app_token') || ''; } catch (e) {}
+  let me = null, myOrders = null, loginPoll = null;
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function appApi(action, opt) {
+    const body = opt && opt.body, post = body !== undefined || (opt && opt.post);
+    const headers = {}; if (body !== undefined) headers['Content-Type'] = 'application/json'; if (token) headers['X-App-Token'] = token;
+    return fetch(`${APP_API}?app=${action}`, { method: post ? 'POST' : 'GET', headers, body: body !== undefined ? JSON.stringify(body) : undefined, cache: 'no-store' })
+      .then(r => r.json().catch(() => ({})).then(j => {
+        if (r.status === 401 && token) logout();
+        if (!r.ok) throw Object.assign(new Error(j.error || 'Xatolik yuz berdi. Qayta urinib koʻring.'), { status: r.status });
+        return j;
+      }), () => { throw new Error('Internet bilan aloqa yoʻq'); });
+  }
+  const setToken = (t) => { token = t || ''; try { t ? localStorage.setItem('ek_app_token', t) : localStorage.removeItem('ek_app_token'); } catch (e) {} };
+  function logout() { setToken(''); me = null; myOrders = null; if (view === 'profile') renderProfile(); }
+  const readPending = () => { const p = readLocal('ek_login', null); return p && p.until > Date.now() ? p : null; };
+  function stopLogin() { clearInterval(loginPoll); loginPoll = null; try { localStorage.removeItem('ek_login'); } catch (e) {} }
+  function pollLogin() {
+    clearInterval(loginPoll);
+    const tick = () => {
+      const p = readPending();
+      if (!p) { stopLogin(); renderAuth(); return; }
+      appApi('login_check', { body: { code: p.code, poll: p.poll } }).then(d => {
+        if (!d.token) return;
+        stopLogin(); setToken(d.token); me = d.user; toast('Xush kelibsiz' + (me.name ? ', ' + me.name : '') + '!');
+        renderProfile();
+      }).catch(e => { if (e.status === 410) { stopLogin(); renderAuth(); toast(e.message); } });
+    };
+    loginPoll = setInterval(tick, 2500); tick();
+  }
+  function startLogin() {
+    const btn = $('pLogin'); if (btn) btn.disabled = true;
+    appApi('login_start', { post: true }).then(d => {
+      try { localStorage.setItem('ek_login', JSON.stringify({ code: d.code, poll: d.poll, url: d.url, until: Date.now() + (d.expires || 600) * 1000 })); } catch (e) {}
+      renderAuth(); pollLogin();
+      location.href = d.url;   // Telegram ochiladi; mijoz u yerda tasdiqlab, ilovaga qaytadi
+    }).catch(e => { toast(e.message); if (btn) btn.disabled = false; });
+  }
+  function renderAuth() {
+    const box = $('pAuth'), pend = !token && readPending();
+    if (token) {
+      box.innerHTML = `<div class="p-row"><div class="tx"><b>${esc((me && me.name) || 'Hisobingiz')}</b><span>${esc((me && me.phone) || 'Telegram orqali kirilgan')}</span></div><button type="button" id="pLogout" style="background:none;color:var(--muted);border:1px solid var(--hair)">Chiqish</button></div>`;
+      $('pLogout').onclick = () => { logout(); toast('Hisobdan chiqdingiz'); };
+    } else if (pend) {
+      box.innerHTML = `<h3>Telegramda tasdiqlang</h3><p class="hint">Botda <b>“Ha, ilovaga kiraman”</b> tugmasini bosing va shu yerga qayting. Sahifa oʻzi yangilanadi.</p>
+        <button class="wide-btn tg" type="button" id="pOpenTg">Telegramni ochish</button><button class="text-btn" type="button" id="pCancel">Bekor qilish</button>`;
+      $('pOpenTg').onclick = () => { location.href = pend.url; };
+      $('pCancel').onclick = () => { stopLogin(); renderAuth(); };
+    } else {
+      box.innerHTML = `<h3>Hisobga kirish</h3><p class="hint">Buyurtma berish va buyurtmalaringiz holatini koʻrish uchun Telegram orqali kiring. Parol kerak emas.</p>
+        <button class="wide-btn tg" type="button" id="pLogin">Telegram orqali kirish</button>`;
+      $('pLogin').onclick = startLogin;
+    }
+    $('pOrdersCard').hidden = !token;
+    $('pLastCard').hidden = !!token;
+  }
+  const when = (ms) => { const d = new Date(ms), z = (n) => String(n).padStart(2, '0'); return `${z(d.getDate())}.${z(d.getMonth() + 1)} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  function renderOrders() {
+    const box = $('pOrders');
+    if (!myOrders) { box.innerHTML = '<p class="hint">Yuklanmoqda…</p>'; return; }
+    if (!myOrders.length) { box.innerHTML = '<p class="hint">Hali buyurtma yoʻq. Katalogdan tanlab, birinchi buyurtmangizni bering.</p>'; return; }
+    box.innerHTML = myOrders.map((o, i) => `<details class="ord"><summary>
+        <span><span class="oid">#${esc(o.id)}</span><span class="odate">${o.created ? when(o.created) : ''}</span></span>
+        <span class="pill s-${esc(o.status)}">${esc(o.status_label)}</span>
+        <span class="osum"><b>${fmt(o.total || 0)}</b> · ${o.items.reduce((a, x) => a + x.q, 0)} ta, ${esc((o.pt || '').toLowerCase())}</span></summary>
+        <ul>${o.items.map(x => `<li><span>${esc(x.n)}</span><span>${x.q} × ${fmtN(x.p || 0)}</span></li>`).join('')}</ul>
+        <div class="oaddr">${esc(o.deliv || '')}${o.addr ? ' · ' + esc(o.addr) : ''}</div>
+        <button class="again" type="button" data-again="${i}">Shu buyurtmani takrorlash</button></details>`).join('');
+  }
+  function loadMe() {
+    if (!token) return;
+    appApi('me').then(d => { me = d.user; myOrders = d.orders || []; if (view === 'profile') { renderAuth(); renderOrders(); } }).catch(() => {});
+  }
+  function addToCart(pairs) {
+    let added = 0, missing = 0;
+    pairs.forEach(([id, q]) => {
+      const r = rows.get(String(id));
+      if (!r || r.out || !(q > 0)) { missing++; return; }
+      cart[String(id)] = typeof r.p.stock === 'number' && r.p.stock > 0 ? Math.min(q, r.p.stock) : q; renderAct(r); added++;
+    });
+    refreshAll();
+    if (!added) { toast('Bu buyurtmadagi modellar hozir omborda yoʻq'); return; }
+    toast(`${added} xil model savatga qoʻshildi` + (missing ? `, ${missing} tasi tugagan` : '')); openCart();
+  }
+
   function renderProfile() {
+    renderAuth(); if (token) { renderOrders(); loadMe(); }
     const inf = readLocal('ek_info', null) || {};
     $('pName').value = inf.n || nameIn.value || '';
     $('pAddr').value = inf.a || addrIn.value || '';
@@ -1269,6 +1394,10 @@ function startShop() {
       toast('Saqlandi');
     };
     $('pRepeat').onclick = () => $('repeatBtn').click();
+    $('pOrders').addEventListener('click', (e) => { const b = e.target.closest('[data-again]'); if (!b || !myOrders) return;
+      haptic('medium'); addToCart(myOrders[+b.dataset.again].items.map(x => [x.id, x.q])); });
+    if (!token && readPending()) pollLogin();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !token && readPending()) pollLogin(); });
     // Android "orqaga" tugmasi: avval oyna yopiladi, keyin bosh sahifaga qaytadi, oxirida ilovadan chiqadi
     window.__appBack = () => {
       if ($('checkoutSheet').classList.contains('open')) { closeSheets(); return true; }

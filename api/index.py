@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from html import escape
-import json, os, io, csv, hmac, hashlib, time, logging, re, requests
+import json, os, io, csv, hmac, hashlib, time, logging, re, secrets, types, requests
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ekranchi")
@@ -83,7 +83,8 @@ def _redis(*cmd):
 
 _TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json", "orders2": "/tmp/orders2.json",
         "last_order": "/tmp/last_order.json", "meta": "/tmp/meta.json",
-        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json", "watch": "/tmp/watch.json"}
+        "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json", "watch": "/tmp/watch.json",
+        "applogin": "/tmp/applogin.json"}
 
 def _file_load(name):
     try:
@@ -528,6 +529,9 @@ def admin_order_kb(cid):
 
 @bot.message_handler(commands=['start'])
 def handle_start(m):
+    payload = (m.text or "").split(maxsplit=1)[1].strip() if len((m.text or "").split(maxsplit=1)) > 1 else ""
+    if payload.startswith("app_"):
+        return ask_app_login(m, payload[4:])
     name = h(m.from_user.first_name or "Mijoz")
     user = get_user(m.chat.id)
     if user.get('role'):
@@ -602,6 +606,11 @@ def handle_role_selection(c):
 
 @bot.message_handler(content_types=['web_app_data'])
 def handle_order(m):
+    return process_order(m)
+
+
+def process_order(m, src="bot"):
+    """Buyurtmani qabul qiladi. Saqlangan buyurtmani qaytaradi; qabul qilinmasa None (sababi mijozga Telegramda yoziladi)."""
     cid = str(m.chat.id)
     try:
         data = json.loads(m.web_app_data.data)
@@ -690,12 +699,13 @@ def handle_order(m):
         writer.writerow(["", "JAMI", t_qty, "", t_sum])
 
         oid = next_order_id()
-        save_order(cid, {"id": oid, "cid": cid, "created": now_ms(), "status": "yangi",
-                         "history": [{"t": now_ms(), "s": "yangi", "by": "mijoz"}],
-                         "name": name, "tg_name": tg_name, "username": m.from_user.username, "phone": phone,
-                         "role": user.get('role'), "deliv": deliv, "addr": addr, "pt": pt,
-                         "qty": t_qty, "total": t_sum, "items": payload_items, "note": "",
-                         "stock_reserved": True})
+        order = {"id": oid, "cid": cid, "created": now_ms(), "status": "yangi",
+                 "history": [{"t": now_ms(), "s": "yangi", "by": "mijoz"}],
+                 "name": name, "tg_name": tg_name, "username": m.from_user.username, "phone": phone,
+                 "role": user.get('role'), "deliv": deliv, "addr": addr, "pt": pt,
+                 "qty": t_qty, "total": t_sum, "items": payload_items, "note": "",
+                 "stock_reserved": True, "src": src}
+        save_order(cid, order)
 
         csv_file = io.BytesIO(csv_buffer.getvalue().encode('utf-8-sig'))
         csv_file.name = f"Buyurtma_{oid}.csv"
@@ -728,7 +738,7 @@ def handle_order(m):
 
         if ADMIN_ID:
             admin_txt = (
-                f"🔔 <b>YANGI BUYURTMA #{oid}</b>\n━━━━━━━━━━━━━━━━━━━\n"
+                f"🔔 <b>YANGI BUYURTMA #{oid}</b>{' 📱 ilovadan' if src == 'app' else ''}\n━━━━━━━━━━━━━━━━━━━\n"
                 f"✍️ <b>Ism (formada):</b> {h(name)} ({h(role)})\n"
                 f"{contact_line(cid, tg_name or name, m.from_user.username, phone)}\n"
                 f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
@@ -746,6 +756,7 @@ def handle_order(m):
             except Exception as e:
                 log.exception("send_document")
                 notify_admin(f"⚠️ Fayl yuborishda xatolik: {h(e)}")
+        return order
     except Exception as e:
         log.exception("handle_order")
         notify_admin(f"⚠️ Buyurtmani qayta ishlashda xato ({cid}): {h(e)}")
@@ -1097,6 +1108,146 @@ def admin_api():
     return jsonify({"error": "Noma'lum so'rov"}), 400
 
 
+# ===================== ILOVA (APK): Telegram orqali kirish, buyurtma va tarix =====================
+APP_LOGIN_TTL = 600            # kirish kodi 10 daqiqa amal qiladi
+APP_TOKEN_DAYS = 180
+_bot_username = os.environ.get("BOT_USERNAME", "").lstrip("@").strip()
+
+def bot_username():
+    global _bot_username
+    if not _bot_username:
+        _bot_username = bot.get_me().username or ""
+    return _bot_username
+
+def make_app_token(cid, days=APP_TOKEN_DAYS):
+    exp = int(time.time()) + days * 86400
+    sig = hmac.new(_panel_key(), f"app:{cid}:{exp}".encode(), hashlib.sha256).hexdigest()[:40]
+    return f"{cid}.{exp}.{sig}"
+
+def check_app_token(tok):
+    """To'g'ri bo'lsa mijozning chat ID sini, aks holda None qaytaradi."""
+    try:
+        cid, exp, sig = str(tok).split(".")
+        good = hmac.new(_panel_key(), f"app:{int(cid)}:{int(exp)}".encode(), hashlib.sha256).hexdigest()[:40]
+        return cid if int(exp) > time.time() and hmac.compare_digest(sig, good) else None
+    except Exception:
+        return None
+
+def _sha(v):
+    return hashlib.sha256(str(v).encode()).hexdigest()
+
+def _login_get(code):
+    rec = store_get("applogin", code) if re.fullmatch(r"[A-Za-z0-9_-]{8,32}", str(code or "")) else None
+    if not isinstance(rec, dict) or now_ms() - int(rec.get("t", 0)) > APP_LOGIN_TTL * 1000:
+        return None
+    return rec
+
+def _login_del(code):
+    try:
+        if REDIS_URL:
+            _redis("HDEL", "applogin", str(code))
+        else:
+            data = _file_load("applogin"); data.pop(str(code), None); _file_save("applogin", data)
+    except Exception:
+        log.exception("applogin del")
+
+def ask_app_login(m, code):
+    """Ilovadagi «Telegram orqali kirish» tugmasidan kelgan mijoz: kirishni o'zi tasdiqlashi kerak."""
+    if not _login_get(code):
+        bot.send_message(m.chat.id, "⚠️ Kirish havolasi eskirgan. Ilovada «Telegram orqali kirish» tugmasini qayta bosing.")
+        return
+    kb = InlineKeyboardMarkup(row_width=1)
+    kb.add(InlineKeyboardButton("✅ Ha, ilovaga kiraman", callback_data=f"applogin:{code}"))
+    bot.send_message(m.chat.id,
+        "📱 <b>Ekranchi_Bola ilovasiga kirish</b>\n\n"
+        "Ilovada kirish tugmasini <b>o'zingiz</b> bosgan bo'lsangiz, pastdagi tugma bilan tasdiqlang.\n\n"
+        "⚠️ Bu havolani sizga boshqa birov yuborgan bo'lsa, <b>bosmang</b>: u sizning nomingizdan buyurtma bera oladi.",
+        reply_markup=kb, parse_mode="HTML")
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith('applogin:'))
+def handle_app_login(c):
+    code = c.data.split(':', 1)[1]
+    rec = _login_get(code)
+    try: bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=None)
+    except Exception: pass
+    if not rec or rec.get("cid"):
+        bot.answer_callback_query(c.id, "Havola eskirgan. Ilovada qayta urinib ko'ring.", show_alert=True)
+        return
+    rec["cid"] = str(c.from_user.id)
+    store_set("applogin", code, rec)
+    user = get_user(c.from_user.id)
+    user.update({"name": c.from_user.first_name, "username": c.from_user.username})
+    store_set("users", c.from_user.id, user)
+    bot.answer_callback_query(c.id, "Tasdiqlandi")
+    bot.send_message(c.message.chat.id, "✅ Tasdiqlandi. Endi <b>Ekranchi_Bola</b> ilovasiga qayting.", parse_mode="HTML")
+    if not user.get("phone"):
+        bot.send_message(c.message.chat.id, "📞 Buyurtmalaringiz bo'yicha bog'lanishimiz uchun telefon raqamingizni yuboring 👇",
+                         reply_markup=contact_kb())
+
+def _app_user(cid):
+    u = get_user(cid)
+    return {"name": u.get("name") or "", "phone": u.get("phone") or "", "role": u.get("role") or ""}
+
+def _app_order(o):
+    return {"id": o.get("id"), "created": o.get("created"), "status": o.get("status"),
+            "status_label": STATUSES.get(o.get("status"), o.get("status")),
+            "total": sum(int(i.get("p", 0)) * int(i.get("rq", i.get("aq", 0)) or 0) for i in o.get("items", [])) or o.get("total", 0),
+            "pt": o.get("pt"), "deliv": o.get("deliv"), "addr": o.get("addr"),
+            "items": [{"id": i.get("id"), "n": i.get("n"), "q": int(i.get("rq", i.get("aq", 0)) or 0),
+                       "asked": i.get("asked"), "p": i.get("p")} for i in o.get("items", [])]}
+
+def app_api():
+    action = request.args.get("app")
+    if action == "login_start" and request.method == "POST":
+        try:
+            name = bot_username()
+        except Exception:
+            log.exception("bot_username")
+            name = ""
+        if not name:
+            return jsonify({"error": "Bot bilan aloqa yo'q. Birozdan keyin urinib ko'ring."}), 503
+        pending = store_all("applogin")
+        if len(pending) > 2000:   # eskirgan kodlarni tozalash
+            for k, v in pending.items():
+                if not isinstance(v, dict) or now_ms() - int(v.get("t", 0)) > APP_LOGIN_TTL * 1000:
+                    _login_del(k)
+        code, poll = secrets.token_urlsafe(9), secrets.token_urlsafe(24)
+        store_set("applogin", code, {"t": now_ms(), "poll": _sha(poll), "cid": None})
+        return jsonify({"code": code, "poll": poll, "url": f"https://t.me/{name}?start=app_{code}", "expires": APP_LOGIN_TTL})
+    if action == "login_check" and request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        code = str(body.get("code", ""))
+        rec = _login_get(code)
+        if not rec or not hmac.compare_digest(rec.get("poll", ""), _sha(body.get("poll", ""))):
+            return jsonify({"error": "Kirish muddati tugadi. Qayta urinib ko'ring."}), 410
+        if not rec.get("cid"):
+            return jsonify({"pending": True})
+        _login_del(code)
+        return jsonify({"token": make_app_token(rec["cid"]), "user": _app_user(rec["cid"])})
+
+    cid = check_app_token(request.headers.get("X-App-Token", ""))
+    if not cid:
+        return jsonify({"error": "Qaytadan kiring."}), 401
+    if action == "me" and request.method == "GET":
+        orders = [o for o in store_all("orders2").values() if isinstance(o, dict) and str(o.get("cid")) == cid]
+        orders.sort(key=lambda o: o.get("created", 0), reverse=True)
+        return jsonify({"user": _app_user(cid), "orders": [_app_order(o) for o in orders[:30]]})
+    if action == "order" and request.method == "POST":
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            return jsonify({"error": "Buyurtmani o'qib bo'lmadi."}), 400
+        u = get_user(cid)
+        fake = types.SimpleNamespace(
+            chat=types.SimpleNamespace(id=int(cid)),
+            from_user=types.SimpleNamespace(id=int(cid), first_name=u.get("name"), last_name=None, username=u.get("username")),
+            web_app_data=types.SimpleNamespace(data=json.dumps(body)))
+        order = process_order(fake, src="app")
+        if not order:
+            return jsonify({"error": "Buyurtma qabul qilinmadi: tanlangan tovarlar omborda qolmagan bo'lishi mumkin. Katalogni yangilab, qayta urinib ko'ring."}), 409
+        return jsonify({"ok": True, "order": _app_order(order), "need_phone": not order.get("phone")})
+    return jsonify({"error": "Noma'lum so'rov"}), 400
+
+
 # ===================== WEBHOOK =====================
 @app.route('/', defaults={'path': ''}, methods=['POST', 'GET'])
 @app.route('/<path:path>', methods=['POST', 'GET'])
@@ -1105,6 +1256,8 @@ def webhook(path):
         return public_catalog()
     if "admin" in request.args:
         return admin_api()
+    if "app" in request.args:
+        return app_api()
     if request.method == 'GET':
         if "ulash" in request.args or path.rstrip("/").endswith("ulash"):
             return do_ulash()
