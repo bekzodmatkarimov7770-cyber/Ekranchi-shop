@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Ekranchi_Bola — displeylar ombori</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="data.js?v=wow_v7"></script>
+  <script src="data.js?v=wow_v8"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -465,19 +465,38 @@
   <div class="toast" id="toast" role="status"></div>
 
 <script>
-/* Narx va qoldiq admin paneldan boshqariladi: avval bazadan olamiz, bo'lmasa data.js ishlatiladi */
+/* Katalog manbasi bitta: baza (API). Oxirgi javob shu qurilmada saqlanadi va keyingi safar darhol chiqadi,
+   yangi narx va qoldiq esa orqa fonda kelib, joyida yangilanadi. API ishlamasa, catalog.seed.json zaxira bo'ladi. */
 const CATALOG_URL = 'https://ekranchi-shop.vercel.app/api/index?catalog=1';
+const SEED_URL = 'catalog.seed.json?v=wow_v8';
+const CACHE_KEY = 'ek_catalog';
 (function loadCatalog() {
   const list = document.getElementById('list');
+  const okList = (a) => Array.isArray(a) && a.length > 0;
+  const getJSON = (url, ms, opt) => {
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const t = setTimeout(() => ctl && ctl.abort(), ms);
+    return fetch(url, Object.assign({ signal: ctl ? ctl.signal : undefined }, opt || {}))
+      .then(r => r.ok ? r.json() : Promise.reject(r.status)).finally(() => clearTimeout(t));
+  };
+  const fromApi = () => getJSON(CATALOG_URL, 8000, { cache: 'no-store' }).then(d => {
+    if (!d || !okList(d.products)) return Promise.reject('empty');
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), p: d.products })); } catch (e) {}
+    return d.products;
+  });
+  const start = (products) => { window.__catalog = products; if (list) list.innerHTML = ''; startShop(); };
+
+  let cached = null;
+  try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && okList(c.p)) cached = c.p; } catch (e) {}
+  if (cached) {
+    start(cached);
+    fromApi().then(fresh => { if (window.__applyCatalog) window.__applyCatalog(fresh); }).catch(() => {});
+    return;
+  }
   if (list) list.innerHTML = '<div class="empty" style="padding:56px 24px"><strong>Narxlar yangilanmoqda…</strong></div>';
-  let done = false;
-  const go = () => { if (done) return; done = true; if (list) list.innerHTML = ''; startShop(); };
-  const timer = setTimeout(go, 5000);
-  fetch(CATALOG_URL, { cache: 'no-store' })
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(d => { if (d && Array.isArray(d.products) && d.products.length) window.__catalog = d.products; })
-    .catch(() => {})
-    .finally(() => { clearTimeout(timer); go(); });
+  fromApi()
+    .catch(() => getJSON(SEED_URL, 8000).then(p => okList(p) ? p : Promise.reject('empty')))
+    .then(start, () => start([]));
 })();
 
 function startShop() {
@@ -498,7 +517,7 @@ function startShop() {
   // Klaviatura tugmasidan ochilganda initData bo'sh bo'ladi, shuning uchun platformaga qaraymiz
   const inTelegram = () => !!(tg && tg.platform && tg.platform !== 'unknown');
 
-  const SOURCE = (window.__catalog && window.__catalog.length) ? window.__catalog : (typeof productsData !== 'undefined' ? productsData : []);
+  const SOURCE = (window.__catalog && window.__catalog.length) ? window.__catalog : [];
   if (!SOURCE.length) {
     $('list').innerHTML = '<div class="empty"><strong>Katalog yuklanmadi</strong>Sahifani yopib, qayta oching.</div>';
     return;
@@ -1044,6 +1063,31 @@ function startShop() {
     haptic('medium');
     if (inTelegram() && tg.sendData) { markWatchSent(); tg.sendData(JSON.stringify({ t: 'nt', w: ids })); }
     else toast('Faqat Telegram ichida ishlaydi. Botdagi “Doʻkonni ochish” tugmasidan kiring.');
+  };
+
+  /* ---- yangi narx va qoldiq kelganda: sahifani qayta chizmasdan, faqat o'zgargan qatorlar yangilanadi ---- */
+  window.__applyCatalog = (fresh) => {
+    let changed = 0, cartCut = false;
+    const touched = new Set();
+    fresh.forEach(f => {
+      const id = String(f.id), p = byId.get(id), r = rows.get(id);
+      if (!p || !r) return;   // yangi qo'shilgan model keyingi ochilishda chiqadi
+      if (p.retail === f.retail && p.wholesale === f.wholesale && p.stock === f.stock) return;
+      p.retail = f.retail; p.wholesale = f.wholesale; p.stock = f.stock;
+      r.out = typeof p.stock === 'number' && p.stock <= 0;
+      r.el.classList.toggle('out', r.out);
+      if (cart[id] && (r.out || (typeof p.stock === 'number' && cart[id] > p.stock))) {
+        if (r.out) delete cart[id]; else cart[id] = p.stock;
+        cartCut = true;
+      }
+      touched.add(r.g); changed++;
+      renderPrice(r, isWholesale()); renderAct(r);
+    });
+    if (!changed) return;
+    touched.forEach(g => { g.out = g.recs.every(r => r.out); g.el.classList.toggle('out', g.out); });
+    lastW = null; refreshAll(); updateWatch();
+    if ($('cartSheet').classList.contains('open')) renderCart();
+    if (cartCut) toast('Ombordagi qoldiq oʻzgardi, savat yangilandi');
   };
 
   /* ---- start ---- */
