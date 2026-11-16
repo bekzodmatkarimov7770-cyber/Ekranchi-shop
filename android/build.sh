@@ -14,10 +14,14 @@ VERSION_NAME="${VERSION_NAME:-0.1.$VERSION_CODE}"
 echo "build-tools: $BT"; echo "platform: $ANDROID_JAR"
 
 rm -rf build && mkdir -p build/gen build/classes build/dex
+# Do'kon sahifasi APK ichiga qo'shiladi
+mkdir -p build/assets/www
+cp ../market.html ../data.js ../catalog.seed.json build/assets/www/
+cp -r ../img build/assets/www/img
 "$BT/aapt2" compile --dir res -o build/res.zip
 "$BT/aapt2" link -o build/app.unsigned.apk -I "$ANDROID_JAR" --manifest AndroidManifest.xml \
   --min-sdk-version "$MIN_SDK" --target-sdk-version "$TARGET_SDK" \
-  --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" --java build/gen build/res.zip
+  --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" --java build/gen -A build/assets build/res.zip
 
 javac -source 8 -target 8 -Xlint:-options -cp "$ANDROID_JAR" -d build/classes \
   $(find src build/gen -name '*.java')

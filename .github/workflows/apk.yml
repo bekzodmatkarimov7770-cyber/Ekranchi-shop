@@ -2,7 +2,7 @@ name: APK
 on:
   push:
     branches: [main, apk-demo]
-    paths: ['android/**', '.github/workflows/apk.yml']
+    paths: ['android/**', '.github/workflows/apk.yml', 'market.html', 'data.js', 'catalog.seed.json', 'img/**']
   workflow_dispatch:
 permissions:
   contents: write
@@ -29,4 +29,4 @@ jobs:
           sleep 3
           gh release create apk-demo android/build/Ekranchi_Bola.apk --prerelease --target "$GITHUB_SHA" \
             --title "Ekranchi_Bola APK (sinov)" \
-            --notes "Sinov uchun yig'ilgan APK. Do'kon sahifasini ilova ichida ochadi; buyurtma berish hozircha faqat Telegram bot orqali ishlaydi."
+            --notes "Sinov uchun yig'ilgan APK. Bo'limlar: Bosh sahifa, Katalog, Savat, Profil. Buyurtma berish hozircha faqat Telegram bot orqali ishlaydi."

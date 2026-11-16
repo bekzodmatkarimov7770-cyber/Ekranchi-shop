@@ -6,11 +6,17 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-/** Do'kon sahifasini ilova ichida ochadi: narx va qoldiq saytdan keladi, shuning uchun ilovani yangilash shart emas. */
+import java.io.IOException;
+
+/**
+ * Do'kon sahifasi APK ichida (assets/www) turadi va sayt manzili ostida ochiladi: internet sekin bo'lsa ham darhol chiqadi.
+ * Narx va qoldiq har doim serverdan (/api) keladi.
+ */
 public class MainActivity extends Activity {
     private static final String HOST = "ekranchi-shop.vercel.app";
     private static final String HOME = "https://" + HOST + "/market.html?app=1";
@@ -42,6 +48,19 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                String path = u.getPath();
+                if (!"GET".equals(request.getMethod()) || !HOST.equals(u.getHost()) || path == null
+                        || path.startsWith("/api") || path.contains("..")) return null;
+                try {
+                    return new WebResourceResponse(mime(path), "utf-8", getAssets().open("www" + path));
+                } catch (IOException notBundled) {
+                    return null;   // APK ichida yo'q fayl internetdan olinadi
+                }
+            }
+
+            @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) showOffline();
             }
@@ -49,6 +68,16 @@ public class MainActivity extends Activity {
 
         if (state != null) web.restoreState(state);
         else web.loadUrl(HOME);
+    }
+
+    private static String mime(String path) {
+        if (path.endsWith(".html")) return "text/html";
+        if (path.endsWith(".js")) return "application/javascript";
+        if (path.endsWith(".json")) return "application/json";
+        if (path.endsWith(".svg")) return "image/svg+xml";
+        if (path.endsWith(".css")) return "text/css";
+        if (path.endsWith(".png")) return "image/png";
+        return "application/octet-stream";
     }
 
     private void showOffline() {
@@ -70,7 +99,9 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (web.canGoBack()) web.goBack();
-        else super.onBackPressed();
+        // Sahifa o'zi hal qiladi: oynani yopadi yoki bosh sahifaga qaytadi; qaytadigan joy qolmasa ilova yopiladi
+        web.evaluateJavascript("window.__appBack ? window.__appBack() : false", handled -> {
+            if (!"true".equals(handled)) finish();
+        });
     }
 }
