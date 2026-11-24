@@ -1019,7 +1019,7 @@ function startShop() {
 
   // Sifat: kod oxiri G (ARG, AHG, AVG, ASI, ACT) = HD, J (ARJ, ASJ, AHJ, AVJ, ACJ) = HD+; iPhone AII = Incell
   const typeClass = (t, b) => /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
-  const TYPE_LABEL = { hd: 'HD', hdp: 'HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis' };
+  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis' };
   const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
   const TYPE_NOTE = { hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi' };
   const typeNote = (tc) => (TYPE_RES[tc] ? TYPE_RES[tc] + ' · ' : '') + TYPE_NOTE[tc];
