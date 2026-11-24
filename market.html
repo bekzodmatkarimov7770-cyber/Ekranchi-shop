@@ -223,6 +223,7 @@
     .t-incell::before, .t-hdp::before { background: linear-gradient(160deg, #E6F1F4, #AFCFD9 65%, #87AEBB); }
     .t-tft::before    { background: repeating-linear-gradient(180deg, #F3E9D2 0 5px, #E6D9BC 5px 10px); }
     .t-orig::before   { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); box-shadow: inset 0 0 0 2px #0F5C4A; }
+    .t-orignf::before { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); }
     .t-servis::before { background: linear-gradient(160deg, #2A2F3A, #0B0E14); box-shadow: inset 0 0 0 2px var(--kapton); }
 
     .info { min-width: 0; }
@@ -231,6 +232,7 @@
     .type-tag.servis { background: #FDF0DA; color: #8A5608; }
     .type-tag.oled { background: #16181D; color: #fff; }
     .type-tag.orig { background: #0F5C4A; color: #fff; }
+    .type-tag.orignf { background: #2E7D6B; color: #fff; }
     .name { font-weight: 700; font-size: 16px; line-height: 1.25; margin: 4px 0 4px; word-break: break-word; letter-spacing: -.005em; }
     .alts { font-size: 12.5px; color: var(--muted); line-height: 1.35; margin: -2px 0 6px;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
@@ -1020,12 +1022,12 @@ function startShop() {
   const byId = new Map(products.map(p => [String(p.id), p]));
 
   // Sifat: kod oxiri G (ARG, AHG, AVG, ASI, ACT) = HD, J (ARJ, ASJ, AHJ, AVJ, ACJ) = HD+; iPhone AII = Incell
-  const typeClass = (t, b) => /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
-  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original' };
+  const typeClass = (t, b) => /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
+  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original ramkali', orignf: 'Original ramkasiz' };
   const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
-  const TYPE_NOTE = { hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov' };
+  const TYPE_NOTE = { hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov' };
   const typeNote = (tc) => (TYPE_RES[tc] ? TYPE_RES[tc] + ' · ' : '') + TYPE_NOTE[tc];
-  const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'orig', 'servis'];
+  const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'orignf', 'orig', 'servis'];
 
   /* ---- bir xil model (turli sifat) bitta qatorga yig'iladi ---- */
   const tokSet = (p) => new Set([p._pm.main, ...p._pm.alts].map(norm));
@@ -1135,7 +1137,7 @@ function startShop() {
 
   /* ---- sifat turi chiplari ---- */
   const typeChips = $('typeChips');
-  const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608', orig: '#0F5C4A' };
+  const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608', orig: '#0F5C4A', orignf: '#2E7D6B' };
   ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type, p.brand) === t))].forEach(t => {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(t === qtype));
