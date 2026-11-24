@@ -49,24 +49,24 @@
         linear-gradient(var(--mat-line) 1px, transparent 1px) 0 0 / 22px 22px,
         linear-gradient(90deg, var(--mat-line) 1px, transparent 1px) 0 0 / 22px 22px,
         radial-gradient(120% 90% at 85% 10%, #1A5248 0%, var(--mat) 55%, var(--mat-deep) 100%);
-      padding: 28px 18px 22px;
+      padding: 16px 18px 14px;
       display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center;
     }
     .hero-copy { position: relative; z-index: 2; }
     .logo {
       font-family: var(--display); font-weight: 800;
-      font-size: 34px; line-height: .95; letter-spacing: -0.03em;
+      font-size: 30px; line-height: .95; letter-spacing: -0.03em;
     }
     .logo em { display: block; font-style: normal; color: var(--kapton); font-size: .78em; letter-spacing: -0.02em; margin-top: 2px; }
-    .logo span { display: block; font-family: var(--body); font-size: 13.5px; font-weight: 500; letter-spacing: 0; margin-top: 10px; color: #A9CFC6; line-height: 1.3; }
+    .logo span { display: block; font-family: var(--body); font-size: 13.5px; font-weight: 500; letter-spacing: 0; margin-top: 7px; color: #A9CFC6; line-height: 1.3; }
     .hero-note {
-      margin-top: 14px; min-height: 38px; font-size: 13.5px; color: #E6F4F0; max-width: 26ch;
+      margin-top: 6px; min-height: 20px; font-size: 13.5px; color: #E6F4F0; max-width: 26ch;
       transition: opacity .35s ease;
     }
     .hero-note b { color: var(--kapton); font-weight: 600; }
 
     .device {
-      position: relative; z-index: 2; width: 92px; height: 176px; border-radius: 20px;
+      position: relative; z-index: 2; width: 72px; height: 122px; border-radius: 17px;
       background: #0A1614; padding: 6px;
       box-shadow: 0 0 0 1.5px #2E6258, 0 18px 40px -12px rgba(0,0,0,.6);
       transform: rotate(6deg);
@@ -86,7 +86,7 @@
       font-family: var(--display); color: #0C3440; z-index: 1;
       animation: fadeIn .5s ease 1.2s both;
     }
-    .device-count strong { font-size: 28px; font-weight: 800; line-height: 1; }
+    .device-count strong { font-size: 23px; font-weight: 800; line-height: 1; }
     .device-count small { font-family: var(--body); font-size: 11px; font-weight: 600; margin-top: 4px; }
     .hero-glow {
       position: absolute; right: -30px; top: -10px; width: 220px; height: 220px; border-radius: 50%;
@@ -102,20 +102,20 @@
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     /* ============ Kapton lenta: optom hisoblagich ============ */
-    .tape-wrap { background: var(--mat-deep); padding: 12px 18px 16px; color: #CFE5DF; }
-    .tape-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; margin-bottom: 8px; gap: 10px; }
+    .tape-wrap { background: var(--mat-deep); padding: 9px 18px 11px; color: #CFE5DF; }
+    .tape-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; margin-bottom: 6px; gap: 10px; }
     .tape-head b { color: #fff; font-weight: 600; }
     .tape-head .count { font-family: var(--display); font-size: 12px; color: var(--kapton); white-space: nowrap; }
     .ruler {
-      position: relative; height: 26px; border-radius: 4px;
+      position: relative; height: 18px; border-radius: 4px;
       background:
-        repeating-linear-gradient(90deg, rgba(207,229,223,.55) 0 1px, transparent 1px 2%) bottom / 100% 6px no-repeat,
-        repeating-linear-gradient(90deg, rgba(207,229,223,.85) 0 1.5px, transparent 1.5px 10%) bottom / 100% 12px no-repeat,
+        repeating-linear-gradient(90deg, rgba(207,229,223,.55) 0 1px, transparent 1px 2%) bottom / 100% 5px no-repeat,
+        repeating-linear-gradient(90deg, rgba(207,229,223,.85) 0 1.5px, transparent 1.5px 10%) bottom / 100% 9px no-repeat,
         #173F39;
       overflow: hidden;
     }
     .tape {
-      position: absolute; left: 0; top: 3px; bottom: 7px; width: 0%;
+      position: absolute; left: 0; top: 2px; bottom: 5px; width: 0%;
       background:
         linear-gradient(180deg, rgba(255,255,255,.35), transparent 40%),
         linear-gradient(90deg, var(--kapton-deep), var(--kapton));
@@ -164,14 +164,14 @@
     .meta .br .wm { color: var(--muted) !important; font-weight: 600; }
 
     /* ============ Banner karusel (rasmli) ============ */
-    .promo { padding: 14px 0 4px; }
+    .promo { padding: 10px 0 2px; }
     .promo-track { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 14px; scrollbar-width: none; }
     .promo-track::-webkit-scrollbar { display: none; }
     .promo-card {
       position: relative; flex: 0 0 calc(100% - 44px); max-width: 520px; scroll-snap-align: center;
-      min-height: 132px; border-radius: 18px; overflow: hidden; color: #fff;
-      display: grid; grid-template-columns: 1fr 118px; align-items: center;
-      padding: 14px 4px 14px 16px; box-shadow: 0 10px 24px -16px rgba(12,46,41,.8);
+      min-height: 104px; border-radius: 18px; overflow: hidden; color: #fff;
+      display: grid; grid-template-columns: 1fr 92px; align-items: center;
+      padding: 11px 4px 11px 16px; box-shadow: 0 10px 24px -16px rgba(12,46,41,.8);
     }
     .promo-card::before { content: ""; position: absolute; inset: 0;
       background: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 18px 18px,
@@ -179,9 +179,9 @@
     .promo-card .pc-tx { position: relative; z-index: 1; min-width: 0; }
     .promo-card .badge { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
       background: var(--kapton); color: #2B1A00; padding: 3px 8px; border-radius: 6px; }
-    .promo-card h3 { font-family: var(--display); font-size: 15px; line-height: 1.2; font-weight: 700; margin: 8px 0 5px; letter-spacing: -.01em; }
-    .promo-card p { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,.78); }
-    .promo-card img { position: relative; z-index: 1; width: 118px; height: 104px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.3)); }
+    .promo-card h3 { font-family: var(--display); font-size: 15px; line-height: 1.2; font-weight: 700; margin: 6px 0 4px; letter-spacing: -.01em; }
+    .promo-card p { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,.78); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .promo-card img { position: relative; z-index: 1; width: 92px; height: 82px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.3)); }
     .promo-dots { display: flex; justify-content: center; gap: 6px; padding-top: 8px; }
     .promo-dots i { width: 6px; height: 6px; border-radius: 6px; background: var(--hair); transition: width .25s, background .25s; }
     .promo-dots i.on { width: 18px; background: var(--kapton); }
@@ -645,7 +645,7 @@
   <header class="hero" data-views="home">
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-copy">
-      <h1 class="logo">Ekranchi<em>_Bola</em><span>Telefon displeylari ulgurji va donalab</span></h1>
+      <h1 class="logo">Ekranchi<em>Bola</em><span>Telefon displeylari ulgurji va donalab</span></h1>
       <p class="hero-note" id="heroNote">Barcha displeylarga <b>2 oy kafolat</b></p>
     </div>
     <div class="device" aria-hidden="true">
