@@ -565,7 +565,7 @@ def handle_stat(m):
            f"🤝 Optomchilar: <b>{optom} ta</b>\n"
            f"👤 Chakanachilar: <b>{retail} ta</b>")
     orders = [o for o in store_all("orders2").values() if isinstance(o, dict)]
-    txt += f"\n🧾 Buyurtmalar: <b>{len(orders)} ta</b>\n\n📊 To'liq ma'lumot: /panel"
+    txt += f"\n🧾 Buyurtmalar: <b>{len(orders)} ta</b>\n\n📊 To'liq ma'lumot: /panel\n📣 Hammaga xabar: /hammaga"
     if not REDIS_URL:
         txt += "\n\n⚠️ Doimiy baza ulanmagan: ma'lumotlar /tmp da, vaqti-vaqti bilan o'chib ketadi."
     bot.send_message(m.chat.id, txt, parse_mode="HTML")
@@ -934,6 +934,161 @@ def handle_snd_miss(c):
     edit_text_or_caption(c.message.chat.id, c.message.message_id,
                          f"✅ <b>Mijozga xabar ketdi!</b>\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)", admin_order_kb(cid))
     bot.answer_callback_query(c.id, "Mijozga yuborildi!")
+
+
+# ===================== OMMAVIY XABAR (/hammaga) =====================
+# Holat bazada saqlanadi (serverless: har bir xabar alohida chaqiruv). Admin xabari copy_message bilan
+# yuboriladi, shuning uchun matn, rasm, video va formatlash o'zgarmaydi. Bitta chaqiruvda BC_BUDGET soniyadan
+# ko'p ishlamaydi; qolgani "Davom ettirish" tugmasi bilan yuboriladi (Telegram webhookni qayta yubormasligi uchun).
+BC_BUDGET = 40
+BC_GROUPS = {"all": "Hammaga", "Optom": "Optomchilarga", "Chakana": "Donachilarga"}
+
+def bc_state():
+    s = store_get("meta", "broadcast")
+    return s if isinstance(s, dict) else {}
+
+def bc_save(s):
+    store_set("meta", "broadcast", s)
+
+def bc_recipients(group):
+    ids = []
+    for uid, u in store_all("users").items():
+        if not isinstance(u, dict) or not str(uid).lstrip("-").isdigit() or is_admin(uid):
+            continue
+        if group == "all" or u.get("role") == group:
+            ids.append(int(uid))
+    return sorted(ids)
+
+def bc_counts():
+    users = [u for k, u in store_all("users").items() if isinstance(u, dict) and not is_admin(k)]
+    return {"all": len(users), "Optom": sum(1 for u in users if u.get("role") == "Optom"),
+            "Chakana": sum(1 for u in users if u.get("role") == "Chakana")}
+
+def bc_choose_kb():
+    n = bc_counts()
+    kb = InlineKeyboardMarkup(row_width=1)
+    for g, label in BC_GROUPS.items():
+        kb.add(InlineKeyboardButton(f"📤 {label} ({n[g]} ta)", callback_data=f"bc:{g}"))
+    kb.add(InlineKeyboardButton("❌ Bekor qilish", callback_data="bc:cancel"))
+    return kb
+
+
+@bot.message_handler(commands=['hammaga'])
+def handle_broadcast_start(m):
+    if not is_admin(m.chat.id):
+        return
+    s = bc_state()
+    if s.get("step") == "sending" and time.time() - s.get("at", 0) < 120:
+        bot.send_message(m.chat.id, "⏳ Oldingi xabar hali yuborilmoqda, tugashini kuting.")
+        return
+    bc_save({"step": "wait", "at": time.time()})
+    bot.send_message(m.chat.id,
+        "📣 <b>Ommaviy xabar</b>\nMijozlarga yuboriladigan xabarni hozir shu yerga yuboring: matn, rasm yoki video "
+        "(rasm tagiga matn yozsa ham bo'ladi).\n\nBekor qilish: /bekor", parse_mode="HTML")
+
+
+@bot.message_handler(commands=['bekor'])
+def handle_broadcast_cancel(m):
+    if not is_admin(m.chat.id):
+        return
+    s = bc_state()
+    if s.get("step") == "sending":
+        bot.send_message(m.chat.id, "⏳ Xabar yuborilmoqda, uni to'xtatib bo'lmaydi.")
+        return
+    bc_save({})
+    bot.send_message(m.chat.id, "❌ Ommaviy xabar bekor qilindi.")
+
+
+def _bc_waiting(m):
+    if not is_admin(m.chat.id) or (m.text or "").startswith("/"):
+        return False
+    return bc_state().get("step") == "wait"
+
+@bot.message_handler(func=_bc_waiting, content_types=['text', 'photo', 'video', 'animation', 'document', 'audio', 'voice'])
+def handle_broadcast_draft(m):
+    bc_save({"step": "ready", "at": time.time(), "from": m.chat.id, "msg": m.message_id})
+    bot.send_message(m.chat.id, "👇 <b>Mijozlarga xabar mana shunday boradi:</b>", parse_mode="HTML")
+    bot.copy_message(m.chat.id, m.chat.id, m.message_id)
+    bot.send_message(m.chat.id, "Kimga yuboramiz?", reply_markup=bc_choose_kb())
+
+
+def bc_send_batch(s):
+    """Ro'yxatdagi navbatdagi mijozlarga yuboradi; vaqt tugasa, joyini saqlab to'xtaydi."""
+    start = time.time()
+    ids, pos = s["ids"], s.get("pos", 0)
+    while pos < len(ids):
+        if time.time() - start > BC_BUDGET:
+            break
+        uid = ids[pos]
+        for attempt in (1, 2):
+            try:
+                bot.copy_message(uid, s["from"], s["msg"])
+                s["ok"] = s.get("ok", 0) + 1
+                break
+            except Exception as e:
+                retry = getattr(e, "result_json", None) or {}
+                wait = (retry.get("parameters") or {}).get("retry_after") if isinstance(retry, dict) else None
+                if attempt == 1 and wait:
+                    time.sleep(min(int(wait), 10))
+                    continue
+                s["fail"] = s.get("fail", 0) + 1
+                break
+        pos += 1
+        s["pos"], s["at"] = pos, time.time()
+        if pos % 20 == 0:
+            bc_save(s)
+        time.sleep(0.04)  # Telegram cheklovi: sekundiga ~30 ta xabar
+    s["pos"], s["at"] = pos, time.time()
+    s["step"] = "done" if pos >= len(ids) else "paused"
+    bc_save(s)
+    return s
+
+def bc_report(s):
+    head = "✅ <b>Xabar yuborildi</b>" if s["step"] == "done" else "⏸ <b>Vaqt tugadi, yuborish to'xtatildi</b>"
+    txt = (f"{head} ({h(BC_GROUPS.get(s.get('group'), ''))})\n"
+           f"📨 Yetib bordi: <b>{s.get('ok', 0)} ta</b>\n"
+           f"🚫 Yetmadi (botni bloklagan): <b>{s.get('fail', 0)} ta</b>")
+    kb = None
+    if s["step"] == "paused":
+        txt += f"\n⏳ Qoldi: <b>{len(s['ids']) - s['pos']} ta</b>"
+        kb = InlineKeyboardMarkup().add(InlineKeyboardButton("▶️ Davom ettirish", callback_data="bc:resume"))
+    return txt, kb
+
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith('bc:'))
+@admin_only
+def handle_broadcast_choice(c):
+    act = c.data.split(':', 1)[1]
+    s = bc_state()
+    if act == "cancel":
+        if s.get("step") == "sending":
+            return bot.answer_callback_query(c.id, "Yuborilmoqda, to'xtatib bo'lmaydi.", show_alert=True)
+        bc_save({})
+        bot.answer_callback_query(c.id, "Bekor qilindi")
+        try: bot.edit_message_text("❌ Ommaviy xabar bekor qilindi.", c.message.chat.id, c.message.message_id)
+        except Exception: pass
+        return
+    if act == "resume":
+        if s.get("step") != "paused":
+            return bot.answer_callback_query(c.id, "Davom ettiradigan xabar yo'q.", show_alert=True)
+    elif act in BC_GROUPS:
+        if s.get("step") != "ready":
+            return bot.answer_callback_query(c.id, "Bu xabar allaqachon yuborilgan yoki bekor qilingan.", show_alert=True)
+        ids = bc_recipients(act)
+        if not ids:
+            return bot.answer_callback_query(c.id, "Bu guruhda mijoz yo'q.", show_alert=True)
+        s.update({"group": act, "ids": ids, "pos": 0, "ok": 0, "fail": 0})
+    else:
+        return bot.answer_callback_query(c.id)
+    # Telegram webhookni qayta yuborsa, xabar ikki marta ketmasligi uchun avval holatni belgilaymiz
+    s.update({"step": "sending", "at": time.time()})
+    bc_save(s)
+    bot.answer_callback_query(c.id, "Yuborilmoqda...")
+    try: bot.edit_message_text(f"⏳ Yuborilmoqda: {len(s['ids']) - s.get('pos', 0)} ta mijozga...", c.message.chat.id, c.message.message_id)
+    except Exception: pass
+    s = bc_send_batch(s)
+    txt, kb = bc_report(s)
+    bot.send_message(c.message.chat.id, txt, parse_mode="HTML", reply_markup=kb)
 
 
 @bot.message_handler(content_types=['photo'])
