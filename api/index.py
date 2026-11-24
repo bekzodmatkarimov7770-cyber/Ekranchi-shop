@@ -43,8 +43,7 @@ REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_R
 CATALOG_VERSION = "2026-10-21"
 # Faqat narxlar yangilanganda: qoldiq, yashirilgan mahsulotlar va nomlar bazada qoladi, optom va chakana SEED_CATALOG dan olinadi.
 # 26.10 (2): mijozlar uchun PDF bilan bir xil. 21.10 gacha bo'lgan eski do'kon narxi, keyin qo'shilgan 174 ta modelga Bekzod yozgan narx; chakana = optom x 1,35.
-# 24.11: Samsung Original Change Glass (ID 2001-2024, pod zakaz) qo'shildi; bazada yo'q seed mahsulotlari qo'shiladi.
-PRICE_VERSION = "2026-11-24"
+PRICE_VERSION = "2026-10-26b"
 def _load_seed():
     """Boshlang'ich katalog bitta faylda turadi: catalog.seed.json (do'kon sahifasi ham zaxira sifatida shuni o'qiydi)."""
     here = os.path.dirname(os.path.abspath(__file__))
@@ -177,13 +176,6 @@ def _reseed_if_new_version():
         seed = {p["id"]: p for p in SEED_CATALOG}
         _set_many("catalog", {pid: {**v, "retail": seed[pid]["retail"], "wholesale": seed[pid]["wholesale"]}
                               for pid, v in cat.items() if pid in seed})
-        # seed ga yangi qo'shilgan mahsulotlar (bazada hali yo'q) qoldig'i bilan qo'shiladi, boshqalari tegilmaydi
-        new = [p for p in SEED_CATALOG if p["id"] not in cat]
-        if new:
-            log.info("Yangi mahsulotlar qo'shilmoqda: %d ta", len(new))
-            _set_many("catalog", {p["id"]: {k: p[k] for k in ("brand", "type", "name", "retail", "wholesale")} | {"active": True}
-                                  for p in new})
-            _set_many("stock", {p["id"]: int(p.get("stock") or 0) for p in new})
         store_set("meta", "price_version", PRICE_VERSION)
     _catalog_version_ok = True
 
@@ -192,6 +184,15 @@ def _ensure_catalog():
     _reseed_if_new_version()
     cat = store_all("catalog")
     if cat:
+        # seed ga keyin qo'shilgan mahsulotlar (masalan 24.11 Samsung Change Glass, ID 2001-2024) bazaga qo'shiladi;
+        # bazadagi narx, qoldiq va yashirilganlar o'zgarmaydi
+        new = [p for p in SEED_CATALOG if p["id"] not in cat]
+        if new:
+            log.info("Yangi mahsulotlar qo'shilmoqda: %d ta", len(new))
+            _set_many("catalog", {p["id"]: {k: p[k] for k in ("brand", "type", "name", "retail", "wholesale")} | {"active": True}
+                                  for p in new})
+            _set_many("stock", {p["id"]: int(p.get("stock") or 0) for p in new})
+            cat = store_all("catalog")
         return cat
     log.info("Katalog bazaga yozilmoqda (%d ta)", len(SEED_CATALOG))
     _set_many("catalog", {p["id"]: {k: p[k] for k in ("brand", "type", "name", "retail", "wholesale")} | {"active": True}
