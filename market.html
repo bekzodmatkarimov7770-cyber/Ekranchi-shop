@@ -1035,9 +1035,9 @@ function startShop() {
 
   // Sifat: kod oxiri G (ARG, AHG, AVG, ASI, ACT) = HD, J (ARJ, ASJ, AHJ, AVJ, ACJ) = HD+; iPhone AII = Incell
   const typeClass = (t, b) => /batt|batar/i.test(t) ? 'batt' : /change\s*glass|original/i.test(t) && /iphone/i.test(b || '') ? 'origi' : /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
-  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original ramkali', orignf: 'Original ramkasiz', origi: 'Original', batt: 'Batareya' };
+  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Change Glass', orignf: 'Change Glass', origi: 'Change Glass', batt: 'Batareya' };
   const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
-  const TYPE_NOTE = { batt: 'Original batareya, diagnostikada koʻrinadi · pod zakaz, 100% oldindan toʻlov', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov', origi: 'Original ekran, ideal sifat, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov' };
+  const TYPE_NOTE = { batt: 'Original batareya, diagnostikada koʻrinadi · pod zakaz, 100% oldindan toʻlov', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran · pod zakaz, 100% oldindan toʻlov', origi: 'Original ekran, ideal sifat · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz · pod zakaz, 100% oldindan toʻlov' };
   const typeNote = (tc) => (TYPE_RES[tc] ? TYPE_RES[tc] + ' · ' : '') + TYPE_NOTE[tc];
   const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'origi', 'orignf', 'orig', 'servis', 'batt'];
 
@@ -1046,8 +1046,8 @@ function startShop() {
   const similar = (a, b) => { let n = 0; a.forEach(x => { if (b.has(x)) n++; }); return n / Math.max(1, Math.min(a.size, b.size)) >= 0.5; };
   const groups = [];
   products.forEach(p => {
-    const tc = typeClass(p.type, p.brand), k = [p.brand, norm(p._pm.main), p._pm.tags.join(','), tc === 'batt' ? 'batt' : ''].join('|'), ts = tokSet(p);
-    const g = groups.find(g => g.k === k && !g.vars.some(v => typeClass(v.type, v.brand) === tc) && similar(g.ts, ts));
+    const tc = typeClass(p.type, p.brand), k = [p.brand, norm(p._pm.main), tc === 'batt' ? 'batt' : ''].join('|'), ts = tokSet(p);
+    const g = groups.find(g => g.k === k && similar(g.ts, ts));
     if (g) { g.vars.push(p); ts.forEach(x => g.ts.add(x)); g.key += ' ' + p._key; }
     else groups.push({ k, ts, vars: [p], key: p._key, brand: p.brand });
   });
@@ -1152,7 +1152,7 @@ function startShop() {
   /* ---- sifat turi chiplari ---- */
   const typeChips = $('typeChips');
   const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608', orig: '#0F5C4A', orignf: '#2E7D6B', origi: '#0F5C4A', batt: '#3B7A2A' };
-  ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type, p.brand) === t))].forEach(t => {
+  ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type, p.brand) === t))].filter((t, i, a) => a.findIndex(x => TYPE_LABEL[x] === TYPE_LABEL[t]) === i).forEach(t => {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(t === qtype));
     el.dataset.t = t;
@@ -1187,7 +1187,6 @@ function startShop() {
       im.onerror = () => { im.parentNode.outerHTML = `<div class="glyph t-${typeClass(p.type, p.brand)}" aria-hidden="true"></div>`; }; }
     const br = el.querySelector('.br'); br.innerHTML = brandMark(p.brand, LOGOS[p.brand] && LOGOS[p.brand][3] ? 9 : 12); br.setAttribute('role', 'img'); br.setAttribute('aria-label', p.brand);
     el.querySelector('.name').textContent = p._pm.main;
-    p._pm.tags.forEach(t => { const tag = document.createElement('span'); tag.className = 'type-tag' + (t === 'Ramkali' ? ' frame' : ''); tag.textContent = t; el.querySelector('.meta').appendChild(tag); });
     const alts = [...new Set(g.vars.flatMap(v => v._pm.alts))].filter(a => a !== p._pm.main);
     if (alts.length) { const a = el.querySelector('.alts'); a.hidden = false;
       const few = alts.slice(0, 4), more = alts.length - few.length;
@@ -1204,6 +1203,7 @@ function startShop() {
       ve.className = 'var' + (out ? ' out' : '');
       ve.innerHTML = `<div class="vinfo"><div class="vhead"><span class="type-tag ${tc}"></span><span class="vnote"></span></div><div class="price"></div></div><div class="act"></div>`;
       ve.querySelector('.type-tag').textContent = TYPE_LABEL[tc];
+      v._pm.tags.forEach(t => { const tag = document.createElement('span'); tag.className = 'type-tag' + (t === 'Ramkali' ? ' frame' : ''); tag.textContent = t === 'Ramkali' ? 'ramkali' : t; ve.querySelector('.type-tag').after(tag); });
       ve.querySelector('.vnote').textContent = typeNote(tc);
       box.appendChild(ve);
       const r = { el: ve, p: v, out, g, tc, priceEl: ve.querySelector('.price'), actEl: ve.querySelector('.act') };
@@ -1314,7 +1314,7 @@ function startShop() {
     const nq = norm(query); let shown = 0;
     groups.forEach(g => {
       let vis = 0;
-      g.recs.forEach(r => { const okT = qtype === 'all' || r.tc === qtype; r.el.hidden = !okT; if (okT) vis++; });
+      g.recs.forEach(r => { const okT = qtype === 'all' || TYPE_LABEL[r.tc] === TYPE_LABEL[qtype]; r.el.hidden = !okT; if (okT) vis++; });
       const ok = vis > 0 && g.kind === kind && (brand === 'Barchasi' || g.brand === brand) && (!nq || g.key.includes(nq));
       g.el.hidden = !ok; if (ok) shown++;
     });
@@ -1813,7 +1813,7 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
       art.innerHTML = '';
       if (photo) { const im = document.createElement('img'); im.alt = p.brand + ' ' + p._pm.main; im.src = photo; im.onerror = () => { art.innerHTML = `<div class="glyph t-${r.tc}"></div>`; }; art.appendChild(im); }
       else art.innerHTML = `<div class="glyph t-${r.tc}"></div>`;
-      $('pdVars').innerHTML = g.recs.map((x, i) => `<button type="button" data-var="${i}" class="${x.out ? 'out' : ''}" aria-pressed="${x === r}">${TYPE_LABEL[x.tc]}</button>`).join('');
+      $('pdVars').innerHTML = g.recs.map((x, i) => `<button type="button" data-var="${i}" class="${x.out ? 'out' : ''}" aria-pressed="${x === r}">${TYPE_LABEL[x.tc]}${x.p._pm.tags.includes('Ramkali') ? ' · ramkali' : ''}</button>`).join('');
       $('pdRetail').textContent = fmt(p.retail); $('pdWholesale').textContent = fmt(p.wholesale);
       const info = $('pdInfo'); info.innerHTML = '';
       const row = (k, v, cls) => { const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b'); a.textContent = k; b.textContent = v; if (cls) b.className = cls; d.append(a, b); info.appendChild(d); };
