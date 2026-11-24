@@ -231,6 +231,7 @@
     .t-batt::before   { background: linear-gradient(180deg, #1B2422 0 18%, #6CC04A 18% 100%); inset: 10px 8px; border-radius: 4px; }
     .t-origi::before  { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); box-shadow: inset 0 0 0 2px #0F5C4A; }
     .t-orignf::before { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); }
+    .t-yech::before   { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); box-shadow: inset 0 0 0 2px #0F5C4A; }
     .t-servis::before { background: linear-gradient(160deg, #2A2F3A, #0B0E14); box-shadow: inset 0 0 0 2px var(--kapton); }
 
     .info { min-width: 0; }
@@ -243,6 +244,7 @@
     .type-tag.batt { background: #E6F2DF; color: #2C5E1E; }
     .type-tag.origi { background: #0F5C4A; color: #fff; }
     .type-tag.orignf { background: #2E7D6B; color: #fff; }
+    .type-tag.yech { background: #0F5C4A; color: #fff; }
     .name { font-weight: 700; font-size: 16px; line-height: 1.25; margin: 4px 0 4px; word-break: break-word; letter-spacing: -.005em; }
     .alts { font-size: 12.5px; color: var(--muted); line-height: 1.35; margin: -2px 0 6px;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
@@ -1038,12 +1040,12 @@ function startShop() {
   const byId = new Map(products.map(p => [String(p.id), p]));
 
   // Sifat: kod oxiri G (ARG, AHG, AVG, ASI, ACT) = HD, J (ARJ, ASJ, AHJ, AVJ, ACJ) = HD+; iPhone AII = Incell
-  const typeClass = (t, b) => /batt|batar/i.test(t) ? 'batt' : /\bfog\b/i.test(t) ? 'fog' : /change\s*glass|original/i.test(t) && /iphone/i.test(b || '') ? 'origi' : /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
-  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original Change Glass', orignf: 'Original Change Glass', origi: 'Original Change Glass', batt: 'Batareya', fog: 'Original FOG' };
+  const typeClass = (t, b) => /batt|batar/i.test(t) ? 'batt' : /\bfog\b/i.test(t) ? 'fog' : /yechma/i.test(t) ? 'yech' : /change\s*glass|original/i.test(t) && /iphone/i.test(b || '') ? 'origi' : /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
+  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original Change Glass', orignf: 'Original Change Glass', origi: 'Original Change Glass', batt: 'Batareya', fog: 'Original FOG', yech: 'Original Yechma' };
   const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
-  const TYPE_NOTE = { fog: '', batt: 'Batareya: original sigʻim, oshibka chiqmaydi', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: '', origi: '', orignf: '' };
+  const TYPE_NOTE = { fog: '', batt: 'Batareya: original sigʻim, oshibka chiqmaydi', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: '', origi: '', orignf: '', yech: '' };
   const typeNote = (tc) => [TYPE_RES[tc], TYPE_NOTE[tc]].filter(Boolean).join(' · ');
-  const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'fog', 'origi', 'orignf', 'orig', 'servis', 'batt'];
+  const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'fog', 'origi', 'orignf', 'orig', 'yech', 'servis', 'batt'];
 
   /* ---- bir xil model (turli sifat) bitta qatorga yig'iladi ---- */
   const tokSet = (p) => new Set([p._pm.main, ...p._pm.alts].map(norm));
@@ -1155,7 +1157,7 @@ function startShop() {
 
   /* ---- sifat turi chiplari ---- */
   const typeChips = $('typeChips');
-  const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608', orig: '#0F5C4A', orignf: '#2E7D6B', origi: '#0F5C4A', batt: '#3B7A2A', fog: '#5B3E8A' };
+  const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608', orig: '#0F5C4A', orignf: '#2E7D6B', origi: '#0F5C4A', batt: '#3B7A2A', fog: '#5B3E8A', yech: '#0F5C4A' };
   ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type, p.brand) === t))].filter((t, i, a) => a.findIndex(x => TYPE_LABEL[x] === TYPE_LABEL[t]) === i).forEach(t => {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(t === qtype));
