@@ -78,3 +78,23 @@ def test_public_catalog_endpoint(api, client):
     ids = {p["id"] for p in body["products"]}
     assert pid not in ids, "yashirilgan mahsulot mijozga ko'rinmasligi kerak"
     assert set(body["products"][0]) <= {"id", "brand", "type", "name", "retail", "wholesale", "stock", "img"}
+
+
+def test_new_seed_products_are_added_without_touching_others(api):
+    api.get_catalog()
+    first, last = api.SEED_CATALOG[0], api.SEED_CATALOG[-1]
+    api.stock_add(first["id"], -3)
+    left = api.get_catalog()[first["id"]]["stock"]
+    # bazada hali yo'q mahsulotni taqlid qilamiz
+    if api.REDIS_URL:
+        api._redis("HDEL", "catalog", last["id"]); api._redis("HDEL", "stock", last["id"])
+    else:
+        c = api._file_load("catalog"); c.pop(last["id"], None); api._file_save("catalog", c)
+        st = api._file_load("stock"); st.pop(last["id"], None); api._file_save("stock", st)
+    assert last["id"] not in api.store_all("catalog")
+    api.store_set("catalog", first["id"], {**api.store_get("catalog", first["id"]), "retail": 999000})
+    cat = api.get_catalog()
+    assert cat[first["id"]]["retail"] == 999000, "admin narxi saqlanishi kerak"
+    assert cat[last["id"]]["stock"] == last["stock"]
+    assert cat[last["id"]]["retail"] == last["retail"]
+    assert cat[first["id"]]["stock"] == left, "eski qoldiq o'zgarmasligi kerak"

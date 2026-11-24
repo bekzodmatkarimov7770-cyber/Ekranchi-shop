@@ -184,6 +184,15 @@ def _ensure_catalog():
     _reseed_if_new_version()
     cat = store_all("catalog")
     if cat:
+        # seed ga keyin qo'shilgan mahsulotlar (masalan 24.11 Samsung Change Glass, ID 2001-2024) bazaga qo'shiladi;
+        # bazadagi narx, qoldiq va yashirilganlar o'zgarmaydi
+        new = [p for p in SEED_CATALOG if p["id"] not in cat]
+        if new:
+            log.info("Yangi mahsulotlar qo'shilmoqda: %d ta", len(new))
+            _set_many("catalog", {p["id"]: {k: p[k] for k in ("brand", "type", "name", "retail", "wholesale")} | {"active": True}
+                                  for p in new})
+            _set_many("stock", {p["id"]: int(p.get("stock") or 0) for p in new})
+            cat = store_all("catalog")
         return cat
     log.info("Katalog bazaga yozilmoqda (%d ta)", len(SEED_CATALOG))
     _set_many("catalog", {p["id"]: {k: p[k] for k in ("brand", "type", "name", "retail", "wholesale")} | {"active": True}
