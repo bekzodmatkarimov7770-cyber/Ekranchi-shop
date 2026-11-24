@@ -223,6 +223,7 @@
     .t-incell::before, .t-hdp::before { background: linear-gradient(160deg, #E6F1F4, #AFCFD9 65%, #87AEBB); }
     .t-tft::before    { background: repeating-linear-gradient(180deg, #F3E9D2 0 5px, #E6D9BC 5px 10px); }
     .t-orig::before   { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); box-shadow: inset 0 0 0 2px #0F5C4A; }
+    .t-batt::before   { background: linear-gradient(180deg, #1B2422 0 18%, #6CC04A 18% 100%); inset: 10px 8px; border-radius: 4px; }
     .t-origi::before  { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); box-shadow: inset 0 0 0 2px #0F5C4A; }
     .t-orignf::before { background: linear-gradient(160deg, #1E2A3A, #05070B 70%); }
     .t-servis::before { background: linear-gradient(160deg, #2A2F3A, #0B0E14); box-shadow: inset 0 0 0 2px var(--kapton); }
@@ -233,6 +234,7 @@
     .type-tag.servis { background: #FDF0DA; color: #8A5608; }
     .type-tag.oled { background: #16181D; color: #fff; }
     .type-tag.orig { background: #0F5C4A; color: #fff; }
+    .type-tag.batt { background: #E6F2DF; color: #2C5E1E; }
     .type-tag.origi { background: #0F5C4A; color: #fff; }
     .type-tag.orignf { background: #2E7D6B; color: #fff; }
     .name { font-weight: 700; font-size: 16px; line-height: 1.25; margin: 4px 0 4px; word-break: break-word; letter-spacing: -.005em; }
@@ -1024,19 +1026,19 @@ function startShop() {
   const byId = new Map(products.map(p => [String(p.id), p]));
 
   // Sifat: kod oxiri G (ARG, AHG, AVG, ASI, ACT) = HD, J (ARJ, ASJ, AHJ, AVJ, ACJ) = HD+; iPhone AII = Incell
-  const typeClass = (t, b) => /change\s*glass|original/i.test(t) && /iphone/i.test(b || '') ? 'origi' : /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
-  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original ramkali', orignf: 'Original ramkasiz', origi: 'Original' };
+  const typeClass = (t, b) => /batt|batar/i.test(t) ? 'batt' : /change\s*glass|original/i.test(t) && /iphone/i.test(b || '') ? 'origi' : /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
+  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original ramkali', orignf: 'Original ramkasiz', origi: 'Original', batt: 'Batareya' };
   const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
-  const TYPE_NOTE = { hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov', origi: 'Original ekran, ideal sifat, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov' };
+  const TYPE_NOTE = { batt: 'Original batareya, diagnostikada koʻrinadi · pod zakaz, 100% oldindan toʻlov', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov', origi: 'Original ekran, ideal sifat, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz, oynasi almashtirilgan (Change Glass) · pod zakaz, 100% oldindan toʻlov' };
   const typeNote = (tc) => (TYPE_RES[tc] ? TYPE_RES[tc] + ' · ' : '') + TYPE_NOTE[tc];
-  const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'origi', 'orignf', 'orig', 'servis'];
+  const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'origi', 'orignf', 'orig', 'servis', 'batt'];
 
   /* ---- bir xil model (turli sifat) bitta qatorga yig'iladi ---- */
   const tokSet = (p) => new Set([p._pm.main, ...p._pm.alts].map(norm));
   const similar = (a, b) => { let n = 0; a.forEach(x => { if (b.has(x)) n++; }); return n / Math.max(1, Math.min(a.size, b.size)) >= 0.5; };
   const groups = [];
   products.forEach(p => {
-    const k = [p.brand, norm(p._pm.main), p._pm.tags.join(',')].join('|'), ts = tokSet(p), tc = typeClass(p.type, p.brand);
+    const tc = typeClass(p.type, p.brand), k = [p.brand, norm(p._pm.main), p._pm.tags.join(','), tc === 'batt' ? 'batt' : ''].join('|'), ts = tokSet(p);
     const g = groups.find(g => g.k === k && !g.vars.some(v => typeClass(v.type, v.brand) === tc) && similar(g.ts, ts));
     if (g) { g.vars.push(p); ts.forEach(x => g.ts.add(x)); g.key += ' ' + p._key; }
     else groups.push({ k, ts, vars: [p], key: p._key, brand: p.brand });
@@ -1139,7 +1141,7 @@ function startShop() {
 
   /* ---- sifat turi chiplari ---- */
   const typeChips = $('typeChips');
-  const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608', orig: '#0F5C4A', orignf: '#2E7D6B', origi: '#0F5C4A' };
+  const DOT = { hd: '#2D4A6B', incell: '#145244', hdp: '#C97F12', oled: '#16181D', tft: '#8A7440', servis: '#8A5608', orig: '#0F5C4A', orignf: '#2E7D6B', origi: '#0F5C4A', batt: '#3B7A2A' };
   ['all', ...TYPE_ORDER.filter(t => products.some(p => typeClass(p.type, p.brand) === t))].forEach(t => {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'chip'; el.setAttribute('aria-pressed', String(t === qtype));
