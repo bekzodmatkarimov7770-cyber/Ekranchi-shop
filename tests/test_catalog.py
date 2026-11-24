@@ -78,3 +78,23 @@ def test_public_catalog_endpoint(api, client):
     ids = {p["id"] for p in body["products"]}
     assert pid not in ids, "yashirilgan mahsulot mijozga ko'rinmasligi kerak"
     assert set(body["products"][0]) <= {"id", "brand", "type", "name", "retail", "wholesale", "stock", "img"}
+
+
+def test_price_version_adds_new_seed_products(api, monkeypatch):
+    api.get_catalog()
+    first, last = api.SEED_CATALOG[0], api.SEED_CATALOG[-1]
+    api.stock_add(first["id"], -3)
+    left = api.get_catalog()[first["id"]]["stock"]
+    # bazada hali yo'q mahsulotni taqlid qilamiz
+    if api.REDIS_URL:
+        api._redis("HDEL", "catalog", last["id"]); api._redis("HDEL", "stock", last["id"])
+    else:
+        c = api._file_load("catalog"); c.pop(last["id"], None); api._file_save("catalog", c)
+        st = api._file_load("stock"); st.pop(last["id"], None); api._file_save("stock", st)
+    assert last["id"] not in api.get_catalog()
+    monkeypatch.setattr(api, "PRICE_VERSION", "yangi-mahsulot")
+    api._catalog_version_ok = False
+    cat = api.get_catalog()
+    assert cat[last["id"]]["stock"] == last["stock"]
+    assert cat[last["id"]]["retail"] == last["retail"]
+    assert cat[first["id"]]["stock"] == left, "eski qoldiq o'zgarmasligi kerak"
