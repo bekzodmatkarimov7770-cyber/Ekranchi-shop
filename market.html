@@ -1039,10 +1039,10 @@ function startShop() {
 
   // Sifat: kod oxiri G (ARG, AHG, AVG, ASI, ACT) = HD, J (ARJ, ASJ, AHJ, AVJ, ACJ) = HD+; iPhone AII = Incell
   const typeClass = (t, b) => /batt|batar/i.test(t) ? 'batt' : /\bfog\b/i.test(t) ? 'fog' : /change\s*glass|original/i.test(t) && /iphone/i.test(b || '') ? 'origi' : /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
-  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Change Glass', orignf: 'Change Glass', origi: 'Change Glass', batt: 'Batareya', fog: 'Original FOG' };
+  const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original Change Glass', orignf: 'Original Change Glass', origi: 'Original Change Glass', batt: 'Batareya', fog: 'Original FOG' };
   const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
-  const TYPE_NOTE = { fog: 'Original ekran (FOG)', batt: 'Original batareya, diagnostikada koʻrinadi · pod zakaz, 100% oldindan toʻlov', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran · pod zakaz, 100% oldindan toʻlov', origi: 'Original ekran, ideal sifat · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz · pod zakaz, 100% oldindan toʻlov' };
-  const typeNote = (tc) => (TYPE_RES[tc] ? TYPE_RES[tc] + ' · ' : '') + TYPE_NOTE[tc];
+  const TYPE_NOTE = { fog: '', batt: 'Original batareya, diagnostikada koʻrinadi · pod zakaz, 100% oldindan toʻlov', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran · pod zakaz, 100% oldindan toʻlov', origi: 'Original ekran, ideal sifat · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz · pod zakaz, 100% oldindan toʻlov' };
+  const typeNote = (tc) => [TYPE_RES[tc], TYPE_NOTE[tc]].filter(Boolean).join(' · ');
   const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'fog', 'origi', 'orignf', 'orig', 'servis', 'batt'];
 
   /* ---- bir xil model (turli sifat) bitta qatorga yig'iladi ---- */
@@ -1394,7 +1394,7 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
       const more = line.querySelector('.line-more');
       const row = (label, text) => { const d = document.createElement('div'), b = document.createElement('b'); b.textContent = label + ' '; d.append(b, document.createTextNode(text)); more.appendChild(d); };
       if (p._pm.alts.length) row('Mos keladi:', [p._pm.main, ...p._pm.alts].join(', '));
-      row('Sifat:', TYPE_LABEL[tc] + ' · ' + typeNote(tc) + (p._pm.tags.includes('Ramkali') ? ' · ramkali' : ''));
+      row('Sifat:', [TYPE_LABEL[tc], typeNote(tc)].filter(Boolean).join(' · ') + (p._pm.tags.includes('Ramkali') ? ' · ramkali' : ''));
       row('Narx:', `chakana ${fmt(p.retail)}, optom ${fmt(p.wholesale)}`);
       if (typeof p.stock === 'number' && p.stock > 0 && p.stock <= 5) row('Omborda:', `faqat ${p.stock} ta qoldi`);
       line.querySelector('.nm').textContent = `${p.brand} ${p._pm.main}, ${TYPE_LABEL[typeClass(p.type, p.brand)]}` + (p._pm.alts.length ? ` (+${p._pm.alts.length} mos model)` : '') + (p._pm.tags.includes('Ramkali') ? ', ramkali' : '');
@@ -1823,7 +1823,7 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
       const row = (k, v, cls) => { const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b'); a.textContent = k; b.textContent = v; if (cls) b.className = cls; d.append(a, b); info.appendChild(d); };
       const st = +p.stock || 0;
       row('Omborda', r.out ? 'Hozircha yoʻq' : st <= 5 ? `Kam qoldi: ${st} ta` : 'Bor', r.out ? 'no' : st <= 5 ? 'low' : 'ok');
-      row('Sifat', TYPE_LABEL[r.tc] + ' · ' + typeNote(r.tc));
+      row('Sifat', [TYPE_LABEL[r.tc], typeNote(r.tc)].filter(Boolean).join(' · '));
       const alts = [...new Set(g.vars.flatMap(v => [v._pm.main, ...v._pm.alts]))];
       if (alts.length > 1) row('Mos keladi', alts.join(', '));
       row('Kafolat', '2 oy');
