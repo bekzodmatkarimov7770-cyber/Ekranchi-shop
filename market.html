@@ -1041,7 +1041,7 @@ function startShop() {
   const typeClass = (t, b) => /batt|batar/i.test(t) ? 'batt' : /\bfog\b/i.test(t) ? 'fog' : /change\s*glass|original/i.test(t) && /iphone/i.test(b || '') ? 'origi' : /no\s*frame/i.test(t) ? 'orignf' : /change\s*glass|original/i.test(t) ? 'orig' : /oled/i.test(t) ? 'oled' : /servis/i.test(t) ? 'servis' : /tft/i.test(t) ? 'tft' : /premium/i.test(t) ? 'hdp' : /iphone/i.test(b || '') ? 'incell' : 'hd';
   const TYPE_LABEL = { hd: 'Incell HD', hdp: 'Incell HD+', incell: 'Incell', oled: 'OLED', tft: 'TFT', servis: 'Servis', orig: 'Original Change Glass', orignf: 'Original Change Glass', origi: 'Original Change Glass', batt: 'Batareya', fog: 'Original FOG' };
   const TYPE_RES = { hd: '1280×720', hdp: '1600×720' };
-  const TYPE_NOTE = { fog: '', batt: 'Batareya: original sigʻim, oshibka chiqmaydi', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: 'Original ekran · pod zakaz, 100% oldindan toʻlov', origi: 'Original ekran, ideal sifat · pod zakaz, 100% oldindan toʻlov', orignf: 'Original ekran, ramkasiz · pod zakaz, 100% oldindan toʻlov' };
+  const TYPE_NOTE = { fog: '', batt: 'Batareya: original sigʻim, oshibka chiqmaydi', hd: 'Kundalik taʼmir uchun', hdp: 'Tiniqroq, originalga yaqin rang', incell: 'Arzon, kundalik taʼmir', oled: 'Eng yorqin, originalga eng yaqin', tft: 'Oddiy TFT ekran', servis: 'Servis qismi', orig: '', origi: '', orignf: '' };
   const typeNote = (tc) => [TYPE_RES[tc], TYPE_NOTE[tc]].filter(Boolean).join(' · ');
   const TYPE_ORDER = ['hd', 'incell', 'tft', 'hdp', 'oled', 'fog', 'origi', 'orignf', 'orig', 'servis', 'batt'];
 
