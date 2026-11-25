@@ -365,6 +365,7 @@
   let statusFilter = 'ochiq', oq = '', cq = '', custSort = 'sum', periodDays = 30;
   const open = new Set();
   const live = (o) => o.status !== 'bekor';
+  const iname = (i) => i.l || i.n;
   const orderSum = (o) => (o.items && o.items.length) ? o.items.reduce((s, it) => s + (it.aq ?? it.oq) * (it.p || 0), 0) : (o.total || 0);
   const orderQty = (o) => (o.items && o.items.length) ? o.items.reduce((s, it) => s + (it.aq ?? it.oq), 0) : (o.qty || 0);
 
@@ -443,7 +444,7 @@
       if (statusFilter === 'ochiq' && !OPEN.has(o.status)) return false;
       if (!['ochiq', 'hammasi'].includes(statusFilter) && o.status !== statusFilter) return false;
       if (!q) return true;
-      const hay = [o.id, o.name, o.tg_name, o.username, phoneOf(o), o.addr, ...(o.items || []).map(i => i.n)].join(' ').toLowerCase().replace(/\s+/g, '');
+      const hay = [o.id, o.name, o.tg_name, o.username, phoneOf(o), o.addr, ...(o.items || []).map(iname)].join(' ').toLowerCase().replace(/\s+/g, '');
       return hay.includes(q);
     });
     const box = $('orders');
@@ -474,7 +475,7 @@
   function orderBody(o, phone) {
     const rows = (o.items || []).map(i => {
       const q = i.aq ?? i.oq;
-      return `<tr><td>${esc(i.n)}${q < i.oq ? `<div class="short">${i.oq} ta soʻralgan, ${q} ta bor</div>` : ''}</td><td>${q} ta</td><td>${fmtN(q * i.p)}</td></tr>`;
+      return `<tr><td>${esc(iname(i))}${q < i.oq ? `<div class="short">${i.oq} ta soʻralgan, ${q} ta bor</div>` : ''}</td><td>${q} ta</td><td>${fmtN(q * i.p)}</td></tr>`;
     }).join('');
     const hist = (o.history || []).slice().reverse().map(h => `<li style="--sc:${sc(h.s)}"><div><b>${esc(STATUSES[h.s] || h.s)}</b>${h.note ? ', ' + esc(h.note) : ''}<br><time>${when(h.t)}${h.by ? ', ' + esc(h.by) : ''}</time></div></li>`).join('');
     return `<div class="o-body">
@@ -562,7 +563,7 @@
     $('kSum').textContent = short(sum); $('kCount').textContent = list.length;
     $('kAvg').textContent = list.length ? short(sum / list.length) : '0'; $('kQty').textContent = fmtN(qty);
     const models = new Map();
-    list.forEach(o => (o.items || []).forEach(i => { const q = i.aq ?? i.oq; const m = models.get(i.n) || { q: 0, s: 0 }; m.q += q; m.s += q * i.p; models.set(i.n, m); }));
+    list.forEach(o => (o.items || []).forEach(i => { const q = i.aq ?? i.oq; const k = iname(i); const m = models.get(k) || { q: 0, s: 0 }; m.q += q; m.s += q * i.p; models.set(k, m); }));
     const top = [...models.entries()].sort((a, b) => b[1].q - a[1].q).slice(0, 10), maxQ = top.length ? top[0][1].q : 1;
     $('topModels').innerHTML = top.length ? top.map(([n, m]) => `<div class="top-row"><span>${esc(n)}</span><b>${m.q} ta</b><span class="meter"><i style="width:${m.q / maxQ * 100}%"></i></span></div>`).join('') : '<p class="sub" style="color:var(--muted);font-size:13.5px">Bu davrda savdo yoʻq.</p>';
     const opt = list.filter(o => o.pt === 'Optom').reduce((s, o) => s + orderSum(o), 0), ret = sum - opt;
@@ -585,7 +586,7 @@
   const d8 = (t) => t ? new Date(t).toLocaleString('uz-UZ') : '';
   $('expOrders').onclick = () => download('buyurtmalar.csv', [['ID', 'Sana', 'Holat', 'Mijoz', 'Username', 'Telefon', 'Yetkazish', 'Manzil', 'Narx turi', 'Soni', 'Summa', 'Tarkib', 'Izoh'],
     ...orders.map(o => [o.id, d8(o.created), STATUSES[o.status] || o.status, nm(o), o.username ? '@' + o.username : '', phoneOf(o), o.deliv, o.addr, o.pt, orderQty(o), orderSum(o),
-      (o.items || []).map(i => `${i.n} x${i.aq ?? i.oq}`).join('; '), o.note])]);
+      (o.items || []).map(i => `${iname(i)} x${i.aq ?? i.oq}`).join('; '), o.note])]);
   $('expCust').onclick = () => download('mijozlar.csv', [['Ism', 'Username', 'Telefon', 'Rejim', 'Buyurtmalar', 'Jami xarid', 'Oxirgi buyurtma'],
     ...custStats().map(c => [c.name, c.username ? '@' + c.username : '', c.phone, c.role, c.n, c.sum, d8(c.last)])]);
 
