@@ -1180,7 +1180,8 @@ def public_catalog():
     items = sorted(cat.values(), key=lambda p: (-int(p.get("stock", 0) > 0), int(p["id"]) if str(p["id"]).isdigit() else 0))
     resp = jsonify({"products": [{k: p.get(k) for k in ("id", "brand", "type", "name", "retail", "wholesale", "stock", "img") if k != "img" or p.get("img")} for p in items],
                     "wholesale_min": WHOLESALE_MIN, "now": now_ms()})
-    resp.headers["Cache-Control"] = "public, s-maxage=10, stale-while-revalidate=30"
+    # Eski narx qolib ketmasin: CDN atigi 5 soniya saqlaydi, eskisini "stale" qilib bermaydi
+    resp.headers["Cache-Control"] = "public, max-age=0, s-maxage=5, must-revalidate"
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
 

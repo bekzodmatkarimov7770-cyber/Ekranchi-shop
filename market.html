@@ -895,17 +895,52 @@ const CACHE_KEY = 'ek_catalog';
   });
   const start = (products) => { window.__catalog = products; if (list) list.innerHTML = ''; startShop(); };
 
+  /* Avto-yangilash: sahifa ochiq turganda har 30 soniyada, ilovaga qaytganda esa darhol
+     yangi narx/qoldiq olinadi. Yangi model qo'shilsa yoki olib tashlansa, sahifa o'zi qayta yuklanadi. */
+  let busy = false, lastPull = 0, pendingReload = false;
+  const sheetOpen = () => !!document.querySelector('.sheet.open');
+  const reloadNow = () => {   // ketma-ket qayta yuklanib qolmasin: daqiqasiga ko'pi bilan 1 marta
+    try {
+      const last = +sessionStorage.getItem('ek_reload') || 0;
+      if (Date.now() - last < 60000) return;
+      sessionStorage.setItem('ek_reload', String(Date.now()));
+      location.reload();
+    } catch (e) {}
+  };
+  const refresh = () => {
+    if (busy || document.hidden || !window.__catalog) return;
+    if (pendingReload && !sheetOpen()) return reloadNow();
+    busy = true; lastPull = Date.now();
+    fromApi().then(fresh => {
+      const oldIds = new Set(window.__catalog.map(p => String(p.id)));
+      const freshIds = new Set(fresh.map(p => String(p.id)));
+      const structural = oldIds.size !== freshIds.size || [...freshIds].some(id => !oldIds.has(id));
+      if (structural) { pendingReload = true; if (!sheetOpen()) reloadNow(); return; }
+      if (window.__applyCatalog) window.__applyCatalog(fresh);
+    }).catch(() => {}).finally(() => { busy = false; });
+  };
+  const autoRefresh = () => {
+    setInterval(refresh, 30000);
+    const onBack = () => { if (!document.hidden && Date.now() - lastPull > 3000) refresh(); };
+    document.addEventListener('visibilitychange', onBack);
+    window.addEventListener('focus', onBack);
+    window.addEventListener('pageshow', (e) => { if (e.persisted) refresh(); });
+    try { const tg = window.Telegram && window.Telegram.WebApp; if (tg && tg.onEvent) tg.onEvent('activated', onBack); } catch (e) {}
+  };
+
   let cached = null;
   try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && okList(c.p)) cached = c.p; } catch (e) {}
   if (cached) {
     start(cached);
-    fromApi().then(fresh => { if (window.__applyCatalog) window.__applyCatalog(fresh); }).catch(() => {});
+    refresh();
+    autoRefresh();
     return;
   }
   if (list) list.innerHTML = '<div class="empty" style="padding:56px 24px"><strong>Narxlar yangilanmoqda…</strong></div>';
   fromApi()
     .catch(() => getJSON(SEED_URL, 8000).then(p => okList(p) ? p : Promise.reject('empty')))
-    .then(start, () => start([]));
+    .then(start, () => start([]))
+    .then(() => { lastPull = Date.now(); autoRefresh(); });
 })();
 
 function startShop() {
