@@ -61,3 +61,26 @@ def test_cancel_returns_stock_once(api):
     api.release_order_stock(order)
     api.release_order_stock(order)               # ikkinchi marta qaytarmaydi
     assert api.get_catalog()[pid]["stock"] == start
+
+
+def test_order_items_show_brand_and_quality(api):
+    """Admin buyurtmada qaysi ekran (brend, model, sifat/seriya) ekanini aniq ko'rishi kerak."""
+    pid = pid_with_stock(api)
+    cat = api.get_catalog()[pid]
+    api.ADMIN_ID = api.ADMIN_ID or "1"
+    api.handle_order(make_message(json.dumps({"i": [[pid, 1]]})))
+    order = next(iter(api.store_all("orders2").values()))
+    it = order["items"][0]
+    assert it["b"] == cat["brand"] and it["ty"] == cat["type"]
+    label = api.item_label(it)
+    assert cat["brand"] in label and cat["type"] in label
+    caption = api.bot.send_document.call_args.kwargs["caption"]
+    assert cat["type"] in caption and cat["brand"] in caption
+
+
+def test_old_orders_get_quality_from_catalog(api):
+    pid = pid_with_stock(api)
+    cat = api.get_catalog()[pid]
+    old = {"id": "E1", "items": [{"id": pid, "n": cat["name"], "oq": 1, "aq": 1, "p": 1}]}
+    api.enrich_items(old)
+    assert old["items"][0]["l"] == f"{cat['brand']} {cat['name'].rstrip(' /')} [{cat['type']}]"

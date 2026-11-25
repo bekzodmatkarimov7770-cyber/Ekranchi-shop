@@ -697,22 +697,23 @@ def process_order(m, src="bot"):
 
         csv_buffer = io.StringIO()
         writer = csv.writer(csv_buffer)
-        writer.writerow(["№", "Model nomi", "Soni", "Narxi (UZS)", "Umumiy summa (UZS)"])
+        writer.writerow(["№", "Brend", "Model nomi", "Sifat (seriya)", "Soni", "Narxi (UZS)", "Umumiy summa (UZS)"])
         payload_items, items_txt, t_sum = [], "", 0
         for idx, (item_id, q) in enumerate(clean_ok.items(), 1):
             cat = catalog[item_id]
             price = int(cat['wholesale'] if is_wholesale else cat['retail'])
             subtotal = q * price
             t_sum += subtotal
-            writer.writerow([idx, cat['name'], q, price, subtotal])
-            payload_items.append({"id": item_id, "n": cat['name'], "oq": q, "aq": q, "rq": q, "p": price,
-                                  "asked": clean[item_id]})
+            it = {"id": item_id, "n": cat['name'], "b": cat.get('brand', ''), "ty": cat.get('type', ''),
+                  "oq": q, "aq": q, "rq": q, "p": price, "asked": clean[item_id]}
+            payload_items.append(it)
+            writer.writerow([idx, it["b"], cat['name'], it["ty"], q, price, subtotal])
             if idx <= 15:
-                items_txt += f"• <b>{h(cat['name'][:30])}</b>: {q} dona\n"
+                items_txt += f"• <b>{h(item_label(it, 45))}</b>: {q} dona\n"
             elif idx == 16:
                 items_txt += f"<i>... va yana (jami {len(clean_ok)} xil model)</i>\n"
         writer.writerow([])
-        writer.writerow(["", "JAMI", t_qty, "", t_sum])
+        writer.writerow(["", "", "JAMI", "", t_qty, "", t_sum])
 
         oid = next_order_id()
         order = {"id": oid, "cid": cid, "created": now_ms(), "status": "yangi",
@@ -762,7 +763,7 @@ def process_order(m, src="bot"):
                 f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
                 + (f"🗺 <a href=\"https://maps.google.com/?q={geo[0]},{geo[1]}\">Xaritada ko'rish</a>\n" if geo else "") +
                 f"📊 <b>Rejim:</b> {pt}\n"
-                f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean)} xil model)\n"
+                f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean_ok)} xil model)\n{items_caption_lines(payload_items, 1024 - 520 - len(short_txt))}"
                 f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>{h(mismatch)}\n"
                 f"💬 <i>To'lovni mijoz bilan o'zingiz kelishasiz</i>\n"
                 + (f"⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
@@ -785,7 +786,7 @@ def process_order(m, src="bot"):
 def show_missing_menu_screen(chat_id, message_id, p, cid):
     m = InlineKeyboardMarkup(row_width=1)
     for idx, it in enumerate(p.get('items', [])):
-        oq, aq, n = it.get('oq', 1), it.get('aq', 1), it.get('n', '')[:22]
+        oq, aq, n = it.get('oq', 1), it.get('aq', 1), item_label(it, 24)
         if aq == oq: st = f"✅ BOR: {n} ({aq}/{oq} ta)"
         elif aq == 0: st = f"❌ YO'Q: {n} (0/{oq} ta)"
         else: st = f"⚠️ KAM: {n} ({aq}/{oq} ta)"
@@ -823,7 +824,7 @@ def show_edit_item_screen(chat_id, message_id, p, idx, cid):
     m.row(InlineKeyboardButton("❌ Yo'q (0 ta)", callback_data=f"st_set:{cid}:{idx}:0"),
           InlineKeyboardButton(f"✅ To'liq ({oq} ta)", callback_data=f"st_set:{cid}:{idx}:{oq}"))
     m.row(InlineKeyboardButton("⬅️ Ro'yxatga qaytish", callback_data=f"back_list:{cid}"))
-    txt = f"🛠 <b>MODEL: {h(it.get('n'))}</b>\n📦 Buyurtma: <b>{oq} dona</b>\n✅ Mavjud: <b>{aq} dona</b>\n❌ Kam: <b>{oq-aq} dona</b>"
+    txt = f"🛠 <b>MODEL: {h(item_label(it))}</b>\n📦 Buyurtma: <b>{oq} dona</b>\n✅ Mavjud: <b>{aq} dona</b>\n❌ Kam: <b>{oq-aq} dona</b>"
     edit_text_or_caption(chat_id, message_id, txt, m)
 
 
@@ -875,6 +876,43 @@ def handle_back_list(c):
     if p: show_missing_menu_screen(c.message.chat.id, c.message.message_id, p, cid)
 
 
+def item_label(it, max_name=None):
+    """Buyurtmadagi ekranning to'liq nomi: brend + model + sifat (seriya). Masalan: Redmi POCO M3 / 9T [Incell HD+]
+    max_name berilsa faqat model nomi qisqartiriladi, sifat hech qachon kesilmaydi."""
+    name = str(it.get('n') or '').strip().rstrip(' /')
+    b, ty = str(it.get('b') or '').strip(), str(it.get('ty') or '').strip()
+    lbl = f"{b} {name}".strip() if b and not name.lower().startswith(b.lower()) else name
+    if max_name and len(lbl) > max_name:
+        lbl = lbl[:max_name - 1].rstrip(' /') + "…"
+    return f"{lbl} [{ty}]" if ty else lbl
+
+
+def items_caption_lines(items, budget=600, qty_key='aq'):
+    """Telegram caption (1024 belgi) ga sig'adigan tovarlar ro'yxati: har qatorda sifat (seriya) albatta bor."""
+    out = ""
+    for i, it in enumerate(items):
+        q = it.get(qty_key, it.get('oq', 1))
+        line = f"• {h(item_label(it, 38))} — <b>{q} ta</b>\n"
+        if len(out) + len(line) > budget:
+            return out + f"<i>... yana {len(items) - i} xil model (to'liq ro'yxat faylda)</i>\n"
+        out += line
+    return out
+
+
+def enrich_items(o, catalog=None):
+    """Eski buyurtmalarda brend/sifat yo'q edi: katalogdan ID bo'yicha to'ldiradi va 'l' (to'liq nom) qo'shadi."""
+    for it in o.get('items', []) or []:
+        if not it.get('ty') or not it.get('b'):
+            if catalog is None:
+                catalog = get_catalog(include_hidden=True)
+            c = catalog.get(str(it.get('id'))) or {}
+            it.setdefault('b', c.get('brand', ''))
+            if not it.get('ty'): it['ty'] = c.get('type', '')
+            if not it.get('b'): it['b'] = c.get('brand', '')
+        it['l'] = item_label(it)
+    return catalog
+
+
 def order_summary(p):
     s_tot = sum(it.get('aq', it.get('oq', 1)) * it.get('p', 0) for it in p.get('items', []))
     q_tot = sum(it.get('aq', it.get('oq', 1)) for it in p.get('items', []))
@@ -894,6 +932,7 @@ def handle_back_ord(c):
            f"🚚 <b>Yetkazish:</b> {h(p.get('deliv'))} | 📍 {h(p.get('addr'))}\n"
            f"📊 <b>Rejim:</b> {h(p.get('pt'))}\n"
            f"📦 <b>Jami soni:</b> {q_tot} dona\n"
+           + items_caption_lines(p.get('items', []), 550) +
            f"💰 <b>Qayta hisoblangan summa:</b> <b>{s_tot:,} so'm</b>")
     edit_text_or_caption(c.message.chat.id, c.message.message_id, txt, admin_order_kb(cid))
 
@@ -909,7 +948,7 @@ def handle_snd_miss(c):
         return bot.answer_callback_query(c.id, "Hamma tovar yetarli!", show_alert=True)
     miss_t = part_t = av_t = ""
     for it in items:
-        oq, aq, pr, n = it.get('oq', 1), it.get('aq', 1), it.get('p', 0), h(it.get('n'))
+        oq, aq, pr, n = it.get('oq', 1), it.get('aq', 1), it.get('p', 0), h(item_label(it))
         if aq == 0: miss_t += f"❌ <b>{n}</b> — umuman yo'q\n"
         elif aq < oq: part_t += f"⚠️ <b>{n}</b> — {oq} ta so'ralgan, <b>{aq} ta bor</b>\n"
         else: av_t += f"✅ <b>{n}</b> — {aq} dona ({aq * pr:,} so'm)\n"
@@ -1201,6 +1240,9 @@ def admin_api():
     if action == "data" and request.method == "GET":
         orders = [o for o in store_all("orders2").values() if isinstance(o, dict) and o.get("id")]
         orders.sort(key=lambda o: o.get("created", 0), reverse=True)
+        cat = None
+        for o in orders:
+            cat = enrich_items(o, cat)
         users = store_all("users")
         customers = [{"cid": str(k), **v} for k, v in users.items() if isinstance(v, dict)]
         return jsonify({"orders": orders, "customers": customers, "statuses": STATUSES, "now": now_ms(),
@@ -1364,11 +1406,12 @@ def _app_user(cid):
     return {"name": u.get("name") or "", "phone": u.get("phone") or "", "role": u.get("role") or ""}
 
 def _app_order(o):
+    enrich_items(o)
     return {"id": o.get("id"), "created": o.get("created"), "status": o.get("status"),
             "status_label": STATUSES.get(o.get("status"), o.get("status")),
             "total": sum(int(i.get("p", 0)) * int(i.get("rq", i.get("aq", 0)) or 0) for i in o.get("items", [])) or o.get("total", 0),
             "pt": o.get("pt"), "deliv": o.get("deliv"), "addr": o.get("addr"), "geo": o.get("geo"),
-            "items": [{"id": i.get("id"), "n": i.get("n"), "q": int(i.get("rq", i.get("aq", 0)) or 0),
+            "items": [{"id": i.get("id"), "n": i.get("l") or i.get("n"), "ty": i.get("ty"), "q": int(i.get("rq", i.get("aq", 0)) or 0),
                        "asked": i.get("asked"), "p": i.get("p")} for i in o.get("items", [])]}
 
 def app_api():
