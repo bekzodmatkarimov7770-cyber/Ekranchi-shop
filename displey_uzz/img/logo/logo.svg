@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="640" height="640">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#1A4FA8"/>
+      <stop offset="0.55" stop-color="#0F1B2D"/>
+      <stop offset="1" stop-color="#05070B"/>
+    </radialGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4D8BFF"/>
+      <stop offset="0.5" stop-color="#1565FF"/>
+      <stop offset="1" stop-color="#0A3FB8"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <clipPath id="scr"><rect x="222" y="132" width="196" height="376" rx="30"/></clipPath>
+  </defs>
+  <rect width="640" height="640" fill="url(#bg)"/>
+  <g transform="translate(320 320) scale(1.15) translate(-320 -320)">
+  <!-- glow -->
+  <rect x="222" y="132" width="196" height="376" rx="30" fill="#1565FF" opacity="0.55" filter="url(#glow)"/>
+  <!-- phone body -->
+  <rect x="204" y="112" width="232" height="416" rx="46" fill="#0B1424" stroke="#FFFFFF" stroke-width="10"/>
+  <!-- screen -->
+  <rect x="222" y="132" width="196" height="376" rx="30" fill="url(#screen)"/>
+  <g clip-path="url(#scr)">
+    <polygon points="222,132 330,132 222,330" fill="url(#shine)"/>
+  </g>
+  <!-- notch -->
+  <rect x="290" y="146" width="60" height="16" rx="8" fill="#0B1424"/>
+  <!-- D letter -->
+  <path d="M268 236 h52 a84 84 0 0 1 0 168 h-52 z M302 268 v104 h16 a52 52 0 0 0 0 -104 z"
+        fill="#FFFFFF" fill-rule="evenodd"/>
+  <!-- .uz badge -->
+  <rect x="268" y="436" width="104" height="40" rx="20" fill="#FFFFFF"/>
+  <text x="320" y="464" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="26" fill="#1565FF">.uz</text>
+  </g>
+</svg>
