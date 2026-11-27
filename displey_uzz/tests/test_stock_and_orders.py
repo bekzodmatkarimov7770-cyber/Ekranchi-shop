@@ -116,3 +116,13 @@ def test_receipt_respects_budget():
     items = [{"n": f"Model {i}", "b": "Samsung", "ty": "Incell HD", "aq": 1, "p": 1000} for i in range(40)]
     r = api.receipt(items, budget=300)
     assert "yana" in r and "JAMI 40 dona" in r and len(r) < 600
+
+
+def test_admin_gets_classic_message_and_customer_new_warranty(api, monkeypatch):
+    monkeypatch.setattr(api, "ADMIN_IDS", [777])
+    pid = pid_with_stock(api)
+    api.handle_order(make_message(json.dumps({"n": "Ali", "d": "BTS", "a": "Urganch", "i": [[pid, 1]]})))
+    cap = api.bot.send_document.call_args.kwargs["caption"]
+    assert cap.startswith("🔔 <b>YANGI BUYURTMA #E") and "━━━" in cap and "<pre>" not in cap and "Jami summa" in cap
+    txt = api.bot.send_message.call_args_list[0].args[1]
+    assert "<pre>" in txt and "usta tekshiradi" in txt and "faqat sensoriga" in txt

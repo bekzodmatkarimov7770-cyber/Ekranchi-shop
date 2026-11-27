@@ -6,7 +6,7 @@
   <title>Displey_Uzz — telefon displeylari donalab</title>
   <script>if (/[?&]app=1\b/.test(location.search) || /EkranchiApp/.test(navigator.userAgent)) document.documentElement.classList.add('app');</script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="data.js?v=du_v1"></script>
+  <script src="data.js?v=du_v2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -705,7 +705,7 @@
       <div class="hero-count"><strong id="modelCount">456</strong> ta model</div>
     </div>
     <h1 class="hero-title">Har qanday telefon<br>uchun displey</h1>
-    <p class="hero-note" id="heroNote">1 tadan sotamiz · <b>1 oy kafolat</b></p>
+    <p class="hero-note" id="heroNote">1 tadan sotamiz · <b>sensorga 1 oy kafolat</b></p>
   </header>
 
 
@@ -766,7 +766,7 @@
     <h2 class="sec-title">Bilib qoʻying</h2>
     <div class="facts">
       <div class="fact"><b>1 tadan sotamiz</b>Bitta ekran kerak boʻlsa ham buyurtma bering, minimal miqdor yoʻq.</div>
-      <div class="fact"><b>1 oy kafolat</b>Zavod braki boʻlsa, almashtiramiz yoki pulni qaytaramiz.</div>
+      <div class="fact"><b>Kafolat</b>Oʻrnatishdan oldin usta tekshiradi: brak boʻlsa, rasm yoki video bilan almashtiramiz yoki pulni qaytaramiz. Oʻrnatilgandan keyin 1 oy faqat sensoriga, video bilan.</div>
       <div class="fact"><b>Yetkazish</b>Viloyatlarga BTS pochta, shahar ichida taksi orqali.</div>
     </div>
   </section>
@@ -800,7 +800,8 @@
       <p class="hint" style="margin-top:8px"><b style="color:var(--ink)">Kuzatuvdagi modellar:</b> <span id="pWatch">yoʻq</span></p>
     </div></details>
     <details class="p-card p-menu" id="mHelp"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z"/><path d="m9 12 2.200 2.200L15.500 10"/></svg><span>Kafolat va yordam</span><i class="chev">›</i></summary><div class="p-in">
-      <p class="hint"><b style="color:var(--ink)">1 oy kafolat.</b> Zavod braki boʻlsa, rasm yoki video bilan murojaat qiling: yangisiga almashtiramiz yoki pulni qaytaramiz.</p>
+      <p class="hint"><b style="color:var(--ink)">Oʻrnatishdan oldin</b> displeyni usta tekshiradi. Brak boʻlsa, rasm yoki video olib yuboring: yangisiga almashtiramiz yoki pulni qaytaramiz.</p>
+      <p class="hint" style="margin-top:8px"><b style="color:var(--ink)">Oʻrnatilgandan keyin</b> 1 oy kafolat faqat sensoriga beriladi. Muammo boʻlsa, video boʻlishi shart, aks holda qaytarib olinmaydi.</p>
       <p class="hint" style="margin-top:8px"><b style="color:var(--ink)">Yetkazish.</b> Viloyatlarga BTS pochta, shahar ichida taksi orqali.</p>
       <p class="hint" style="margin-top:8px"><b style="color:var(--ink)">Savollar.</b> Telegram botimizga yozing, admin javob beradi.</p>
     </div></details>
@@ -1911,7 +1912,7 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
       row('Sifat', [TYPE_LABEL[r.tc], typeNote(r.tc)].filter(Boolean).join(' · '));
       const alts = [...new Set(g.vars.flatMap(v => [v._pm.main, ...v._pm.alts]))];
       if (alts.length > 1) row('Mos keladi', alts.join(', '));
-      row('Kafolat', '1 oy');
+      row('Kafolat', 'sensoriga 1 oy');
       const foot = $('pdFoot'), q = cart[id] || 0;
       if (r.out) {
         const on = id in watch;
@@ -1944,7 +1945,7 @@ const tc = typeClass(p.type, p.brand), isOpen = openLines.has(id);
     const SLIDES = [
       ['img/partiya.svg', 'Telefon displeylari ombori', 'Samsung, iPhone, Redmi va boshqa brendlar: narx va qoldiq har doim ombor bilan bir xil.'],
       ['img/kafolat.svg', '1 tadan sotamiz', 'Bitta ekran kerak boʻlsa ham buyurtma bering: minimal miqdor yoʻq.'],
-      ['img/yetkazish.svg', 'Kafolat va yetkazish', 'Barcha displeylarga 1 oy kafolat. Viloyatlarga BTS, shahar ichida taksi.']
+      ['img/yetkazish.svg', 'Kafolat va yetkazish', 'Oʻrnatishdan oldin usta tekshiradi, keyin sensorga 1 oy kafolat. Viloyatlarga BTS, shahar ichida taksi.']
     ];
     let slide = 0;
     const showSlide = () => {
