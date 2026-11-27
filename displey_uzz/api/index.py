@@ -8,6 +8,7 @@ Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
                      (birinchisi asosiy admin: mijozlar "Adminga yozish" tugmasi bilan unga yozadi)
   WEBHOOK_SECRET   - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   WEB_APP_URL      - (ixtiyoriy) market.html manzili
+  CONTACT_ADMIN_ID - (ixtiyoriy) "Admin bilan bog'lanish" va mijoz savollari shu adminga boradi
   ADMIN_USERNAME   - (ixtiyoriy) admin @username. Berilmasa, adminlarning Telegram profilidan olinadi;
                      u ham bo'lmasa, mijoz savoli bot orqali adminlarga yetkaziladi (admin reply bilan javob beradi)
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN - doimiy baza (Vercel Marketplace > Upstash)
@@ -29,6 +30,11 @@ PUBLIC_URL_DEFAULT = "https://displey-uz.vercel.app"
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_IDS = [int(x) for x in re.findall(r"-?\d+", os.environ.get("ADMIN_ID", "") or "") if int(x) != 0]
 ADMIN_ID = ADMIN_IDS[0] if ADMIN_IDS else 0   # asosiy admin
+# "Admin bilan bog'lanish" va mijoz savollari uchun admin (berilmasa, hamma adminlar)
+CONTACT_ADMIN_ID = int(re.sub(r"[^0-9-]", "", os.environ.get("CONTACT_ADMIN_ID", "")) or 0)
+
+def contact_admins():
+    return [CONTACT_ADMIN_ID] if CONTACT_ADMIN_ID else ADMIN_IDS
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 WEB_APP_URL = os.environ.get("WEB_APP_URL", PUBLIC_URL_DEFAULT + "/market.html?v=du_v1")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "").lstrip("@").strip()
@@ -512,7 +518,7 @@ def admin_username():
     if _admin_un["v"] is not None and time.time() - _admin_un["t"] < 3600:
         return _admin_un["v"]
     un = ""
-    for aid in ADMIN_IDS:
+    for aid in contact_admins():
         try:
             un = (bot.get_chat(aid).username or "").strip()
         except Exception:
@@ -524,7 +530,7 @@ def admin_username():
 
 def admin_contact_kb():
     """Admin @username bo'lsa, to'g'ridan-to'g'ri chatga; bo'lmasa, savol bot orqali adminlarga yetkaziladi."""
-    if not ADMIN_IDS:
+    if not contact_admins():
         return None
     un = admin_username()
     if un:
@@ -1281,14 +1287,14 @@ def _is_customer_msg(m):
 @bot.message_handler(func=_is_customer_msg, content_types=[t for t in RELAY_TYPES if t != 'photo'])
 def handle_customer_question(m):
     """Mijozning botga yozgan xabari hamma adminlarga boradi; admin reply qilsa, javob mijozga qaytadi."""
-    if not ADMIN_IDS:
+    if not contact_admins():
         return
     cid = str(m.chat.id)
     u = get_user(cid)
     head = (f"💬 <b>MIJOZDAN XABAR</b>\n{contact_line(cid, m.from_user.first_name, m.from_user.username, u.get('phone'))}\n"
             f"<i>Javob berish uchun pastdagi xabarga reply qiling.</i>")
     sent = 0
-    for aid in ADMIN_IDS:
+    for aid in contact_admins():
         try:
             bot.send_message(aid, head, parse_mode="HTML")
             msg = bot.copy_message(aid, m.chat.id, m.message_id)
