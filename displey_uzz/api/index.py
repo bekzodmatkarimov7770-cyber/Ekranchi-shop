@@ -76,8 +76,10 @@ SEED_CATALOG = _load_seed()
 
 
 WARRANTY_TEXT = (
-    "🛡 <b>Kafolat: 1 oy.</b> Zavod braki bo'lsa, yangisiga almashtiramiz yoki pulni to'liq qaytaramiz.\n"
-    "⚠️ Brakni ko'rsatuvchi <b>video yoki rasm</b> shart: ularsiz mahsulot qaytarib olinmaydi."
+    "🛠 <b>O'rnatishdan oldin</b> displeyni usta tekshiradi. Brak bo'lsa, <b>rasm yoki video</b> olib yuborasiz: "
+    "yangisiga almashtiramiz yoki pulni qaytaramiz.\n"
+    "🛡 <b>O'rnatilgandan keyin 1 oy kafolat faqat sensoriga</b> beriladi. Muammo bo'lsa, <b>video</b> bo'lishi shart, "
+    "aks holda qaytarib olinmaydi."
 )
 
 # ===================== B USLUB: chek ko'rinishidagi xabarlar =====================
@@ -649,7 +651,7 @@ def handle_start(m):
     user = get_user(m.chat.id)
     if user.get('phone'):
         txt = (f"{BRAND_HEAD}\n\nSalom, <b>{name}</b>! Buyurtma uchun\ndo'konni oching 👇\n\n"
-               f"<i>1 tadan ham sotamiz · 1 oy kafolat</i>")
+               f"<i>1 tadan ham sotamiz · sensorga 1 oy kafolat</i>")
         bot.send_message(m.chat.id, txt, reply_markup=main_kb(), parse_mode="HTML")
     else:
         txt = (f"{BRAND_HEAD}\n\nSalom, <b>{name}</b>! Buyurtma berish uchun avval\n"
@@ -662,7 +664,7 @@ def handle_stat(m):
     if not is_admin(m.chat.id):
         return
     users = store_all("users")
-    txt = (f"📊 <b>BOT STATISTIKASI:</b>\n{SEP}\n"
+    txt = (f"📊 <b>BOT STATISTIKASI:</b>\n━━━━━━━━━━━━━━━━━━━\n"
            f"📱 Raqam tasdiqlaganlar: <b>{len(users)} ta</b>")
     orders = [o for o in store_all("orders2").values() if isinstance(o, dict)]
     txt += f"\n🧾 Buyurtmalar: <b>{len(orders)} ta</b>\n\n📊 To'liq ma'lumot: /panel\n📣 Hammaga xabar: /hammaga"
@@ -833,15 +835,16 @@ def process_order(m, src="bot"):
 
         if ADMIN_IDS:
             admin_txt = (
-                f"🧾 <b>YANGI CHEK № {oid}</b>{' 📱 ilovadan' if src == 'app' else ''}\n{SEP}\n"
+                f"🔔 <b>YANGI BUYURTMA #{oid}</b>{' 📱 ilovadan' if src == 'app' else ''}\n━━━━━━━━━━━━━━━━━━━\n"
                 f"✍️ <b>Ism (formada):</b> {h(name)}\n"
                 f"{contact_line(cid, tg_name or name, m.from_user.username, phone)}\n"
                 f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
                 + (f"🗺 <a href=\"https://maps.google.com/?q={geo[0]},{geo[1]}\">Xaritada ko'rish</a>\n" if geo else "") +
-                f"{receipt(payload_items, budget=1024 - 480 - len(short_txt))}{h(mismatch)}\n"
+                f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean_ok)} xil model)\n{items_caption_lines(payload_items, 1024 - 520 - len(short_txt))}"
+                f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>{h(mismatch)}\n"
                 f"💬 <i>To'lovni mijoz bilan o'zingiz kelishasiz</i>\n"
                 + (f"⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
-                f"{SEP}\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
                 f"📥 <i>To'liq ro'yxat pastdagi Excel (.csv) faylda 👇</i>"
             )
             for aid in ADMIN_IDS:   # har bir adminga alohida fayl nusxasi
@@ -1003,10 +1006,12 @@ def handle_back_ord(c):
     p = get_payload(cid)
     if not p: return
     s_tot, q_tot = order_summary(p)
-    txt = (f"🧾 <b>CHEK № {h(p.get('id', ''))}</b> · {h(p.get('name'))}\n{SEP}\n"
+    txt = (f"🔔 <b>BUYURTMA #{h(p.get('id', ''))}: {h(p.get('name'))}</b>\n━━━━━━━━━━━━━━━━━━━\n"
            f"{contact_line(order_cid(cid, p), p.get('tg_name') or p.get('name'), p.get('username'), p.get('phone'))}\n"
            f"🚚 <b>Yetkazish:</b> {h(p.get('deliv'))} | 📍 {h(p.get('addr'))}\n"
-           + receipt(p.get('items', []), budget=550))
+           f"📦 <b>Jami soni:</b> {q_tot} dona\n"
+           + items_caption_lines(p.get('items', []), 550) +
+           f"💰 <b>Qayta hisoblangan summa:</b> <b>{s_tot:,} so'm</b>")
     edit_text_or_caption(c.message.chat.id, c.message.message_id, txt, admin_order_kb(cid))
 
 
