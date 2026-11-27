@@ -130,3 +130,14 @@ def test_contact_button_uses_admin_username_or_relay(api, monkeypatch):
     api.bot.get_chat.return_value = t.SimpleNamespace(username=None)
     btn = api.admin_contact_kb().keyboard[0][0]
     assert btn.callback_data == "ask_admin" and not btn.url
+
+
+def test_start_points_menu_button_to_current_shop(api, monkeypatch):
+    import types as t
+    monkeypatch.setattr(api, "_menu_ok", False)
+    m = t.SimpleNamespace(chat=t.SimpleNamespace(id=42), text="/start", from_user=t.SimpleNamespace(id=42, first_name="Ali"))
+    api.handle_start(m)
+    mb = api.bot.set_chat_menu_button.call_args.kwargs["menu_button"]
+    assert mb.web_app.url == api.WEB_APP_URL and "displey-uz.vercel.app" in mb.web_app.url
+    api.handle_start(m)
+    assert api.bot.set_chat_menu_button.call_count == 1   # bir nusxada bir marta

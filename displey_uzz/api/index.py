@@ -18,7 +18,7 @@ Webhookni ulash: https://<sayt>/api/index?ulash=1&key=<WEBHOOK_SECRET>
 """
 from flask import Flask, request, jsonify
 import telebot
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, MenuButtonWebApp
 from html import escape
 import json, os, io, csv, hmac, hashlib, time, logging, re, secrets, types, requests
 
@@ -551,6 +551,7 @@ def do_ulash():
         webhook_url = f"https://{request.host}/api/index"
         ok = bot.set_webhook(url=webhook_url, secret_token=WEBHOOK_SECRET,
                              allowed_updates=["message", "callback_query"], drop_pending_updates=False)
+        ensure_menu_button(force=True)
         me = bot.get_me()
         if ok:
             return f"✅ Bot @{h(me.username)} <b>{h(webhook_url)}</b> manziliga ulandi. Endi Telegramda /start yozing.", 200
@@ -558,6 +559,20 @@ def do_ulash():
     except Exception as e:
         log.exception("set_webhook")
         return f"XATOLIK: {h(e)}", 500
+
+
+_menu_ok = False
+
+def ensure_menu_button(force=False):
+    """Chat pastidagi "Do'kon" menyu tugmasi doim joriy saytni ochsin (BotFather'dagi eski manzil o'rniga)."""
+    global _menu_ok
+    if _menu_ok and not force:
+        return True
+    try:
+        _menu_ok = bool(bot.set_chat_menu_button(menu_button=MenuButtonWebApp("🛍 Do'kon", WebAppInfo(url=WEB_APP_URL))))
+    except Exception:
+        log.exception("set_chat_menu_button")
+    return _menu_ok
 
 
 def main_kb():
@@ -584,6 +599,7 @@ def admin_order_kb(cid):
 
 @bot.message_handler(commands=['start'])
 def handle_start(m):
+    ensure_menu_button()
     payload = (m.text or "").split(maxsplit=1)[1].strip() if len((m.text or "").split(maxsplit=1)) > 1 else ""
     if payload.startswith("app_"):
         return ask_app_login(m, payload[4:])
