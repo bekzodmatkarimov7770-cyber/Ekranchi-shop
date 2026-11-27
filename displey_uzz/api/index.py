@@ -566,23 +566,27 @@ def admin_username():
     _admin_un.update(v=un, t=time.time())
     return un
 
-def admin_contact_kb():
-    """Admin @username bo'lsa, to'g'ridan-to'g'ri chatga; bo'lmasa, savol bot orqali adminlarga yetkaziladi."""
-    if not contact_admins():
+def admin_contact_kb(relay=False):
+    """Admin profiliga havola: @username bo'lsa t.me/..., bo'lmasa tg://user?id=... (admin maxfiylik sozlamasi
+    ruxsat bergan bo'lsa ishlaydi). relay=True: savol bot orqali yetkaziladi (havola rad etilganda zaxira)."""
+    admins = contact_admins()
+    if not admins:
         return None
+    if relay:
+        return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Adminga yozish", callback_data="ask_admin"))
     un = admin_username()
-    if un:
-        return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"https://t.me/{un}"))
-    return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Adminga yozish", callback_data="ask_admin"))
+    url = f"https://t.me/{un}" if un else f"tg://user?id={admins[0]}"
+    return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=url))
 
 def send_with_admin_btn(chat_id, text):
     """Admin bilan bog'lanish tugmasi bilan yuboradi; admin profili yopiq bo'lsa, tugmasiz yuboradi."""
-    kb = admin_contact_kb()
-    if kb:
+    for kb in (admin_contact_kb(), admin_contact_kb(relay=True)):
+        if not kb:
+            break
         try:
             return bot.send_message(int(chat_id), text, parse_mode="HTML", reply_markup=kb)
         except Exception:
-            log.warning("admin tugmasi bilan yuborilmadi, tugmasiz yuboriladi")
+            log.warning("admin tugmasi rad etildi (profil yopiq bo'lishi mumkin), keyingi variant sinaladi")
     return safe_send(chat_id, text, parse_mode="HTML")
 
 
@@ -1277,7 +1281,9 @@ def process_pay(c):
     if act not in PAY_TEXTS:
         return bot.answer_callback_query(c.id)
     p = get_payload(cid)
-    if p and p.get("id"):
+    if not p:
+        return bot.answer_callback_query(c.id, "Buyurtma topilmadi (eski yoki o'chirilgan).", show_alert=True)
+    if p.get("id"):
         st = {"today": "tasdiqlandi", "tomorrow": "tasdiqlandi", "cash": "tasdiqlandi",
               "cancel": "bekor", "fake": "yangi"}[act]
         set_status(p, st, note=PAY_TEXTS[act], by="admin")
