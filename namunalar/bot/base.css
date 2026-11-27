@@ -1,0 +1,13 @@
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:390px;background:#8fb6d9 linear-gradient(160deg,#a7c7e7,#7fa7cf);font-family:-apple-system,"Segoe UI",Roboto,"Onest",sans-serif;padding:0 0 18px}
+.top{background:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #dde5f0}
+.ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1565FF,#0A3FB8);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px}
+.top b{font-size:15px}.top small{display:block;color:#7a89a0;font-size:12px}
+.tag{margin:12px auto 0;width:max-content;background:rgba(0,0,0,.25);color:#fff;font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px}
+.msg{background:#fff;margin:10px 12px 0;border-radius:16px 16px 16px 4px;padding:9px 12px 6px;font-size:15px;line-height:1.38;color:#000;max-width:340px;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+.msg .t{text-align:right;color:#9aa;font-size:11px;margin-top:2px}
+.btns{margin:4px 12px 0;max-width:340px;display:grid;gap:4px}
+.btns div{background:rgba(40,70,110,.45);color:#fff;text-align:center;border-radius:10px;padding:9px;font-size:14px;font-weight:500}
+pre{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.45;background:#f2f5fa;border-radius:8px;padding:8px;margin:6px 0;white-space:pre}
+blockquote{border-left:3px solid #1565FF;background:#eef4ff;border-radius:6px;padding:6px 9px;margin:6px 0}
+a{color:#1565FF;text-decoration:none}
