@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+ <defs>
+  <radialGradient id="bg" cx="50%" cy="42%" r="72%">
+   <stop offset="0" stop-color="#26241F"/><stop offset=".55" stop-color="#121214"/><stop offset="1" stop-color="#060607"/>
+  </radialGradient>
+  <radialGradient id="warm" cx="50%" cy="50%" r="50%">
+   <stop offset="0" stop-color="#FFB000" stop-opacity=".38"/><stop offset="1" stop-color="#FFB000" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+   <stop offset="0" stop-color="#FFE27A"/><stop offset=".4" stop-color="#FFC21A"/>
+   <stop offset=".75" stop-color="#E89A00"/><stop offset="1" stop-color="#C47A00"/>
+  </linearGradient>
+  <linearGradient id="side" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#A86400"/><stop offset="1" stop-color="#5E3600"/>
+  </linearGradient>
+  <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+   <stop offset="0" stop-color="#2A2A30"/><stop offset=".5" stop-color="#121216"/><stop offset="1" stop-color="#08080A"/>
+  </linearGradient>
+  <linearGradient id="refl" x1="0" y1="0" x2="1" y2="1">
+   <stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity=".03"/><stop offset=".46" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="stripe" x1="0" y1="1" x2="1" y2="0">
+   <stop offset="0" stop-color="#FFB000"/><stop offset="1" stop-color="#FFF1B0"/>
+  </linearGradient>
+  <filter id="bevel" x="-10%" y="-10%" width="120%" height="120%">
+   <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
+   <feSpecularLighting in="b" surfaceScale="6" specularConstant="1.1" specularExponent="22" lighting-color="#FFF6D8" result="s">
+    <fePointLight x="120" y="40" z="260"/>
+   </feSpecularLighting>
+   <feComposite in="s" in2="SourceAlpha" operator="in" result="s2"/>
+   <feComposite in="SourceGraphic" in2="s2" operator="arithmetic" k1="0" k2="1" k3=".75" k4="0"/>
+  </filter>
+  <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+   <feGaussianBlur stdDeviation="18"/>
+  </filter>
+  <filter id="bloom" x="-50%" y="-50%" width="200%" height="200%">
+   <feGaussianBlur stdDeviation="6" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <clipPath id="inner"><path id="ip" d="M262 170 H300 A122 150 0 0 1 300 470 H262 A30 30 0 0 1 232 440 V200 A30 30 0 0 1 262 170 Z"/></clipPath>
+ </defs>
+
+ <rect width="640" height="640" fill="url(#bg)"/>
+ <circle cx="320" cy="300" r="250" fill="url(#warm)"/>
+
+ <!-- ground shadow -->
+ <ellipse cx="322" cy="540" rx="170" ry="20" fill="#000" opacity=".75" filter="url(#shadow)"/>
+
+ <g transform="translate(320 320) scale(1.14) translate(-326 -320)">
+  <!-- extrusion (depth) -->
+  <path d="M250 152 H300 A140 168 0 0 1 300 488 H250 A38 38 0 0 1 212 450 V190 A38 38 0 0 1 250 152 Z" transform="translate(6 14)" fill="url(#side)"/>
+  <!-- gold D-phone body -->
+  <path d="M250 152 H300 A140 168 0 0 1 300 488 H250 A38 38 0 0 1 212 450 V190 A38 38 0 0 1 250 152 Z" fill="url(#gold)" filter="url(#bevel)"/>
+  <!-- inner rim shadow -->
+  <path d="M262 170 H300 A122 150 0 0 1 300 470 H262 A30 30 0 0 1 232 440 V200 A30 30 0 0 1 262 170 Z" fill="#3A2400" transform="translate(0 -3)"/>
+  <!-- screen glass -->
+  <path d="M262 170 H300 A122 150 0 0 1 300 470 H262 A30 30 0 0 1 232 440 V200 A30 30 0 0 1 262 170 Z" fill="url(#glass)"/>
+  <g clip-path="url(#inner)">
+   <rect x="200" y="150" width="280" height="340" fill="url(#refl)"/>
+   <!-- camera pill -->
+   <rect x="262" y="190" width="46" height="12" rx="6" fill="#000"/>
+   <circle cx="300" cy="196" r="3" fill="#2A3A5A"/>
+   <!-- glare stripes (brand) -->
+   <g filter="url(#bloom)" stroke="url(#stripe)" stroke-linecap="round" stroke-width="20">
+    <line x1="262" y1="344" x2="338" y2="268"/>
+    <line x1="290" y1="384" x2="378" y2="296"/>
+   </g>
+  </g>
+  <!-- top edge highlight -->
+  <path d="M250 154 H300 A138 166 0 0 1 414 226" fill="none" stroke="#FFF4C8" stroke-width="2" stroke-linecap="round" opacity=".8"/>
+ </g>
+</svg>
