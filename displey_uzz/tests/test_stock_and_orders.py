@@ -85,3 +85,16 @@ def test_old_orders_get_quality_from_catalog(api):
     old = {"id": "E1", "items": [{"id": pid, "n": cat["name"], "oq": 1, "aq": 1, "p": 1}]}
     api.enrich_items(old)
     assert old["items"][0]["l"] == f"{cat['brand']} {cat['name'].rstrip(' /')} [{cat['type']}]"
+
+
+def test_admin_back_button_works_with_order_id(api):
+    """Admin buyurtma ekranida "Orqaga" bosganda (callback'da buyurtma raqami E1001) bot yiqilmasligi kerak."""
+    import types as t
+    pid = pid_with_stock(api)
+    api.handle_order(make_message(json.dumps({"i": [[pid, 1]]})))
+    oid = next(iter(api.store_all("orders2").values()))["id"]
+    c = t.SimpleNamespace(id="cb", data=f"back_ord:{oid}", from_user=t.SimpleNamespace(id=777),
+                          message=t.SimpleNamespace(chat=t.SimpleNamespace(id=777), message_id=5))
+    api.handle_back_ord(c)
+    txt = api.bot.edit_message_caption.call_args.kwargs.get("caption") or api.bot.edit_message_caption.call_args.args[0]
+    assert "tg://user?id=42" in txt and "Rejim" not in txt

@@ -463,13 +463,15 @@ app = Flask(__name__)
 
 def user_link(uid, name):
     """Mijoz profiliga havola: username bo'lmasa ham ID orqali ochiladi."""
+    if not str(uid).lstrip("-").isdigit():   # buyurtma raqami (E1001) kelib qolsa ham yiqilmasin
+        return h(name or "Mijoz")
     return f'<a href="tg://user?id={int(uid)}">{h(name or "Mijoz")}</a>'
 
 def contact_line(uid, name, username, phone):
     parts = [f"👤 <b>Mijoz:</b> {user_link(uid, name)}"]
     if username:
         parts.append(f"🔗 @{h(username)}")
-    parts.append(f"🆔 <code>{int(uid)}</code>")
+    parts.append(f"🆔 <code>{h(uid)}</code>")
     line = " | ".join(parts)
     line += f"\n📞 <b>Raqam:</b> {h(phone)}" if phone else "\n📞 <b>Raqam:</b> ⏳ <i>mijozdan so'raldi</i>"
     return line
@@ -949,9 +951,8 @@ def handle_back_ord(c):
     if not p: return
     s_tot, q_tot = order_summary(p)
     txt = (f"🔔 <b>BUYURTMA #{h(p.get('id', ''))}: {h(p.get('name'))}</b>\n━━━━━━━━━━━━━━━━━━━\n"
-           f"{contact_line(cid, p.get('tg_name') or p.get('name'), p.get('username'), p.get('phone'))}\n"
+           f"{contact_line(order_cid(cid, p), p.get('tg_name') or p.get('name'), p.get('username'), p.get('phone'))}\n"
            f"🚚 <b>Yetkazish:</b> {h(p.get('deliv'))} | 📍 {h(p.get('addr'))}\n"
-           f"📊 <b>Rejim:</b> {h(p.get('pt'))}\n"
            f"📦 <b>Jami soni:</b> {q_tot} dona\n"
            + items_caption_lines(p.get('items', []), 550) +
            f"💰 <b>Qayta hisoblangan summa:</b> <b>{s_tot:,} so'm</b>")
