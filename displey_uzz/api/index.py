@@ -38,7 +38,7 @@ def contact_admins():
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 WEB_APP_URL = os.environ.get("WEB_APP_URL", PUBLIC_URL_DEFAULT + "/market.html?v=du_v1")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "").lstrip("@").strip()
-PAYMENT_TEXT = "💬 <b>To'lov masalasida admin siz bilan o'zi bog'lanadi.</b> Savollar bo'lsa, pastdagi tugma orqali adminga yozing."
+PAYMENT_TEXT = "💬 To'lovni admin siz bilan o'zi kelishadi. Savol bo'lsa, pastdagi tugma orqali yozing."
 
 PUBLIC_URL = os.environ.get("PUBLIC_URL", PUBLIC_URL_DEFAULT).rstrip("/")
 
@@ -76,12 +76,45 @@ SEED_CATALOG = _load_seed()
 
 
 WARRANTY_TEXT = (
-    "🛡 <b>KAFOLAT VA QAYTARISH SHARTLARI (1 OY):</b>\n"
-    "• Barcha displeylarga <b>1 oy kafolat</b> mavjud.\n"
-    "• Zavod braki bo'lsa, xohishingizga ko'ra yangisiga almashtirib beriladi yoki pulingiz to'liq qaytariladi.\n"
-    "• ⚠️ <b>Qat'iy talab:</b> Brakligini isbotlovchi aniq <b>video yoki rasm</b> bo'lishi shart! "
-    "Rasmi yoki videosi bo'lmasa, mahsulot mutlaqo qaytarib olinmaydi!"
+    "🛡 <b>Kafolat: 1 oy.</b> Zavod braki bo'lsa, yangisiga almashtiramiz yoki pulni to'liq qaytaramiz.\n"
+    "⚠️ Brakni ko'rsatuvchi <b>video yoki rasm</b> shart: ularsiz mahsulot qaytarib olinmaydi."
 )
+
+# ===================== B USLUB: chek ko'rinishidagi xabarlar =====================
+BRAND_HEAD = "📟 <b>DISPLEY_UZ</b>\nTelefon displeylari · donalab"
+SEP = "<code>" + "-" * 30 + "</code>"
+RW = 30   # chek kengligi (belgi)
+
+def money(n):
+    return f"{int(n or 0):,}".replace(",", " ")
+
+def _short_model(it):
+    name = str(it.get('n') or '').split(" / ")[0].strip()
+    b = str(it.get('b') or '').strip()
+    lbl = f"{b} {name}".strip() if b and not name.lower().startswith(b.lower()) else name
+    return lbl if len(lbl) <= RW - 4 else lbl[:RW - 5] + "…"
+
+def receipt(items, qty_key='aq', budget=None, show_total=True):
+    """Buyurtma chek ko'rinishida (monospace, <pre> ichida). budget: matn uzunligi chegarasi (caption uchun)."""
+    lines, t_qty, t_sum = [], 0, 0
+    for it in items:
+        q = int(it.get(qty_key, it.get('oq', 1)) or 0)
+        t_qty += q; t_sum += q * int(it.get('p', 0) or 0)
+    for i, it in enumerate(items, 1):
+        q, p = int(it.get(qty_key, it.get('oq', 1)) or 0), int(it.get('p', 0) or 0)
+        ty = str(it.get('ty') or '')[:11]
+        row = f"{i}. {_short_model(it)}\n   {ty:<11}{q:>3} x{money(p):>9}"
+        if q == 0:
+            row = f"{i}. {_short_model(it)}\n   {ty:<11}  — yo'q"
+        if budget and sum(len(x) + 1 for x in lines) + len(row) > budget:
+            lines.append(f"... yana {len(items) - i + 1} xil model")
+            break
+        lines.append(row)
+    if show_total:
+        lines.append("-" * RW)
+        left = f"JAMI {t_qty} dona"
+        lines.append(f"{left}{money(t_sum):>{RW - len(left)}}")
+    return "<pre>" + h("\n".join(lines)) + "</pre>"
 
 
 def h(value):
@@ -355,9 +388,12 @@ def notify_restock(pids):
         for cid in watch_pop(pid):
             per_user.setdefault(cid, []).append(p)
     for cid, items in per_user.items():
-        lines = "".join(f"• <b>{h(p.get('brand', ''))} {h(str(p.get('name', ''))[:40].rstrip(' /'))}</b> — "
-                        f"{int(p.get('retail') or 0):,} so'm\n" for p in items[:15])
-        safe_send(cid, f"🔔 <b>Siz kutgan ekran omborga keldi!</b>\n\n{lines}\n"
+        rows = []
+        for p in items[:15]:
+            lbl = _short_model({"n": p.get("name", ""), "b": p.get("brand", "")})
+            rows.append(f"{lbl}\n   {str(p.get('type') or '')[:11]:<11}{money(p.get('retail')):>12}")
+        lines = "<pre>" + h("\n".join(rows)) + "</pre>"
+        safe_send(cid, f"🔔 <b>Siz kutgan ekran omborga keldi!</b>\n{lines}\n"
                        f"Tugab qolmasidan oldin <b>«🛍 Do'konni ochish»</b> tugmasini bosing 👇",
                   parse_mode="HTML", reply_markup=main_kb())
     if per_user:
@@ -378,10 +414,10 @@ STATUSES = {
     "bekor": "Bekor qilindi",
 }
 STATUS_CUSTOMER_MSG = {
-    "tasdiqlandi": "✅ Buyurtmangiz <b>#{id}</b> tasdiqlandi, tayyorlanmoqda.",
-    "yuborildi": "📦 Buyurtmangiz <b>#{id}</b> yuborildi! Tez orada yetib boradi.",
-    "yetkazildi": "🎉 Buyurtmangiz <b>#{id}</b> yetkazildi. Xaridingiz uchun rahmat!",
-    "bekor": "❌ Buyurtmangiz <b>#{id}</b> bekor qilindi. Savollar bo'lsa, adminga yozing.",
+    "tasdiqlandi": "🧾 <b>CHEK № {id}</b>\n✅ Tasdiqlandi, tayyorlanmoqda.",
+    "yuborildi": "🧾 <b>CHEK № {id}</b>\n🚚 Yuborildi, tez orada yetib boradi.",
+    "yetkazildi": "🧾 <b>CHEK № {id}</b>\n📦 Yetkazildi. Xaridingiz uchun rahmat!",
+    "bekor": "🧾 <b>CHEK № {id}</b>\n❌ Bekor qilindi. Savol bo'lsa, adminga yozing.",
 }
 
 def now_ms():
@@ -612,12 +648,12 @@ def handle_start(m):
     name = h(m.from_user.first_name or "Mijoz")
     user = get_user(m.chat.id)
     if user.get('phone'):
-        txt = (f"Assalomu alaykum, <b>{name}</b>! 👋\n\n<b>Displey_Uzz</b> do'konimizga xush kelibsiz!\nTelefon displeylari <b>donalab</b>, 1 tadan ham sotamiz.\n\n"
-               f"Pastdagi <b>«🛍 Do'konni ochish»</b> tugmasini bosib buyurtma berishingiz mumkin: 👇")
+        txt = (f"{BRAND_HEAD}\n\nSalom, <b>{name}</b>! Buyurtma uchun\ndo'konni oching 👇\n\n"
+               f"<i>1 tadan ham sotamiz · 1 oy kafolat</i>")
         bot.send_message(m.chat.id, txt, reply_markup=main_kb(), parse_mode="HTML")
     else:
-        txt = (f"Assalomu alaykum, <b>{name}</b>!\nDo'kondan buyurtma berish uchun, iltimos, "
-               f"<b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing: 👇")
+        txt = (f"{BRAND_HEAD}\n\nSalom, <b>{name}</b>! Buyurtma berish uchun avval\n"
+               f"<b>«📱 Telefon raqamimni yuborish»</b> tugmasini bosing 👇")
         bot.send_message(m.chat.id, txt, reply_markup=contact_kb(), parse_mode="HTML")
 
 
@@ -626,7 +662,7 @@ def handle_stat(m):
     if not is_admin(m.chat.id):
         return
     users = store_all("users")
-    txt = (f"📊 <b>BOT STATISTIKASI:</b>\n━━━━━━━━━━━━━━━━━━━\n"
+    txt = (f"📊 <b>BOT STATISTIKASI:</b>\n{SEP}\n"
            f"📱 Raqam tasdiqlaganlar: <b>{len(users)} ta</b>")
     orders = [o for o in store_all("orders2").values() if isinstance(o, dict)]
     txt += f"\n🧾 Buyurtmalar: <b>{len(orders)} ta</b>\n\n📊 To'liq ma'lumot: /panel\n📣 Hammaga xabar: /hammaga"
@@ -774,14 +810,10 @@ def process_order(m, src="bot"):
         csv_file.name = f"Buyurtma_{oid}.csv"
 
         client_txt = (
-            f"🛒 <b>Buyurtmangiz #{oid} qabul qilindi!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 <b>Mijoz:</b> {h(name)}\n📞 <b>Telefon:</b> {h(phone or 'yuborilmagan')}\n"
-            f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
-            f"📦 <b>Tarkibi:</b>\n{items_txt}"
-            + (f"\n⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
-            f"━━━━━━━━━━━━━━━━━━━\n"
-            f"💰 <b>JAMI:</b> <b>{t_sum:,} so'm</b> ({t_qty} dona)\n\n"
-            f"{PAYMENT_TEXT}\n\n{WARRANTY_TEXT}"
+            f"🧾 <b>CHEK № {oid}</b>\n{receipt(payload_items, budget=3000)}\n"
+            + (f"⚠️ <b>Omborda yetmadi:</b>\n{short_txt}\n" if short_txt else "") +
+            f"🚚 <code>{h(deliv)}</code> {h(addr)}\n📞 {h(phone or 'yuborilmagan')}\n\n"
+            f"{WARRANTY_TEXT}\n\n{PAYMENT_TEXT}"
         )
         send_with_admin_btn(cid, client_txt)
 
@@ -801,16 +833,15 @@ def process_order(m, src="bot"):
 
         if ADMIN_IDS:
             admin_txt = (
-                f"🔔 <b>YANGI BUYURTMA #{oid}</b>{' 📱 ilovadan' if src == 'app' else ''}\n━━━━━━━━━━━━━━━━━━━\n"
+                f"🧾 <b>YANGI CHEK № {oid}</b>{' 📱 ilovadan' if src == 'app' else ''}\n{SEP}\n"
                 f"✍️ <b>Ism (formada):</b> {h(name)}\n"
                 f"{contact_line(cid, tg_name or name, m.from_user.username, phone)}\n"
                 f"🚚 <b>Yetkazish:</b> {h(deliv)} | 📍 {h(addr)}\n"
                 + (f"🗺 <a href=\"https://maps.google.com/?q={geo[0]},{geo[1]}\">Xaritada ko'rish</a>\n" if geo else "") +
-                f"📦 <b>Tovarlar:</b> {t_qty} dona ({len(clean_ok)} xil model)\n{items_caption_lines(payload_items, 1024 - 520 - len(short_txt))}"
-                f"💰 <b>Jami summa:</b> <b>{t_sum:,} so'm</b>{h(mismatch)}\n"
+                f"{receipt(payload_items, budget=1024 - 480 - len(short_txt))}{h(mismatch)}\n"
                 f"💬 <i>To'lovni mijoz bilan o'zingiz kelishasiz</i>\n"
                 + (f"⚠️ <b>Omborda yetmadi:</b>\n{short_txt}" if short_txt else "") +
-                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"{SEP}\n"
                 f"📥 <i>To'liq ro'yxat pastdagi Excel (.csv) faylda 👇</i>"
             )
             for aid in ADMIN_IDS:   # har bir adminga alohida fayl nusxasi
@@ -972,12 +1003,10 @@ def handle_back_ord(c):
     p = get_payload(cid)
     if not p: return
     s_tot, q_tot = order_summary(p)
-    txt = (f"🔔 <b>BUYURTMA #{h(p.get('id', ''))}: {h(p.get('name'))}</b>\n━━━━━━━━━━━━━━━━━━━\n"
+    txt = (f"🧾 <b>CHEK № {h(p.get('id', ''))}</b> · {h(p.get('name'))}\n{SEP}\n"
            f"{contact_line(order_cid(cid, p), p.get('tg_name') or p.get('name'), p.get('username'), p.get('phone'))}\n"
            f"🚚 <b>Yetkazish:</b> {h(p.get('deliv'))} | 📍 {h(p.get('addr'))}\n"
-           f"📦 <b>Jami soni:</b> {q_tot} dona\n"
-           + items_caption_lines(p.get('items', []), 550) +
-           f"💰 <b>Qayta hisoblangan summa:</b> <b>{s_tot:,} so'm</b>")
+           + receipt(p.get('items', []), budget=550))
     edit_text_or_caption(c.message.chat.id, c.message.message_id, txt, admin_order_kb(cid))
 
 
@@ -1008,11 +1037,9 @@ def handle_snd_miss(c):
         p.setdefault("history", []).append({"t": now_ms(), "s": p.get("status", "yangi"), "by": "admin",
                                             "note": f"Tarkib o'zgardi: {n_qty} ta, {n_sum:,} so'm"})
         save_order(p["cid"], p)
-    msg = (f"⚠️ <b>DIQQAT: AYRIM MODELLAR OMBORDA KAM YOKI YO'Q!</b>\n━━━━━━━━━━━━━━━━━━━\n"
-           f"{miss_t}{part_t}━━━━━━━━━━━━━━━━━━━\n"
-           f"📦 <b>Bor tovarlar:</b>\n{av_t or 'Qolmadi'}\n━━━━━━━━━━━━━━━━━━━\n"
-           f"💰 <b>Qayta hisoblangan summa:</b> <b>{n_sum:,} so'm</b> ({n_qty} ta)\n\n"
-           f"{PAYMENT_TEXT}\n\n{WARRANTY_TEXT}")
+    msg = (f"🧾 <b>YANGILANGAN CHEK № {h(p.get('id', ''))}</b>\n"
+           f"Ayrim modellar omborda kam yoki yo'q:\n{miss_t}{part_t}\n"
+           f"{receipt(items, budget=3000)}\n\n{PAYMENT_TEXT}")
     send_with_admin_btn(order_cid(cid, p), msg)
     edit_text_or_caption(c.message.chat.id, c.message.message_id,
                          f"✅ <b>Mijozga xabar ketdi!</b>\n💰 Yangi summa: <b>{n_sum:,} so'm</b> ({n_qty} ta)", admin_order_kb(cid))
