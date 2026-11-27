@@ -1,0 +1,9 @@
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:390px;height:844px;overflow:hidden;font-family:"Onest",system-ui,sans-serif;font-size:14px;color:#0F1B2D;position:relative}
+.phone{width:390px;height:844px;position:relative;overflow:hidden}
+.ph{background:linear-gradient(160deg,#EAF2FF,#C9DEFF);display:flex;align-items:center;justify-content:center;border-radius:12px}
+.ph i{width:34%;height:70%;border-radius:8px;background:linear-gradient(160deg,#fff,#BBD5FF);border:3px solid #13233F}
+.nav{position:absolute;left:0;right:0;bottom:0;height:76px;background:#fff;border-top:1px solid #E3EAF5;display:flex;justify-content:space-around;padding-top:10px;font-size:11px;color:#7A89A0}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.nav b{width:22px;height:22px;border-radius:7px;border:2px solid currentColor}
+.nav .on{color:#1565FF}
