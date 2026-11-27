@@ -69,7 +69,6 @@ def test_order_items_show_brand_and_quality(api):
     """Admin buyurtmada qaysi ekran (brend, model, sifat/seriya) ekanini aniq ko'rishi kerak."""
     pid = pid_with_stock(api)
     cat = api.get_catalog()[pid]
-    api.ADMIN_ID = api.ADMIN_ID or "1"
     api.handle_order(make_message(json.dumps({"i": [[pid, 1]]})))
     order = next(iter(api.store_all("orders2").values()))
     it = order["items"][0]

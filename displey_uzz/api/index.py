@@ -4,7 +4,8 @@ Ekranchi_Bola do'konidan klon: faqat dona (chakana) savdo, optom narx va mijoz t
 
 Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
   BOT_TOKEN        - @BotFather dan olingan YANGI token (eskisini revoke qiling!)
-  ADMIN_ID         - admin Telegram ID raqami
+  ADMIN_ID         - adminlarning Telegram ID raqamlari, vergul bilan: 111,222,333
+                     (birinchisi asosiy admin: mijozlar "Adminga yozish" tugmasi bilan unga yozadi)
   WEBHOOK_SECRET   - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   WEB_APP_URL      - (ixtiyoriy) market.html manzili
   ADMIN_USERNAME   - (ixtiyoriy) admin @username, mijozlar to'lov haqida shunga yozadi
@@ -25,7 +26,8 @@ log = logging.getLogger("displey_uzz")
 
 PUBLIC_URL_DEFAULT = "https://displey-uzz.vercel.app"
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "0") or 0)
+ADMIN_IDS = [int(x) for x in re.findall(r"-?\d+", os.environ.get("ADMIN_ID", "") or "") if int(x) != 0]
+ADMIN_ID = ADMIN_IDS[0] if ADMIN_IDS else 0   # asosiy admin
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 WEB_APP_URL = os.environ.get("WEB_APP_URL", PUBLIC_URL_DEFAULT + "/market.html?v=du_v1")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "").lstrip("@").strip()
@@ -472,7 +474,10 @@ def contact_line(uid, name, username, phone):
     return line
 
 def is_admin(uid):
-    return ADMIN_ID != 0 and int(uid) == ADMIN_ID
+    try:
+        return int(uid) in ADMIN_IDS
+    except (TypeError, ValueError):
+        return False
 
 def admin_only(handler):
     """Admin tugmalarini boshqa odam bosa olmasligi uchun."""
@@ -492,8 +497,8 @@ def safe_send(chat_id, text, **kw):
         log.exception("send_message -> %s", chat_id)
 
 def notify_admin(text):
-    if ADMIN_ID:
-        safe_send(ADMIN_ID, text, parse_mode="HTML")
+    for aid in ADMIN_IDS:
+        safe_send(aid, text, parse_mode="HTML")
 
 def admin_contact_kb():
     url = f"https://t.me/{ADMIN_USERNAME}" if ADMIN_USERNAME else (f"tg://user?id={ADMIN_ID}" if ADMIN_ID else None)
@@ -745,7 +750,7 @@ def process_order(m, src="bot"):
         except (ValueError, TypeError):
             pass
 
-        if ADMIN_ID:
+        if ADMIN_IDS:
             admin_txt = (
                 f"🔔 <b>YANGI BUYURTMA #{oid}</b>{' 📱 ilovadan' if src == 'app' else ''}\n━━━━━━━━━━━━━━━━━━━\n"
                 f"✍️ <b>Ism (formada):</b> {h(name)}\n"
@@ -759,12 +764,14 @@ def process_order(m, src="bot"):
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"📥 <i>To'liq ro'yxat pastdagi Excel (.csv) faylda 👇</i>"
             )
-            try:
-                bot.send_document(ADMIN_ID, document=csv_file, caption=admin_txt,
-                                  reply_markup=admin_order_kb(oid), parse_mode="HTML")
-            except Exception as e:
-                log.exception("send_document")
-                notify_admin(f"⚠️ Fayl yuborishda xatolik: {h(e)}")
+            for aid in ADMIN_IDS:   # har bir adminga alohida fayl nusxasi
+                f = io.BytesIO(csv_file.getvalue()); f.name = csv_file.name
+                try:
+                    bot.send_document(aid, document=f, caption=admin_txt,
+                                      reply_markup=admin_order_kb(oid), parse_mode="HTML")
+                except Exception as e:
+                    log.exception("send_document -> %s", aid)
+                    safe_send(aid, f"⚠️ Buyurtma #{oid} faylini yuborishda xatolik: {h(e)}")
         return order
     except Exception as e:
         log.exception("handle_order")
@@ -1123,7 +1130,7 @@ def handle_receipt(m):
     cid = str(m.chat.id)
     if is_admin(cid):
         return
-    if not ADMIN_ID:
+    if not ADMIN_IDS:
         return
     phone = get_user(cid).get('phone')
     order = get_payload(cid)
@@ -1137,9 +1144,17 @@ def handle_receipt(m):
            InlineKeyboardButton("✅ Ertaga yetkazish", callback_data=f"pay:{key}:tomorrow"),
            InlineKeyboardButton("❌ To'lov tushmadi", callback_data=f"pay:{key}:fake"))
     try:
-        bot.send_photo(ADMIN_ID, m.photo[-1].file_id,
-                       caption=f"📷 <b>MIJOZDAN RASM KELDI</b> #{h(order.get('id', ''))}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
-                       reply_markup=kb, parse_mode="HTML")
+        sent = 0
+        for aid in ADMIN_IDS:
+            try:
+                bot.send_photo(aid, m.photo[-1].file_id,
+                               caption=f"📷 <b>MIJOZDAN RASM KELDI</b> #{h(order.get('id', ''))}\n{contact_line(cid, m.from_user.first_name, m.from_user.username, phone)}",
+                               reply_markup=kb, parse_mode="HTML")
+                sent += 1
+            except Exception:
+                log.exception("receipt -> %s", aid)
+        if not sent:
+            raise RuntimeError("hech bir adminga yetmadi")
         if order.get("status") in ("yangi", "chek"):
             set_status(order, "chek", by="mijoz")
         bot.reply_to(m, "✅ Rasm adminga yuborildi, tez orada javob beradi.")

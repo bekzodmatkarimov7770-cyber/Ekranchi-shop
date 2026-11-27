@@ -85,3 +85,13 @@ def test_redis_keys_are_prefixed(api, monkeypatch):
     api._redis("HGET", "users", "1")
     api._redis("DEL", "catalog", "stock")
     assert calls == [["HGET", "du:users", "1"], ["DEL", "du:catalog", "du:stock"]]
+
+
+def test_several_admins_get_new_orders(api, monkeypatch):
+    import json
+    from conftest import make_message
+    monkeypatch.setattr(api, "ADMIN_IDS", [777, 888, 999])
+    assert api.is_admin(888) and api.is_admin("999") and not api.is_admin(42)
+    pid = next(p["id"] for p in api.get_catalog().values() if p["stock"] > 0)
+    api.handle_order(make_message(json.dumps({"i": [[pid, 1]]})))
+    assert sorted(c.args[0] for c in api.bot.send_document.call_args_list) == [777, 888, 999]

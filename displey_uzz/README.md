@@ -22,7 +22,7 @@ Android ilova (`android/`) va nakladnoy bot (`nakladnoy/`) klonga kiritilmagan.
 3. @BotFather'da **yangi bot** oching (masalan `@displey_uzz_bot`).
 4. Environment Variables:
    - `BOT_TOKEN`: yangi botning tokeni
-   - `ADMIN_ID`: admin Telegram ID raqami
+   - `ADMIN_ID`: adminlarning Telegram ID raqamlari, vergul bilan (masalan `111,222,333`). Yangi buyurtma hammasiga boradi; birinchisi asosiy admin
    - `WEBHOOK_SECRET`: uzun tasodifiy satr (A-Z a-z 0-9 _ -)
    - `ADMIN_USERNAME`: (ixtiyoriy) admin @username
    - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`: doimiy baza (Vercel Marketplace > Upstash)
