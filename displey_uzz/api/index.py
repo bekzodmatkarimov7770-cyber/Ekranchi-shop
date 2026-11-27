@@ -8,7 +8,8 @@ Vercel > Settings > Environment Variables ga quyidagilarni qo'shing:
                      (birinchisi asosiy admin: mijozlar "Adminga yozish" tugmasi bilan unga yozadi)
   WEBHOOK_SECRET   - istalgan uzun tasodifiy satr (faqat A-Z a-z 0-9 _ -)
   WEB_APP_URL      - (ixtiyoriy) market.html manzili
-  ADMIN_USERNAME   - (ixtiyoriy) admin @username, mijozlar to'lov haqida shunga yozadi
+  ADMIN_USERNAME   - (ixtiyoriy) admin @username. Berilmasa, adminlarning Telegram profilidan olinadi;
+                     u ham bo'lmasa, mijoz savoli bot orqali adminlarga yetkaziladi (admin reply bilan javob beradi)
   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN - doimiy baza (Vercel Marketplace > Upstash)
   REDIS_PREFIX     - (ixtiyoriy) bazadagi kalitlar oldiga qo'shiladi, standart "du:".
                      Ekranchi bilan bitta Upstash bazasidan foydalansangiz ham ma'lumotlar aralashmaydi.
@@ -24,7 +25,7 @@ import json, os, io, csv, hmac, hashlib, time, logging, re, secrets, types, requ
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("displey_uzz")
 
-PUBLIC_URL_DEFAULT = "https://displey-uzz-beta.vercel.app"
+PUBLIC_URL_DEFAULT = "https://displey-uz.vercel.app"
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_IDS = [int(x) for x in re.findall(r"-?\d+", os.environ.get("ADMIN_ID", "") or "") if int(x) != 0]
 ADMIN_ID = ADMIN_IDS[0] if ADMIN_IDS else 0   # asosiy admin
@@ -100,7 +101,7 @@ def _redis(*cmd):
 _TMP = {"users": "/tmp/users.json", "orders": "/tmp/orders.json", "orders2": "/tmp/orders2.json",
         "last_order": "/tmp/last_order.json", "meta": "/tmp/meta.json",
         "catalog": "/tmp/catalog.json", "stock": "/tmp/stock.json", "watch": "/tmp/watch.json",
-        "applogin": "/tmp/applogin.json"}
+        "applogin": "/tmp/applogin.json", "relay": "/tmp/relay.json"}
 
 def _file_load(name):
     try:
@@ -500,9 +501,33 @@ def notify_admin(text):
     for aid in ADMIN_IDS:
         safe_send(aid, text, parse_mode="HTML")
 
+_admin_un = {"v": None, "t": 0}
+
+def admin_username():
+    """ADMIN_USERNAME yoki adminlarning Telegram profilidan @username (1 soat keshda)."""
+    if ADMIN_USERNAME:
+        return ADMIN_USERNAME
+    if _admin_un["v"] is not None and time.time() - _admin_un["t"] < 3600:
+        return _admin_un["v"]
+    un = ""
+    for aid in ADMIN_IDS:
+        try:
+            un = (bot.get_chat(aid).username or "").strip()
+        except Exception:
+            log.warning("admin %s profili o'qilmadi", aid)
+        if un:
+            break
+    _admin_un.update(v=un, t=time.time())
+    return un
+
 def admin_contact_kb():
-    url = f"https://t.me/{ADMIN_USERNAME}" if ADMIN_USERNAME else (f"tg://user?id={ADMIN_ID}" if ADMIN_ID else None)
-    return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=url)) if url else None
+    """Admin @username bo'lsa, to'g'ridan-to'g'ri chatga; bo'lmasa, savol bot orqali adminlarga yetkaziladi."""
+    if not ADMIN_IDS:
+        return None
+    un = admin_username()
+    if un:
+        return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"https://t.me/{un}"))
+    return InlineKeyboardMarkup().add(InlineKeyboardButton("💬 Adminga yozish", callback_data="ask_admin"))
 
 def send_with_admin_btn(chat_id, text):
     """Admin bilan bog'lanish tugmasi bilan yuboradi; admin profili yopiq bo'lsa, tugmasiz yuboradi."""
@@ -1038,6 +1063,27 @@ def _bc_waiting(m):
         return False
     return bc_state().get("step") == "wait"
 
+RELAY_TYPES = ['text', 'photo', 'video', 'animation', 'document', 'audio', 'voice', 'video_note', 'sticker']
+
+def _relay_target(m):
+    """Admin mijoz savoliga reply qilgan bo'lsa, o'sha mijozning chat ID si."""
+    r = getattr(m, "reply_to_message", None)
+    if not r or not is_admin(m.chat.id):
+        return None
+    return store_get("relay", f"{m.chat.id}:{r.message_id}")
+
+@bot.message_handler(func=lambda m: _relay_target(m) is not None, content_types=RELAY_TYPES)
+def handle_admin_reply(m):
+    cid = _relay_target(m)
+    try:
+        bot.send_message(int(cid), "💬 <b>Admin javobi:</b>", parse_mode="HTML")
+        bot.copy_message(int(cid), m.chat.id, m.message_id)
+        bot.reply_to(m, "✅ Mijozga yuborildi.")
+    except Exception as e:
+        log.exception("relay -> %s", cid)
+        bot.reply_to(m, f"⚠️ Mijozga yetmadi (botni bloklagan bo'lishi mumkin): {h(e)}")
+
+
 @bot.message_handler(func=_bc_waiting, content_types=['text', 'photo', 'video', 'animation', 'document', 'audio', 'voice'])
 def handle_broadcast_draft(m):
     bc_save({"step": "ready", "at": time.time(), "from": m.chat.id, "msg": m.message_id})
@@ -1134,10 +1180,8 @@ def handle_receipt(m):
         return
     phone = get_user(cid).get('phone')
     order = get_payload(cid)
-    if not order:
-        bot.reply_to(m, "ℹ️ Sizda faol buyurtma yo'q. Avval «🛍 Do'konni ochish» orqali buyurtma bering.",
-                     reply_markup=main_kb())
-        return
+    if not order:   # buyurtma yo'q: rasm oddiy savol sifatida adminga boradi
+        return handle_customer_question(m)
     kb = InlineKeyboardMarkup(row_width=2)
     key = order.get("id") or cid  # aniq buyurtma ID si: mijoz yangi buyurtma bersa ham tugma eskisiga tegadi
     kb.add(InlineKeyboardButton("✅ Bugun yetkazish", callback_data=f"pay:{key}:today"),
@@ -1204,6 +1248,40 @@ def check_admin_token(tok):
         return int(exp) > time.time() and hmac.compare_digest(sig, good)
     except Exception:
         return False
+
+@bot.callback_query_handler(func=lambda c: c.data == 'ask_admin')
+def handle_ask_admin(c):
+    bot.answer_callback_query(c.id)
+    bot.send_message(c.message.chat.id, "✍️ Savolingizni shu yerga yozing (matn, rasm yoki ovozli xabar). "
+                     "Admin javobi ham shu chatga keladi.")
+
+
+def _is_customer_msg(m):
+    if is_admin(m.chat.id) or getattr(m.chat, "type", "private") != "private":
+        return False
+    return not (m.content_type == 'text' and (m.text or "").startswith("/"))
+
+@bot.message_handler(func=_is_customer_msg, content_types=[t for t in RELAY_TYPES if t != 'photo'])
+def handle_customer_question(m):
+    """Mijozning botga yozgan xabari hamma adminlarga boradi; admin reply qilsa, javob mijozga qaytadi."""
+    if not ADMIN_IDS:
+        return
+    cid = str(m.chat.id)
+    u = get_user(cid)
+    head = (f"💬 <b>MIJOZDAN XABAR</b>\n{contact_line(cid, m.from_user.first_name, m.from_user.username, u.get('phone'))}\n"
+            f"<i>Javob berish uchun pastdagi xabarga reply qiling.</i>")
+    sent = 0
+    for aid in ADMIN_IDS:
+        try:
+            bot.send_message(aid, head, parse_mode="HTML")
+            msg = bot.copy_message(aid, m.chat.id, m.message_id)
+            store_set("relay", f"{aid}:{msg.message_id}", cid)
+            sent += 1
+        except Exception:
+            log.exception("question -> %s", aid)
+    bot.reply_to(m, "✅ Xabaringiz adminga yuborildi, javob shu yerga keladi." if sent
+                 else "⚠️ Hozir adminga yetkazib bo'lmadi, birozdan keyin qayta yozing.")
+
 
 @bot.message_handler(commands=['panel'])
 def handle_panel(m):

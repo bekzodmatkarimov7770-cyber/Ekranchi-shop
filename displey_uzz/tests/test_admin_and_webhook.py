@@ -63,7 +63,7 @@ def test_webhook_setup_needs_key(client):
 
 
 def test_shop_button_points_to_vercel(api):
-    assert api.WEB_APP_URL.startswith("https://displey-uzz-beta.vercel.app/market.html")
+    assert api.WEB_APP_URL.startswith("https://displey-uz.vercel.app/market.html")
 
 
 def test_contact_does_not_ask_wholesale_role(api):
@@ -95,3 +95,38 @@ def test_several_admins_get_new_orders(api, monkeypatch):
     pid = next(p["id"] for p in api.get_catalog().values() if p["stock"] > 0)
     api.handle_order(make_message(json.dumps({"i": [[pid, 1]]})))
     assert sorted(c.args[0] for c in api.bot.send_document.call_args_list) == [777, 888, 999]
+
+
+def _msg(chat_id, text="Salom, A10 bormi?", mid=10, reply_to=None):
+    import types as t
+    return t.SimpleNamespace(chat=t.SimpleNamespace(id=chat_id, type="private"), message_id=mid, content_type="text", text=text,
+                             from_user=t.SimpleNamespace(id=chat_id, first_name="Ali", username=None), reply_to_message=reply_to)
+
+
+def test_customer_question_reaches_admins_and_reply_returns(api, monkeypatch):
+    import types as t
+    monkeypatch.setattr(api, "ADMIN_IDS", [777, 888])
+    api.bot.copy_message.side_effect = lambda to, frm, mid: t.SimpleNamespace(message_id=500 + to % 10)
+    assert api._is_customer_msg(_msg(42)) and not api._is_customer_msg(_msg(42, "/start")) and not api._is_customer_msg(_msg(777))
+    api.handle_customer_question(_msg(42))
+    assert sorted(c.args[0] for c in api.bot.copy_message.call_args_list) == [777, 888]
+    # admin 888 o'sha xabarga reply qiladi -> mijozga boradi
+    reply = _msg(888, "Ha, bor", mid=11, reply_to=t.SimpleNamespace(message_id=508))
+    assert api._relay_target(reply) == "42"
+    api.bot.copy_message.reset_mock()
+    api.handle_admin_reply(reply)
+    assert api.bot.copy_message.call_args.args[:2] == (42, 888)
+
+
+def test_contact_button_uses_admin_username_or_relay(api, monkeypatch):
+    import types as t
+    monkeypatch.setattr(api, "ADMIN_IDS", [777])
+    monkeypatch.setattr(api, "ADMIN_USERNAME", "")
+    api._admin_un.update(v=None, t=0)
+    api.bot.get_chat.return_value = t.SimpleNamespace(username="displey_admin")
+    btn = api.admin_contact_kb().keyboard[0][0]
+    assert btn.url == "https://t.me/displey_admin"
+    api._admin_un.update(v=None, t=0)
+    api.bot.get_chat.return_value = t.SimpleNamespace(username=None)
+    btn = api.admin_contact_kb().keyboard[0][0]
+    assert btn.callback_data == "ask_admin" and not btn.url
