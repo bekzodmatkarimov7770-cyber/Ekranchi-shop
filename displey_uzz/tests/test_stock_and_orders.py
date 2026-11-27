@@ -98,3 +98,21 @@ def test_admin_back_button_works_with_order_id(api):
     api.handle_back_ord(c)
     txt = api.bot.edit_message_caption.call_args.kwargs.get("caption") or api.bot.edit_message_caption.call_args.args[0]
     assert "tg://user?id=42" in txt and "Rejim" not in txt
+
+
+def test_customer_gets_receipt_style_message(api):
+    """B uslub: buyurtma mijozga chek ko'rinishida (monospace) boradi."""
+    pid = pid_with_stock(api)
+    p = api.get_catalog()[pid]
+    api.handle_order(make_message(json.dumps({"n": "Ali", "d": "BTS", "a": "Urganch", "i": [[pid, 2]]})))
+    txt = api.bot.send_message.call_args_list[0].args[1]
+    assert txt.startswith("🧾 <b>CHEK № E") and "<pre>" in txt and "━" not in txt
+    assert f"2 x{api.money(p['retail']):>9}" in txt and "JAMI 2 dona" in txt
+
+
+def test_receipt_respects_budget():
+    import importlib
+    api = __import__("shop_api")
+    items = [{"n": f"Model {i}", "b": "Samsung", "ty": "Incell HD", "aq": 1, "p": 1000} for i in range(40)]
+    r = api.receipt(items, budget=300)
+    assert "yana" in r and "JAMI 40 dona" in r and len(r) < 600
