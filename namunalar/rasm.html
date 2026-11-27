@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="common.css"><style>
+body{background:#fff;height:auto}.phone{height:auto;padding-bottom:20px}
+.bar{background:#1565FF;color:#fff;padding:20px 16px 14px}
+.bar .r{display:flex;align-items:center;gap:10px}
+.lg{font-weight:800;font-size:18px;background:#fff;color:#1565FF;border-radius:10px;padding:6px 10px}
+.srch{flex:1;height:42px;border-radius:12px;background:#fff;color:#8A97AC;display:flex;align-items:center;padding:0 12px;font-size:13px}
+h2{font-size:17px;padding:16px 16px 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px}
+.c .art{height:170px;border-radius:16px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.c .tag{position:absolute;left:8px;top:8px;font-size:10px;font-weight:700;border-radius:6px;padding:3px 7px;z-index:2}
+.c b{display:block;font-size:16px;margin-top:8px}.c h4{font-weight:500;font-size:13px;color:#3A4A63;margin:2px 0 8px}
+.c button{width:100%;height:36px;border:0;border-radius:10px;background:#1565FF;color:#fff;font-weight:600}
+svg{width:96px;height:150px;filter:drop-shadow(0 10px 14px rgba(10,40,100,.25))}
+</style></head><body><div class="phone">
+<div class="bar"><div class="r"><div class="lg">D·UZZ</div><div class="srch">🔍 Displey qidirish</div></div></div>
+<h2>Avtomatik chizilgan rasmlar</h2>
+<div class="grid" id="g"></div>
+</div>
+<script>
+// tur bo'yicha: fon, ekran ichi, ramka, belgi
+const T = {
+  incell:{bg:'linear-gradient(160deg,#EEF4FF,#D3E4FF)', scr:['#F7FBFF','#B9D4FF'], tag:['#1565FF','#fff','Incell HD'] },
+  hdp:   {bg:'linear-gradient(160deg,#E9F6FF,#C4E6FF)', scr:['#FFFFFF','#8EC5FF'], tag:['#0A3FB8','#fff','Incell HD+'] },
+  oled:  {bg:'linear-gradient(160deg,#0F1B2D,#1D3A6B)', scr:['#0B1530','#04070F'], glow:true, tag:['#fff','#0F1B2D','OLED'] },
+  orig:  {bg:'linear-gradient(160deg,#0A3FB8,#1565FF)', scr:['#13233F','#05070B'], ring:'#4DA3FF', tag:['#fff','#0A3FB8','ORIGINAL'] },
+  tft:   {bg:'linear-gradient(160deg,#F2F5FA,#DDE5F0)', scr:['#F3F6FB','#C9D3E2'], stripes:true, tag:['#3A4A63','#fff','TFT'] },
+  batt:  {bg:'linear-gradient(160deg,#EAF8EF,#CDEFD9)', batt:true, tag:['#17603A','#fff','Batareya'] },
+};
+const ITEMS = [
+  ['Samsung','#1428A0','A02s / A03s','incell',77000],
+  ['Redmi','#E4002B','Poco M3 / 9T','hdp',84000],
+  ['iPhone','#0F1B2D','11','oled',320000],
+  ['Samsung','#1428A0','A51','orig',260000],
+  ['Tecno','#1F4FD8','Spark 10','tft',69000],
+  ['Redmi','#E4002B','Note 8 batareya','batt',65000],
+];
+function art(brand, color, t, i){
+  const s=T[t], id='g'+i;
+  if (s.batt) return `<svg viewBox="0 0 96 150"><rect x="14" y="10" width="68" height="130" rx="10" fill="#1E2A3A"/><rect x="20" y="16" width="56" height="118" rx="6" fill="#fff"/><rect x="20" y="58" width="56" height="76" rx="6" fill="#36B26A"/><rect x="36" y="4" width="24" height="8" rx="3" fill="#1E2A3A"/><text x="48" y="44" text-anchor="middle" font-family="Onest" font-weight="800" font-size="13" fill="${color}">${brand}</text><text x="48" y="104" text-anchor="middle" font-size="22" fill="#fff">⚡</text></svg>`;
+  const dark = t==='oled'||t==='orig';
+  return `<svg viewBox="0 0 96 150"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${s.scr[0]}"/><stop offset="1" stop-color="${s.scr[1]}"/></linearGradient>
+  <radialGradient id="${id}r" cx=".3" cy=".3" r=".9"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".9"/><stop offset=".5" stop-color="#7B4DFF" stop-opacity=".5"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>
+  <rect x="4" y="2" width="88" height="146" rx="16" fill="#0F1B2D"/>
+  <rect x="9" y="7" width="78" height="136" rx="12" fill="url(#${id})" ${s.ring?`stroke="${s.ring}" stroke-width="2"`:''}/>
+  ${s.glow?`<rect x="9" y="7" width="78" height="136" rx="12" fill="url(#${id}r)"/>`:''}
+  ${s.stripes?[...Array(13)].map((_,k)=>`<rect x="9" y="${12+k*10}" width="78" height="4" fill="#E1E7F0"/>`).join(''):''}
+  <rect x="38" y="11" width="20" height="5" rx="2.5" fill="#0F1B2D"/>
+  <text x="48" y="80" text-anchor="middle" font-family="Onest" font-weight="800" font-size="${brand.length>6?12:14}" fill="${dark?'#fff':color}">${brand}</text>
+  <rect x="34" y="128" width="28" height="3" rx="1.5" fill="${dark?'#ffffff88':'#0F1B2D44'}"/></svg>`;
+}
+document.getElementById('g').innerHTML = ITEMS.map(([b,col,m,t,p],i)=>`<div class="c"><div class="art" style="background:${T[t].bg}"><span class="tag" style="background:${T[t].tag[0]};color:${T[t].tag[1]}">${T[t].tag[2]}</span>${art(b,col,t,i)}</div><b>${p.toLocaleString('ru').replace(/,/g,' ')} so'm</b><h4>${b} ${m}</h4><button>Savatga</button></div>`).join('');
+</script></body></html>
