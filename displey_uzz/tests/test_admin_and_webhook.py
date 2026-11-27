@@ -129,7 +129,24 @@ def test_contact_button_uses_admin_username_or_relay(api, monkeypatch):
     api._admin_un.update(v=None, t=0)
     api.bot.get_chat.return_value = t.SimpleNamespace(username=None)
     btn = api.admin_contact_kb().keyboard[0][0]
+    assert btn.url == "tg://user?id=777"          # username yo'q: profilga ID orqali
+    btn = api.admin_contact_kb(relay=True).keyboard[0][0]
     assert btn.callback_data == "ask_admin" and not btn.url
+
+
+def test_profile_link_rejected_falls_back_to_relay(api, monkeypatch):
+    import types as t
+    monkeypatch.setattr(api, "ADMIN_IDS", [777]); monkeypatch.setattr(api, "ADMIN_USERNAME", "")
+    api._admin_un.update(v="", t=10**12)
+    calls = []
+    def send(chat_id, text, **kw):
+        kb = kw.get("reply_markup"); calls.append(kb.keyboard[0][0] if kb else None)
+        if kb and kb.keyboard[0][0].url:
+            raise Exception("Bad Request: BUTTON_USER_PRIVACY_RESTRICTED")
+        return t.SimpleNamespace(message_id=1)
+    api.bot.send_message.side_effect = send
+    api.send_with_admin_btn(42, "chek")
+    assert calls[0].url == "tg://user?id=777" and calls[1].callback_data == "ask_admin"
 
 
 def test_start_points_menu_button_to_current_shop(api, monkeypatch):
