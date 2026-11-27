@@ -24,7 +24,8 @@ Android ilova (`android/`) va nakladnoy bot (`nakladnoy/`) klonga kiritilmagan.
    - `BOT_TOKEN`: yangi botning tokeni
    - `ADMIN_ID`: adminlarning Telegram ID raqamlari, vergul bilan (masalan `111,222,333`). Yangi buyurtma hammasiga boradi; birinchisi asosiy admin
    - `WEBHOOK_SECRET`: uzun tasodifiy satr (A-Z a-z 0-9 _ -)
-   - `ADMIN_USERNAME`: (ixtiyoriy) admin @username
+   - `CONTACT_ADMIN_ID`: (ixtiyoriy) "Admin bilan bog'lanish" tugmasi va mijoz savollari shu adminga boradi (hozir 2-admin)
+   - `ADMIN_USERNAME`: (ixtiyoriy) admin @username; berilmasa, adminning Telegram profilidan olinadi
    - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`: doimiy baza (Vercel Marketplace > Upstash)
    - `REDIS_PREFIX`: (ixtiyoriy) standart `du:`. Ekranchi bilan bitta bazadan foydalansangiz ham ma'lumotlar aralashmaydi.
 5. Deploydan keyin webhookni ulang: `https://displey-uz.vercel.app/api/index?ulash=1&key=<WEBHOOK_SECRET>`

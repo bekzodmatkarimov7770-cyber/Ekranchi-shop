@@ -141,3 +141,16 @@ def test_start_points_menu_button_to_current_shop(api, monkeypatch):
     assert mb.web_app.url == api.WEB_APP_URL and "displey-uz.vercel.app" in mb.web_app.url
     api.handle_start(m)
     assert api.bot.set_chat_menu_button.call_count == 1   # bir nusxada bir marta
+
+
+def test_contact_goes_to_chosen_admin(api, monkeypatch):
+    import types as t
+    monkeypatch.setattr(api, "ADMIN_IDS", [777, 888])
+    monkeypatch.setattr(api, "CONTACT_ADMIN_ID", 888)
+    monkeypatch.setattr(api, "ADMIN_USERNAME", "")
+    api._admin_un.update(v=None, t=0)
+    api.bot.get_chat.side_effect = lambda aid: t.SimpleNamespace(username={777: "birinchi", 888: "ikkinchi"}[aid])
+    assert api.admin_contact_kb().keyboard[0][0].url == "https://t.me/ikkinchi"
+    api.bot.copy_message.side_effect = lambda to, frm, mid: t.SimpleNamespace(message_id=600)
+    api.handle_customer_question(_msg(42))
+    assert [c.args[0] for c in api.bot.copy_message.call_args_list] == [888]
