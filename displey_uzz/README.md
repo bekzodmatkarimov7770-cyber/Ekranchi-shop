@@ -18,7 +18,7 @@ Android ilova (`android/`) va nakladnoy bot (`nakladnoy/`) klonga kiritilmagan.
 ## Vercel'ga joylash
 
 1. Vercel'da yangi loyiha oching, shu repozitoriyni tanlang va **Root Directory** ni `displey_uzz` qiling.
-2. Loyiha nomini `displey-uzz` qiling. Boshqa domen bo'lsa, `PUBLIC_URL` ni o'rnating va `market.html` dagi `displey-uzz.vercel.app` ni almashtiring.
+2. Loyiha: `displey-uzz`, manzil: `displey-uzz-beta.vercel.app`. Domen o'zgarsa, `PUBLIC_URL`, `WEB_APP_URL` ni va `market.html` dagi manzilni almashtiring. Framework: **Other** (Flask emas, aks holda sahifalar ochilmaydi).
 3. @BotFather'da **yangi bot** oching (masalan `@displey_uzz_bot`).
 4. Environment Variables:
    - `BOT_TOKEN`: yangi botning tokeni
@@ -27,7 +27,7 @@ Android ilova (`android/`) va nakladnoy bot (`nakladnoy/`) klonga kiritilmagan.
    - `ADMIN_USERNAME`: (ixtiyoriy) admin @username
    - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`: doimiy baza (Vercel Marketplace > Upstash)
    - `REDIS_PREFIX`: (ixtiyoriy) standart `du:`. Ekranchi bilan bitta bazadan foydalansangiz ham ma'lumotlar aralashmaydi.
-5. Deploydan keyin webhookni ulang: `https://displey-uzz.vercel.app/api/index?ulash=1&key=<WEBHOOK_SECRET>`
+5. Deploydan keyin webhookni ulang: `https://displey-uzz-beta.vercel.app/api/index?ulash=1&key=<WEBHOOK_SECRET>`
 
 Katalog `catalog.seed.json` dan olinadi (Ekranchi'dagi dona narxlar). Narx va qoldiqni keyin admin paneldan (botga `/panel`) o'zgartirasiz.
 

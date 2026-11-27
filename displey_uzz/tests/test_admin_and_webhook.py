@@ -63,7 +63,7 @@ def test_webhook_setup_needs_key(client):
 
 
 def test_shop_button_points_to_vercel(api):
-    assert api.WEB_APP_URL.startswith("https://displey-uzz.vercel.app/market.html")
+    assert api.WEB_APP_URL.startswith("https://displey-uzz-beta.vercel.app/market.html")
 
 
 def test_contact_does_not_ask_wholesale_role(api):

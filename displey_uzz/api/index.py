@@ -24,7 +24,7 @@ import json, os, io, csv, hmac, hashlib, time, logging, re, secrets, types, requ
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("displey_uzz")
 
-PUBLIC_URL_DEFAULT = "https://displey-uzz.vercel.app"
+PUBLIC_URL_DEFAULT = "https://displey-uzz-beta.vercel.app"
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_IDS = [int(x) for x in re.findall(r"-?\d+", os.environ.get("ADMIN_ID", "") or "") if int(x) != 0]
 ADMIN_ID = ADMIN_IDS[0] if ADMIN_IDS else 0   # asosiy admin
