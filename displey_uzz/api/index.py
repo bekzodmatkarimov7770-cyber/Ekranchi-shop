@@ -67,8 +67,8 @@ SEED_CATALOG = _load_seed()
 
 
 WARRANTY_TEXT = (
-    "🛡 <b>KAFOLAT VA QAYTARISH SHARTLARI (2 OY):</b>\n"
-    "• Barcha displeylarga <b>2 oy kafolat</b> mavjud.\n"
+    "🛡 <b>KAFOLAT VA QAYTARISH SHARTLARI (1 OY):</b>\n"
+    "• Barcha displeylarga <b>1 oy kafolat</b> mavjud.\n"
     "• Zavod braki bo'lsa, xohishingizga ko'ra yangisiga almashtirib beriladi yoki pulingiz to'liq qaytariladi.\n"
     "• ⚠️ <b>Qat'iy talab:</b> Brakligini isbotlovchi aniq <b>video yoki rasm</b> bo'lishi shart! "
     "Rasmi yoki videosi bo'lmasa, mahsulot mutlaqo qaytarib olinmaydi!"

@@ -18,7 +18,7 @@ const bannersData = [
   },
   {
     badge: "KAFOLAT",
-    title: "Barcha displeylarga 2 oy kafolat!",
+    title: "Barcha displeylarga 1 oy kafolat!",
     desc: "Zavod braki bo'lsa, video yoki rasm bilan yangisiga almashtiramiz yoki pulni qaytaramiz.",
     img: "img/kafolat.svg",
     bg: "linear-gradient(135deg, #0B4FB3 0%, #2A6BD1 100%)"
